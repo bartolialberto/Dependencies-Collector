@@ -1,11 +1,9 @@
 import dns.resolver
 from pathlib import Path
-
 from entities.TypesRR import TypesRR
 from utils import file_utils
 from utils import network_utils
 from utils import resolver_utils
-from Zones import RRecord
 from exceptions.UnknownReasonError import UnknownReasonError
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError

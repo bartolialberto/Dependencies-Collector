@@ -1,9 +1,10 @@
 import re
 import dns.resolver
-from entities.ErrorLogger import ErrorLogger
+from entities.ErrorLogger import ErrorLogger, ErrorEntry
 from entities.LocalResolverCache import LocalResolverCache
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
+from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import domain_name_utils
 from utils import list_utils
 from exceptions.UnknownReasonError import UnknownReasonError
@@ -37,8 +38,13 @@ def search_resource_records(resolver: dns.resolver.Resolver, name: str, _type: T
         raise DomainNonExistentError(name)
     except dns.resolver.NoAnswer:  # there is no answer
         raise NoAnswerError(name, _type)
+    # no non-broken nameservers are available to answer the question
+    # query name is too long after DNAME substitution
+    except (dns.resolver.NoNameservers, dns.resolver.YXDOMAIN) as e:
+        raise UnknownReasonError(message=str(e))
     except Exception:  # fail because of another reason...
         raise UnknownReasonError()
+
 
 # TODO
 def find_dns_info_multiple(self, domain_list):
@@ -51,18 +57,19 @@ def find_dns_info_multiple(self, domain_list):
         results.append(dictionary)
     return results
 
-def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
+
+def find_dns_info(resolver: dns.resolver.Resolver, domain: str) -> (list, LocalResolverCache, ErrorLogger):
     cache = LocalResolverCache()
+    # cache.load_csv("C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\testing\\output\\cache.csv")
+    cache.load_csv("output\\cache.csv")
     error_logs = ErrorLogger()
     rr_response = None
     rr_aliases = None
     nsz_rr_response = None
     nsz_rr_alias = None
-
     check = re.findall("[/@,#]", domain)
     if len(check) != 0:
-        print("WebDomain is not a valid domain: ", domain)
-        error_logs.add_entry({"domain": domain, "error": "Not a valid domain"})
+        raise InvalidDomainNameError(domain)
     # if domain contains caratteri strani return None e setta valore in logErrror o meglio basta verificare che subdomains non sia NOn
     subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
     if subdomains is None:
@@ -226,4 +233,4 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
         zone_list.append(tmp)
         # dict_list.append({"Zone": zone_name, "NameServers": nameserver, "CNAME": cname})
     # return dict_list
-    return zone_list
+    return zone_list, cache, error_logs

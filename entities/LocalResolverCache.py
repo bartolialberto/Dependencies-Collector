@@ -1,5 +1,9 @@
 import csv
-import Zones
+import os
+from pathlib import Path
+
+from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
+from utils import file_utils
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
@@ -11,7 +15,7 @@ class LocalResolverCache:
     def __init__(self):
         self.cache = list()
 
-    def add_entry(self, entry: Zones.RRecord):
+    def add_entry(self, entry: RRecord):
         self.cache.append(entry)
 
     def look_up_first(self, domain_name: str, _type: TypesRR) -> RRecord:
@@ -30,53 +34,62 @@ class LocalResolverCache:
         else:
             return result
 
-    def write_to_file(self):
-        fhand = open(csv, "w")
-        line = ""
-        for rr in self.cache:
-            line = rr.name + "," + rr.type
-            if rr.values == "NoAnswer":
-                line = line + ",NoAnswer"
-            elif rr.values == "NXDomain":
-                line = line + ",NXDomain"
-            else:
-                for value in rr.values:
-                    line = line + "," + value
-            line = line + "\n"
-            fhand.write(line)
-        fhand.close()
-
-    # TODO
-    def load(self, csv):
-        fhand = open(csv, "r")
+    def load_csv(self, path: str):
+        fhand = open(path, "r")
         for line in fhand:
-            splitted = line.split("\t")     # \t is TAB
-            if len(splitted) >= 3:
-                if splitted[2].strip() == "NoAnswer" or splitted[2].strip() == "NXDomain":
-                    self.cache.append(RRecord(splitted[0], splitted[1], splitted[2].strip()))
-                    continue
-                list_respose = list()
-                for a in splitted[2:]:
-                    list_respose.append(a.strip())
-                rrecord = RRecord(splitted[0], splitted[1], list_respose)
-                self.cache.append(rrecord)
-            else:
-                print("Line: ", line, " has too few arguments")
+            row = line.replace("[", "")
+            row = row.replace("]", "")
+            row = row.replace('"', "")
+            row = row.replace("\n", "")
+            split_row = row.split(",")
+
+            try:
+                _type = TypesRR.parse_from_string(split_row[1])
+            except NotResourceRecordTypeError:
+                continue
+
+            # parsing values
+            values = []
+            for val in split_row[2:]:
+                values.append(val)
+
+            self.cache.append(RRecord(split_row[0], _type, values))
         fhand.close()
 
-    # TODO
-    def write_to_file(self):
-        fhand = open(csv, "w")
-        line = ""
-        for rr in self.cache:
-            line = rr.name + "," + rr.type
-            if rr.values == "NoAnswer":
-                line = line + ",NoAnswer"
-            elif rr.values == "NXDomain":
-                line = line + ",NXDomain"
-            else:
-                for value in rr.values:
-                    line = line + "," + value
-            line = line + "\n"
-            fhand.write(line)
-        fhand.close()
+    def write_to_csv_file(self, filename="cache"):
+        filename = file_utils.parse_filename(filename)
+        output_folder = Path("output")
+        if not output_folder.exists():
+            output_folder.mkdir(parents=True, exist_ok=False)
+        csv_file = Path(f"output{os.sep}{filename}.csv")
+        with csv_file.open('w', encoding='utf-8', newline='') as f:
+            write = csv.writer(f)
+            for rr in self.cache:
+                temp_list = []
+                temp_list.append(rr.name)
+                temp_list.append(rr.type.to_string())
+                tmp = "["
+                for index, val in enumerate(rr.values):
+                    tmp += val
+                    if not index == len(rr.values) - 1:
+                        tmp += ","
+                tmp += "]"
+                temp_list.append(tmp)
+                write.writerow(temp_list)
+            f.close()
+
+    def write_to_txt_file(self, filename="cache"):
+        filename = file_utils.parse_filename(filename)
+        output_folder = Path("output")
+        if not output_folder.exists():
+            output_folder.mkdir(parents=True, exist_ok=False)
+        with open(f"output{os.sep}{filename}.txt", 'w') as f:       # 'w' or 'x'
+            for rr in self.cache:
+                temp = f"{rr.name}\t{rr.type.to_string()}\t["
+                for index, val in enumerate(rr.values):
+                    temp += val
+                    if not index == len(rr.values) - 1:
+                        temp += " "
+                temp += "]\n"
+                f.write(temp)
+            f.close()

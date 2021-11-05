@@ -3,7 +3,6 @@ from pathlib import Path
 from utils import file_utils
 from utils import network_utils
 from utils import resolver_utils
-from Zones import RRecord
 import exceptions
 
 

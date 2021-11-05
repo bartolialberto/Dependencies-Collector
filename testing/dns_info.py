@@ -3,7 +3,9 @@ from pathlib import Path
 from utils import file_utils
 from utils import network_utils
 from utils import resolver_utils
-from Zones import RRecord
+from entities import Zone
+from entities import LocalResolverCache
+from entities import ErrorLogger
 import exceptions
 
 
@@ -28,7 +30,9 @@ d = "www.units.it"
 
 r = dns.resolver.Resolver()
 r.nameservers = ["1.1.1.1"]
-print(f"START for domain_name = {d}")
-result = resolver_utils.find_dns_info(r, d)
+print(f"********** START for domain_name = {d} **********")
+zone_list, cache, error_logs = resolver_utils.find_dns_info(r, d)
+cache.write_to_csv_file()
+error_logs.write_to_csv_file()
+print("********** THE END **********")
 
-print("THE END")
