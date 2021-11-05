@@ -32,7 +32,7 @@ d = "dyndns.it"
 
 r = dns.resolver.Resolver()
 r.nameservers = ["1.1.1.1"]
-print(f"START for domain_name = {d}")
+print(f"********** START for domain_name = {d} **********")
 try:
     response, rr_aliases = resolver_utils.search_resource_records(r, d, TypesRR.NS)
     print("RESPONSE:")
@@ -48,4 +48,4 @@ try:
 except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
     print(f"(!) {e.message}")
 
-print("THE END")
+print(" ********** THE END  **********")

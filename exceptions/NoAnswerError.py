@@ -1,4 +1,4 @@
-from entities.TypesRR import TypesRR
+from entities import TypesRR
 
 
 class NoAnswerError(Exception):
@@ -6,7 +6,7 @@ class NoAnswerError(Exception):
     for_type: TypesRR
 
     def __init__(self, domain_name: str, _type: TypesRR):
-        tmp = f"No answer for {_type.value} query of domain name '{domain_name}'."
+        tmp = f"No answer for {_type.to_string()} query of domain name '{domain_name}'."
         self.message = tmp
         self.for_domain_name = domain_name
         self.for_type = _type

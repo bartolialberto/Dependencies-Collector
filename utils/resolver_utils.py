@@ -16,12 +16,13 @@ from entities.Zone import Zone
 def search_resource_records(resolver: dns.resolver.Resolver, name: str, _type: TypesRR):
     cname_rrecords = list()
     try:
-        answer = resolver.resolve(name, _type.value)
+        answer = resolver.resolve(name, _type.to_string())
         for cname in answer.chaining_result.cnames:
             temp = []
             for key in cname.items.keys():
                 temp.append(key.target)
-            cname_rrecords.append(RRecord(cname.name, TypesRR.parse_from_string(dns.rdatatype.to_text(cname.rdtype)), temp))
+            debug = TypesRR.parse_from_string(dns.rdatatype.to_text(cname.rdtype))
+            cname_rrecords.append(RRecord(cname.name, debug, temp))
         if len(cname_rrecords) == 0:  # no aliases found
             pass
         rrecords = list()
@@ -35,10 +36,20 @@ def search_resource_records(resolver: dns.resolver.Resolver, name: str, _type: T
     except dns.resolver.NXDOMAIN:  # name is a domain that does not exist
         raise DomainNonExistentError(name)
     except dns.resolver.NoAnswer:  # there is no answer
-        raise NoAnswerError(name, _type.value)
+        raise NoAnswerError(name, _type)
     except Exception:  # fail because of another reason...
         raise UnknownReasonError()
 
+# TODO
+def find_dns_info_multiple(self, domain_list):
+    results = list()
+    for el in domain_list:
+        dictionary = dict()
+        #occhio che qui ora ritorna anche qualche record di tipo cname
+        dictionary["DNSInfo"] = self.find_dns_info(el)
+        dictionary["Domain"] = el
+        results.append(dictionary)
+    return results
 
 def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
     cache = LocalResolverCache()
@@ -64,7 +75,7 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
     cname = list()  # questa la lascio lista, al più rimane vuota ma non torna None
 
     zone_list = list()
-    dict_list = list()  # si va a popolare con ogni iterazione
+    zone_list = list()  # si va a popolare con ogni iterazione
     print("Looking for zones ", domain, "depends on...")
     for domain in subdomains:
         # reset all variables for new iteration
@@ -77,21 +88,21 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
         while True:
             try:
                 cache_look_up = cache.look_up_first(curr_name, TypesRR.CNAME)  # se ci sono alias nella cache
-                if cache_look_up.values[0] not in subdomains:
-                    subdomains.append(cache_look_up.values[0])
+                if cache_look_up.get_first_value() not in subdomains:
+                    subdomains.append(cache_look_up.get_first_value())
                 else:
-                    for dix in dict_list:
-                        if dix["Zone"] == cache_look_up.values[0]:
+                    for zone in zone_list:
+                        if zone.name == cache_look_up.get_first_value():
                             # l'ho già risolto
                             is_domain_already_resolved = True
                             # ma verifico se c'è anche tale cname
                             already_cname = False
-                            for cn in dix["CNAME"]:
+                            for cn in zone.cnames:
                                 if cn == cache_look_up.name:
                                     already_cname = True
                                     break
                             if not already_cname:
-                                dix["CNAME"].append(cache_look_up.name)
+                                zone.cnames.append(cache_look_up.name)
                     break
                 cname.append(cache_look_up.name)
                 cname_list.append(cache_look_up.name)
@@ -107,22 +118,22 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
             is_domain_already_resolved = False
             dc_elem = None
             # cerco se questa zona l'ho già risolta, potrei averlo fatto tramite cache e ora essere qui perché son passato da CNAME
-            for dc in dict_list:
-                if dc["Zone"] == zone_name:
+            for zone in zone_list:
+                if zone.name == zone_name:
                     is_domain_already_resolved = True
-                    dc_elem = dc
+                    dc_elem = zone
                     break
             # ora verifico che anche se l'ho già risolta ha già tutti i cname di zona presi magari da cache
             if is_domain_already_resolved:
                 if len(cname_list) != 0:
                     cname_already_exists = False
                     for e in cname_list:
-                        for cn in dc_elem["CNAME"]:
+                        for cn in dc_elem.cnames:
                             if cn.name == e.name:
                                 cname_already_exists = True
                                 break
                         if not cname_already_exists:
-                            dc_elem["CNAME"].append(e)
+                            dc_elem.cnames.append(e)
                         cname_already_exists = False
                 else:
                     continue
@@ -160,20 +171,20 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
                     is_already_subdomain = False
             # se ho già risolto non lo ririsolvo ma se ho trovato che ha dei cname ce li aggiungo
             is_domain_already_resolved = False
-            for dix in dict_list:
-                if dix["Zone"] == zone_name:
+            for zone in zone_list:
+                if zone.name == zone_name:
                     # l'ho già risolto
                     is_domain_already_resolved = True
                     # ma verifico se c'è anche tale cname
                     already_cname = False
                     if rr_aliases is not None:
                         for alias in rr_aliases:
-                            for cn in dix["CNAME"]:
+                            for cn in zone.cnames:
                                 if cn == alias.name:
                                     already_cname = True
                                     break
                             if not already_cname:
-                                dix["CNAME"].append(alias.name)
+                                zone.cnames.append(alias.name)
                             already_cname = False
                     break
             if is_domain_already_resolved:
@@ -211,7 +222,8 @@ def find_dns_info(resolver: dns.resolver.Resolver, domain: str):
                 for ns in split_name_server:
                     if ns not in subdomains:
                         subdomains.append(ns)
-        zone_list.append(Zone(zone_name, nameserver, cname))
+        tmp = Zone(zone_name, nameserver, cname)
+        zone_list.append(tmp)
         # dict_list.append({"Zone": zone_name, "NameServers": nameserver, "CNAME": cname})
     # return dict_list
     return zone_list

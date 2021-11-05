@@ -18,6 +18,6 @@ class RRecord:
         else:
             self.values = values
 
-    def get_first_value(self):
+    def get_first_value(self) -> str:
         return self.values[0]
 

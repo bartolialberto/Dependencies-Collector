@@ -1,4 +1,4 @@
-from entities.TypesRR import TypesRR
+from entities import TypesRR
 
 
 class NoRecordInCacheError(Exception):

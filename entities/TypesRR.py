@@ -8,6 +8,9 @@ class TypesRR(Enum):
     NS = "NS",
     MX = "MX"
 
+    def to_string(self):
+        return self.value[0]
+
     @staticmethod
     def parse_from_string(string: str):
         if string == TypesRR.A.value:
@@ -20,3 +23,4 @@ class TypesRR(Enum):
             return TypesRR.MX
         else:
             raise NotResourceRecordTypeError(string)
+
