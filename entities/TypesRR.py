@@ -24,3 +24,5 @@ class TypesRR(Enum):
         else:
             raise NotResourceRecordTypeError(string)
 
+    def __str__(self):
+        return self.to_string()

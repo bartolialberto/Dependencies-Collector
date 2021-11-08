@@ -2,20 +2,25 @@ from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 
 
-def append_to_list_with_no_duplicates(_list: list, element):
+def append_with_no_duplicates(_list: list, element):
     if element not in _list:
         _list.append(element)
 
 
-def remove_duplicates_from_list(_list: list):
+def update_element(_list: list, element_to_be_removed, new_element):
+    _list.remove(element_to_be_removed)
+    _list.append(new_element)
+
+
+def remove_duplicates(_list: list):
     return list(dict.fromkeys(_list))
 
 
-def remove_none_elements_from_list(_list: list):
+def remove_none_elements(_list: list):
     return list(filter(lambda e: e is not None, _list))
 
 
-def is_list_of_type(_list: list, _class):       # Zones.RRecord
+def are_all_objects_of_type(_list: list, _class):       # Zones.RRecord
     for element in _list:
         if isinstance(element, _class):
             pass
@@ -24,10 +29,10 @@ def is_list_of_type(_list: list, _class):       # Zones.RRecord
     return True
 
 
-def is_list_of_type_RRecord_and_rr_type(_list: list, _type: TypesRR):
-        for element in _list:
-            if isinstance(element, RRecord) and (element.type is _type):
-                pass
-            else:
-                return False
-        return True
+def are_all_objects_RRecord_and_rr_type(_list: list, rr_type: TypesRR):
+    for element in _list:
+        if isinstance(element, RRecord) and (element.type is rr_type):
+            pass
+        else:
+            return False
+    return True

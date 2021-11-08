@@ -1,4 +1,19 @@
 import re
+from exceptions.InvalidDomainNameError import InvalidDomainNameError
+
+
+def grammatically_correct(domain_name: str):
+    check = re.findall("[/@,#]", domain_name)
+    if len(check) != 0:
+        raise InvalidDomainNameError(domain_name)
+
+
+def is_grammatically_correct(domain_name: str) -> bool:
+    check = re.findall("[/@,#]", domain_name)
+    if len(check) != 0:
+        return False
+    else:
+        return True
 
 
 # return list with higher domain names first in the list

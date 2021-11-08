@@ -8,6 +8,11 @@ def parse_file_path(string: str) -> (str, str):
     return filename, file_extension
 
 
+def parse_file_extension(string: str) -> str:   # with the dot
+    filename, file_extension = parse_file_path(string)
+    return file_extension
+
+
 def parse_filename(path: str):
     filepath, file_extension = parse_file_path(path)
     index = None

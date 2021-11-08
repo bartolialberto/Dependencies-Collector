@@ -18,6 +18,14 @@ class RRecord:
         else:
             self.values = values
 
+    def __eq__(self, other):
+        if isinstance(other, RRecord):
+            if self.name == other.name and self.type is other.type:
+                return True
+            else:
+                return False
+        else:
+            return False
+
     def get_first_value(self) -> str:
         return self.values[0]
-
