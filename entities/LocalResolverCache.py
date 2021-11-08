@@ -40,8 +40,8 @@ class LocalResolverCache:
             return result
 
     def load_csv(self, path: str):
-        fhand = open(path, "r")
-        for line in fhand:
+        f = open(path, "r")
+        for line in f:
             row = line.replace("[", "")
             row = row.replace("]", "")
             row = row.replace('"', "")      # TODO: risolvere questo problema
@@ -59,7 +59,7 @@ class LocalResolverCache:
                 values.append(val)
 
             self.cache.append(RRecord(split_row[0], _type, values))
-        fhand.close()
+        f.close()
 
     def write_to_csv_file(self, filename="cache"):
         filename = file_utils.parse_filename(filename)

@@ -5,6 +5,7 @@ from entities.ErrorLogger import ErrorLogger, ErrorEntry
 from entities.LocalResolverCache import LocalResolverCache
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
+from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import domain_name_utils
 from utils import list_utils
 from exceptions.UnknownReasonError import UnknownReasonError
@@ -56,13 +57,17 @@ def search_domains_dns_dependencies(resolver: dns.resolver.Resolver, domain_list
     total_error_logs.merge_from(results[domain_list[0]][2])
     # All other iteration
     for domain in domain_list[1:]:     # from index 1
-        results[domain] = search_domain_dns_dependencies(resolver, domain, pre_booted_cache=total_cache)
-        total_cache.merge_from(results[domain][1])
-        total_error_logs.merge_from(results[domain][2])
+        try:
+            results[domain] = search_domain_dns_dependencies(resolver, domain, pre_booted_cache=total_cache)
+            total_cache.merge_from(results[domain][1])
+            total_error_logs.merge_from(results[domain][2])
+        except InvalidDomainNameError:
+            pass
     return results, total_cache, total_error_logs
 
 
 def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str, pre_booted_cache=None):
+    domain_name_utils.grammatically_correct(domain)
     cache = LocalResolverCache()    # contiene RRecord
     if pre_booted_cache is None:
         try:
@@ -79,11 +84,11 @@ def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str,
     error_logs = ErrorLogger()
     start_cache_length = len(cache.cache)
     subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
-    if subdomains is None:
-        print("domain,", domain, " is not a valid domain")
-        return None
+    if len(subdomains) == 0:
+        raise InvalidDomainNameError(domain)      # giusto???
     zone_list = list()  # si va a popolare con ogni iterazione
-    print(f"Looking zone dependencies for {domain}... Cache has {start_cache_length} entries.")
+    print(f"Cache has {start_cache_length} entries.")
+    print(f"Looking at zone dependencies for '{domain}'..\n")
     for domain in subdomains:
         # reset all variables for new iteration
         rr_response = None
