@@ -2,10 +2,14 @@ import os
 import sys
 import dns.resolver
 from pathlib import Path
-
+import requests
+import selenium
 from entities.FirefoxContentDependenciesResolver import FirefoxContentDependenciesResolver
 from entities.IpDatabase import IpDatabase
+from entities.LandingSiteHttpResolver import LandingSiteHttpResolver
+from entities.LandingSiteHttpsResolver import LandingSiteHttpsResolver
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
+from exceptions.GeckoDriverExecutableNotFoundError import GeckoDriverExecutableNotFoundError
 from utils import network_utils, list_utils
 from utils import resolver_utils
 from utils import domain_name_utils
@@ -16,7 +20,6 @@ print(f"Local IP: {network_utils.get_local_ip()}")
 print(f"Current working directory: {Path.cwd()}")
 
 firefox_path = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
-gecko_driver_path = "input/geckodriver.exe"
 
 # d = "google.com"
 # d = "www.google.com"
@@ -81,13 +84,12 @@ else:
     pass
 print("END DNS DEPENDENCIES RESOLVER\n")
 
-# IP-AS ADDRESS RESOLUTION
+print("START IP-AS RESOLVER")
 try:
     ip_database = IpDatabase()
 except FileNotFoundError as e:
     print(f"!!! {str(e)} !!!")
     exit(1)
-print("START IP-AS RESOLVER")
 print(f"> Do you want a print for every nameserver IP-AS resolution for each zone? (Can be a lot VERBOSE)")
 answer = input(f"> Press 'y' or 'n': ")
 verbose = False
@@ -115,9 +117,41 @@ print("END IP-AS RESOLVER\n")
 
 print("START CONTENT DEPENDENCIES RESOLVER")
 print("Make sure no instance of Firefox is already running in your computer.")
-content_resolver = FirefoxContentDependenciesResolver()
-content_dependencies, domain_list = content_resolver.search_dependencies("DOMAIN_NAME")
-content_resolver.close()
+try:
+    content_resolver = FirefoxContentDependenciesResolver()
+    content_dependencies, domain_list = content_resolver.search_script_application_dependencies("DOMAIN_NAME")
+    content_resolver.close()
+    print(f"javascript/application dependencies found: {len(content_dependencies)} on {len(domain_list)} domains.")
+except selenium.common.exceptions.WebDriverException as e:
+    print(f"!!! {str(e)} !!!")
+except GeckoDriverExecutableNotFoundError as e2:
+    print(f"!!! {e2.message} !!!")
 print("END CONTENT DEPENDENCIES RESOLVER\n")
+
+print("START LANDING PAGE RESOLVER")
+domain = "www.prova.lol"
+print(f"Trying to connect to domain '{domain}' via https:")
+try:
+    landing_site_resolver = LandingSiteHttpsResolver(domain)
+    print(f"Landing url: {landing_site_resolver.landing_url}\nLanding domain: {landing_site_resolver.landing_domain}")
+    print(f"Redirection path:")
+    for index, url in enumerate(landing_site_resolver.redirection_path):
+        print(f"[{index + 1}/{len(landing_site_resolver.redirection_path)}]: {url}")
+    print(f"Is there a domain redirection? {landing_site_resolver.domain_redirection}")
+except requests.exceptions.ConnectionError as e:
+    try:
+        print(f"Seems that https is not supported.")
+        print(f"Trying to connect to domain '{domain}' via http:")
+        landing_site_resolver = LandingSiteHttpResolver(domain)
+        print(f"Landing url: {landing_site_resolver.landing_url}\nLanding domain: {landing_site_resolver.landing_domain}")
+        print(f"Redirection path:")
+        for index, url in enumerate(landing_site_resolver.redirection_path):
+            print(f"[{index + 1}/{len(landing_site_resolver.redirection_path)}]: {url}")
+        print(f"Is there a domain redirection? {landing_site_resolver.domain_redirection}")
+    except Exception as e:
+        print(f"!!! {str(e)} !!!")
+except Exception as e:
+    print(f"!!! {str(e)} !!!")
+print("END LANDING PAGE RESOLVER\n")
 
 print("********** APPLICATION END **********")

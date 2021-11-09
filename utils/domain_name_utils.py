@@ -45,27 +45,73 @@ def get_subdomains_name_list(domain_name: str, root_included=False):
     return subdomains
 
 
-def deduct_url(domain_name: str, as_https=True):
-    if domain_name.startswith("www."):
+# TODO: se finisce con un punto???
+def deduct_url(domain_name: str, as_https=True) -> str:
+    temp = eliminate_trailing_point(domain_name)
+    if temp.startswith("www."):
         if as_https:
-            return "https://"+domain_name+"/"
+            return "https://"+temp+"/"
         else:
-            return "http://"+domain_name+"/"
-    elif domain_name.startswith("https://"):
+            return "http://"+temp+"/"
+    elif temp.startswith("https://"):
         if as_https:
-            return domain_name
+            return temp
         else:
-            return domain_name.replace("https://", "http://")
-    elif domain_name.startswith("http://"):
+            return temp.replace("https://", "http://")
+    elif temp.startswith("http://"):
         if as_https:
-            return domain_name.replace("http://", "https://")
+            return temp.replace("http://", "https://")
         else:
-            return domain_name
+            return temp
     else:
-        if is_grammatically_correct(domain_name):
+        if is_grammatically_correct(temp):
             if as_https:
-                return "https://www."+domain_name+"/"
+                return "https://www."+temp+"/"
             else:
-                return "http://www."+domain_name+"/"
+                return "http://www."+temp+"/"
         else:
-            raise InvalidDomainNameError(domain_name)
+            raise InvalidDomainNameError(temp)
+
+
+def eliminate_trailing_point(domain_name: str) -> str:
+    if domain_name.endswith("."):
+        return eliminate_trailing_point(domain_name[:-1])
+    else:
+        return domain_name
+
+
+def insert_trailing_point(domain_name: str) -> str:
+    if domain_name.endswith("."):
+        return domain_name
+    else:
+        return domain_name+"."
+
+
+def deduct_domain_name(url: str) -> str:
+    # temp = url.replace("www.", "")
+    temp = url
+    if temp.endswith("/"):
+        temp = temp[0:-1]
+    last_point_index = temp.rindex(".")
+    end_index = -1
+    for i, char in enumerate(temp, start=last_point_index):
+        if i == '/':
+            end_index = i
+    if end_index == -1:
+        pass
+    else:
+         temp = temp[:end_index]
+    if temp.startswith("http://"):
+        temp = temp.replace("http://", "")
+        return temp
+    elif temp.startswith("https://"):
+        temp = temp.replace("https://", "")
+        return temp
+    elif temp.startswith("ftp://"):
+        temp = temp.replace("ftp://", "")
+        return temp
+    elif temp.startswith("ftps://"):
+        temp = temp.replace("ftps://", "")
+        return temp
+    else:
+        return temp

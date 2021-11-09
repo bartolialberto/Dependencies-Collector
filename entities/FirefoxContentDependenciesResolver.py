@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import List
 import selenium
@@ -6,6 +5,7 @@ from selenium.webdriver.firefox.options import Options
 from seleniumwire import webdriver
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 import re
+from exceptions.GeckoDriverExecutableNotFoundError import GeckoDriverExecutableNotFoundError
 from utils import list_utils, domain_name_utils, file_utils
 
 
@@ -46,8 +46,7 @@ class FirefoxContentDependenciesResolver:
                 self.gecko_driver_path = f"input/{file.name}"
                 break
             else:
-                self.gecko_driver_path = "input/geckodriver.exe"
-                break
+                raise GeckoDriverExecutableNotFoundError()
         self.firefox_path = firefox_path
         try:
             self.init_headless_browser()
@@ -63,8 +62,9 @@ class FirefoxContentDependenciesResolver:
             self.driver = webdriver.Firefox(executable_path=self.gecko_driver_path, options=self.options, firefox_binary=self.binary)
         except selenium.common.exceptions.WebDriverException:
             raise
-        print("Headless browser initialize correctly.")
+        print("Headless browser initialized correctly.")
 
+    # TODO: ma a cosa serve?
     def search_domain_dependencies(self, string: str) -> List[str]:
         url = domain_name_utils.deduct_url(string)
         mat = re.findall("/", url)
@@ -77,7 +77,7 @@ class FirefoxContentDependenciesResolver:
             boundaries = match.span()
             url_domain = url[boundaries[0] + 2:boundaries[1] - 1]
         print("Looking for software dependencies of domain: ", url_domain)
-        content_dependencies, domain_list = self.search_dependencies(url)
+        content_dependencies, domain_list = self.search_script_application_dependencies(url)
         try:
             for domain in domain_list:
                 if domain == url_domain:
@@ -86,14 +86,13 @@ class FirefoxContentDependenciesResolver:
             print("Error: ", e)
         return domain_list
 
-    def search_dependencies(self, string: str) -> tuple:
+    def search_script_application_dependencies(self, string: str) -> tuple:
         url = domain_name_utils.deduct_url(string)
         print(f"Searching content dependencies for: {url}")
         # Go to the url home page
         try:
             self.driver.get(url)
-        except selenium.common.exceptions.WebDriverException as e:
-            print("!!! Error while getting the response !!!")
+        except selenium.common.exceptions.WebDriverException:
             raise
         domain_list = list()
         content_dependencies = list()
@@ -102,7 +101,6 @@ class FirefoxContentDependenciesResolver:
                 if "javascript" in request.response.headers['Content-Type'] or "application/" in request.response.headers['Content-Type']:
                     content_dependencies.append(ContentDependencyEntry(request.host, request.url, request.response.status_code, request.response.headers['Content-Type']))
                     list_utils.append_with_no_duplicates(domain_list, request.host)
-        print(f"javascript/application dependencies found: {len(content_dependencies)} on {len(domain_list)} domains.")
         return content_dependencies, domain_list
 
     def close(self):

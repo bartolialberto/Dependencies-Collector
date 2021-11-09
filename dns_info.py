@@ -12,27 +12,27 @@ path_firefox = '"C:\\Program Files\\Mozilla Firefox\\firefox.exe"' #C:/Program F
 path_geckodriver = 'C:\\geckodriver-v0.30.0-win64' #C:/Users/Alberto/Downloads/geckodriver
 
 
-d1 = "google.com"
-d2 = "www.google.com"
+# d1 = "google.com"
+# d2 = "www.google.com"
 # d = "www.google.it"
 # d = "www.darklyrics.com"
 # d = "www.easupersian.com"
 # d = "www.networkfabbio.ns0.it"
 # d = "www.tubebooks.org"
 # d = "www.dyndns.it"
-# d = "www.units.it"
+d1 = "www.units.it"
 # d = "dia.units.it"
 # d = "www.inginf.units.it"
 
 domain_name_utils.grammatically_correct(d1)
-domain_name_utils.grammatically_correct(d2)
+# domain_name_utils.grammatically_correct(d2)
 
-d = [d1, d2]
+d = [d1]
 
 resolver = dns.resolver.Resolver()
 resolver.nameservers = ["1.1.1.1"]
 results, cache, error_logs = resolver_utils.search_domains_dns_dependencies(resolver, d)
 cache.write_to_csv_file()
-error_logs.write_to_txt_file()
+error_logs.write_to_csv_file()
 print("********** END **********")
 

@@ -1,8 +1,8 @@
 import exceptions.AutonomousSystemNotFoundError
 import exceptions.DomainNonExistentError
+import exceptions.GeckoDriverExecutableNotFoundError
 import exceptions.InvalidDomainNameError
 import exceptions.NoAnswerError
 import exceptions.NoRecordInCacheError
 import exceptions.NotResourceRecordTypeError
 import exceptions.UnknownReasonError
-
