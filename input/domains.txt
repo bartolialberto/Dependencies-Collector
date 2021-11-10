@@ -1,0 +1,14 @@
+accounts.google.com
+login.microsoftonline.com
+www.facebook.com
+https://twitter.com/i/flow/login
+https://www.amazon.com/ap/signin
+auth.myprofile.postoffice.co.uk
+auth.digidentity.eu
+clave-dninbrt.seg-social.gob.es
+pasarela.clave.gob.es
+https://auth.digidentity.eu/sign_in
+https://auth.myprofile.postoffice.co.uk/sign_in
+https://clave-dninbrt.seg-social.gob.es/rss-gateway/AuthByLevelFormGateWayServlet?id_transaction=d22d07df2f0af685be8a0ffb7eb4ae80c7f94a2cfb9334a02f95eb335b8cf15a
+https://www.digid.nl/en/login-methods/username-and-password/
+https://eid.gov.it/servizi

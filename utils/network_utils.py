@@ -31,15 +31,3 @@ def is_in_network(ip: ipaddress.IPv4Address, network: ipaddress.IPv4Network) -> 
         return True
     else:
         return False
-
-
-def test1(start: ipaddress.IPv4Address, end: ipaddress.IPv4Address):
-    return list(ipaddress.summarize_address_range(start, end))
-
-
-def test2(ip: ipaddress.IPv4Address, start: ipaddress.IPv4Address, end: ipaddress.IPv4Address):
-    _list = test1(start, end)
-    for network in _list:
-        if is_in_network(ip, network):
-            return network
-    return None

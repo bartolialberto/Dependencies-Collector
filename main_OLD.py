@@ -9,10 +9,8 @@ from entities.IpAsDatabase import IpAsDatabase
 from entities.LandingSiteHttpResolver import LandingSiteHttpResolver
 from entities.LandingSiteHttpsResolver import LandingSiteHttpsResolver
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.GeckoDriverExecutableNotFoundError import GeckoDriverExecutableNotFoundError
-from exceptions.NoValidDomainNamesFoundError import NoValidDomainNamesFoundError
-from utils import network_utils, list_utils, shell_utils, file_utils
+from utils import network_utils, list_utils
 from utils import resolver_utils
 from utils import domain_name_utils
 
@@ -21,13 +19,7 @@ print("********** START APPLICATION **********")
 print(f"Local IP: {network_utils.get_local_ip()}")
 print(f"Current working directory: {Path.cwd()}")
 
-firefox_string_path = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
-firefox_path = Path(firefox_string_path)
-if firefox_path.exists() and firefox_path.is_file():
-    print(f"Firefox executable filepath: {firefox_string_path}")
-else:
-    print(f"!!! firefoxpath: {firefox_string_path} is not valid. !!!")
-    exit(1)
+firefox_path = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
 
 # d = "google.com"
 # d = "www.google.com"
@@ -41,47 +33,45 @@ else:
 # d = "dia.units.it"
 # d = "www.inginf.units.it"
 
-# Getting the domain list in one of the 3 possible ways: through command line, file or by hand.
 domain_name_list = list()
 if len(sys.argv) == 1:
-    answer = shell_utils.wait_how_to_load_domain_names_response()
-    if answer == 0:
-        try:
-            domain_name_list = shell_utils.handle_getting_domain_names_from_txt_file()
-            print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-            for index, domain_name in enumerate(domain_name_list):
-                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-        except FileWithExtensionNotFoundError:
-            print(f"!!! No .txt file found in input folder. !!!")
-            exit(1)
-        except NoValidDomainNamesFoundError as e:
-            print(f"!!! {e.message} !!!")
-            exit(1)
+    print(f"> No command line arguments found. Do you want to write it down now?")
+    answer = input(f"> Press 'y' or 'n': ")
+    if answer == 'y' or answer == 'Y':
+        finished = False
+        while not finished:
+            print(f"> Current domain name list: {str(domain_name_list)}")
+            print(f"> Write 'ok' to finish")
+            print(f"> Write 'del' to delete last element of the list.")
+            print(f"> Write a domain name and then enter to add.")
+            answer = input(f"> ")
+            if answer == 'ok' or answer == 'OK':
+                finished = True
+            elif answer == 'del' or answer == 'DEL':
+                try:
+                    domain_name_list.pop()
+                except IndexError:
+                    print(f"!!! you can't delete from an empty list !!!")
+            else:
+                if domain_name_utils.is_grammatically_correct(answer):
+                    domain_name_list.append(answer)
+                else:
+                    print(f"!!! {answer} is not a well-formatted domain name. !!!")
+        if len(domain_name_list) == 0:
+            exit(0)
     else:
-        domain_name_list = shell_utils.wait_domain_names_typing()
-        print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-        for index, domain_name in enumerate(domain_name_list):
-            print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
+        exit(0)
 else:
     print('> Argument List:', str(sys.argv))
-    for arg in sys.argv[1:]:
+    for arg in sys.argv:
         if domain_name_utils.is_grammatically_correct(arg):
             pass
         else:
             print(f"!!! {arg} is not a well-formatted domain name. !!!")
-    if len(domain_name_list) == 0:
-        print(f"!!! Command line arguments are not well-formatted domain names. !!!")
-        exit(1)
-    else:
-        print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-        for index, domain_name in enumerate(domain_name_list):
-            print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-
 list_utils.remove_duplicates(domain_name_list)
 
-# Starting the application
 # DNS DEPENDENCIES RESOLVER
-print("\n\nSTART DNS DEPENDENCIES RESOLVER")
+print("START DNS DEPENDENCIES RESOLVER")
 dns_resolver = dns.resolver.Resolver()
 dns_resolver.nameservers = ["1.1.1.1"]
 results, cache, error_logs = resolver_utils.search_domains_dns_dependencies(dns_resolver, domain_name_list)
@@ -92,12 +82,12 @@ if answer == 'y' or answer == 'Y':
     error_logs.write_to_csv_file()
 else:
     pass
-print("END DNS DEPENDENCIES RESOLVER")
+print("END DNS DEPENDENCIES RESOLVER\n")
 
-print("\n\nSTART IP-AS RESOLVER")
+print("START IP-AS RESOLVER")
 try:
-    ip_as_db = IpAsDatabase()
-except (FileWithExtensionNotFoundError, OSError) as e:
+    ip_database = IpAsDatabase()
+except FileNotFoundError as e:
     print(f"!!! {str(e)} !!!")
     exit(1)
 print(f"> Do you want a print for every nameserver IP-AS resolution for each zone? (Can be a lot VERBOSE)")
@@ -114,7 +104,7 @@ for index_domain, domain in enumerate(results.keys()):
             print(f"--> Handling zone[{index_zone}] '{zone.name}'")
         for index_rr, rr in enumerate(zone.zone_nameservers):
             try:
-                entry = ip_as_db.resolve_range(rr.get_first_value())
+                entry = ip_database.resolve_range(rr.get_first_value())
                 entries_found.append(entry)
                 if verbose:
                     print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]")
@@ -123,9 +113,9 @@ for index_domain, domain in enumerate(results.keys()):
                 if verbose:
                     print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS record found.")
 print(f"Found {len(entries_found)}/{len(entries_found)+not_found_counter} entries.")
-print("END IP-AS RESOLVER")
+print("END IP-AS RESOLVER\n")
 
-print("\n\nSTART CONTENT DEPENDENCIES RESOLVER")
+print("START CONTENT DEPENDENCIES RESOLVER")
 print("Make sure no instance of Firefox is already running in your computer.")
 try:
     content_resolver = FirefoxContentDependenciesResolver()
@@ -162,6 +152,6 @@ except requests.exceptions.ConnectionError as e:
         print(f"!!! {str(e)} !!!")
 except Exception as e:
     print(f"!!! {str(e)} !!!")
-print("END LANDING PAGE RESOLVER")
+print("END LANDING PAGE RESOLVER\n")
 
 print("********** APPLICATION END **********")
