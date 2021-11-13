@@ -10,8 +10,8 @@ class RRecord:
 
     ...
 
-    Attributes
-    ----------
+    Instance Attributes
+    -------------------
     name : `str`
         The name field of the resource record.
     type : `TypesRR`
@@ -27,14 +27,12 @@ class RRecord:
         """
         Instantiate a RRecord object initializing all the attributes defined above.
 
-        Parameters
-        ----------
-        name : `str`
-            The name.
-        type_rr : `TypesRR`
-            The type.
-        values : `str` of 'List[tr]`
-            The values.
+        :param name: The name.
+        :type name: str
+        :param type_rr: The type.
+        :type type_rr: TypesRR
+        :param values: The values.
+        :type values: str or List[str]
         """
         self.name = name
         self.type = type_rr
@@ -58,41 +56,34 @@ class RRecord:
         return self.values[0]
 
     @staticmethod
-    def parse_from_csv_entry_as_str(entry: str) -> 'RRecord':     # FORWARD DECLARATIONS (REFERENCES)
+    def parse_from_csv_entry_as_str(entry: str, separator=';') -> 'RRecord':     # FORWARD DECLARATIONS (REFERENCES)
         """
-        A static method that takes a string comma-separated which represents a resource record as described in this
+        A static method that takes a string which represents a resource record as described in this
         class.
 
-        Parameters
-        ----------
-        entry : `str`
-            The string.
-
-        Returns
-        -------
-        rr : `RRecord`
-            The parsed RRecord object.
-
-        Raises
-        ------
-        ValueError
-            If the string separated from the comma are least than 3.
-        NotResourceRecordTypeError
-            If the type associated with the type is not matchable with any type as described in class/enum TypesRR.
+        :param entry: The string.
+        :type entry: str
+        :param separator: The string character that separates columns (of an entry) in the string.
+        :type separator: str
+        :raise ValueError: If the string separated from the comma are least than 3.
+        :raise NotResourceRecordTypeError: If the type associated with the type is not matchable with any type as
+        described in class/enum TypesRR.
+        :returns: The parsed RRecord object.
+        :rtype: RRecord
         """
         temp = entry.replace("[", "")
         temp = temp.replace("]", "")
-        temp = temp.replace('"', "")  # TODO: risolvere questo problema
         temp = temp.replace("\n", "")
-        split_entry = temp.split(",")
-        if len(split_entry) < 3:
+        split_entry = temp.split(separator)
+        if len(split_entry) != 3:
             raise ValueError()
         try:
             type_rr = TypesRR.parse_from_string(split_entry[1])
         except NotResourceRecordTypeError:
             raise
         # parsing values
+        split_values = split_entry[2].split(',')
         values = []
-        for val in split_entry[2:]:
+        for val in split_values:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)

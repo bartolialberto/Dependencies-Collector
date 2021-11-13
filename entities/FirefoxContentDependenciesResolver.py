@@ -1,21 +1,45 @@
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import selenium
 from selenium.webdriver.firefox.options import Options
 from seleniumwire import webdriver
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 import re
-from exceptions.GeckoDriverExecutableNotFoundError import GeckoDriverExecutableNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from utils import list_utils, domain_name_utils, file_utils
 
 
 class ContentDependencyEntry:
-    domain_name: str
-    url: str
-    response_code: int
-    mime_type: str
+    """
+    This class represent a personalized entry of content dependency.
+
+    ...
+
+    Instance Attributes
+    -------------------
+    domain_name : `str`
+        The domain name.
+    url : `str`
+        The url.
+    response_code : `int`
+        The response code of the request.
+    mime_type : `str`
+        The mime type of the content.
+    """
 
     def __init__(self, domain_name: str, url: str, response_code: int, mime_type: str):
+        """
+        Initialized an object.
+
+        :param domain_name: The domain name.
+        :type domain_name: str
+        :param url: The url.
+        :type url: str
+        :param response_code: The response code of the request.
+        :type response_code: int
+        :param mime_type: The mime type of the content.
+        :type mime_type: str
+        """
         self.domain_name = domain_name
         self.url = url
         self.response_code = response_code
@@ -23,73 +47,77 @@ class ContentDependencyEntry:
 
 
 class FirefoxContentDependenciesResolver:
-    firefox_path: str
-    gecko_driver_path: str
-    options: Options
-    binary: FirefoxBinary
-    driver: webdriver.Firefox
+    """
+    This class concern is to start a headless browser and then, given an url, search for content dependencies to render
+    that url, in particular dependencies of type javascript and application/*. The headless browser needs a valid
+    installation of firefox with its executable file path, and geckodriver executable put in the input folder of the
+    project root folder.
 
-    def __init__(self, firefox_path="C:\\Program Files\\Mozilla Firefox\\firefox.exe", gecko_driver_path="input/geckodriver.exe"):
-        cwd = Path.cwd()        # TODO: gestire la ricerca della cartella con un metodo in utils..
-        input_folder = None
-        for folder in cwd.iterdir():
-            if folder.is_dir() and folder.name == "input":
-                input_folder = folder
-                break
-        if input_folder is None:
-            input_folder = Path("input")
-            input_folder.mkdir(parents=True, exist_ok=False)
-            # crea dal parent la cartella input
-            raise ValueError()
-        for file in input_folder.iterdir():
-            if file.is_file() and file_utils.parse_file_extension(file.name) == ".exe":     # TODO: ma se è linux o mac ... ?
-                self.gecko_driver_path = f"input/{file.name}"
-                break
-            else:
-                raise GeckoDriverExecutableNotFoundError()
+    ...
+
+    Attributes
+    ----------
+    firefox_path : `str`
+        The firefox.exe file path (absolute).
+    gecko_driver_path : `str`
+        The geckodriver.exe file path (absolute or relative).
+    options : `selenium.webdriver.firefox.options.Options`
+        Instance of the object representating the options in the browser.
+    binary : `selenium.webdriver.firefox.firefox_binary.FirefoxBinary`
+        Instance of Firefox binary.
+    driver : `seleniumwire.webdriver.Firefox`
+        Instance of the Firefox driver.
+    """
+
+    def __init__(self, firefox_path="C:\\Program Files\\Mozilla Firefox\\firefox.exe"):
+        """
+        This class concern is to start a headless browser and then, given an url, search for content dependencies to
+        render that url, in particular dependencies of type javascript and application/*. The headless browser needs a
+        valid installation of firefox with its executable file path, and geckodriver executable put in the input folder
+        of the project root folder. The method is the actual starting point of the headless browser. If everything goes
+        well, then the headless browser is set as attribute.
+
+
+        :param firefox_path : The firefox.exe file path (absolute).
+        :type firefox_path: str
+        :raise FilenameNotFoundError: The geckodriver file is not found.
+        :raise selenium.common.exceptions.WebDriverException: There was a problem starting the firefox webdriver.
+        """
+        try:
+            # TODO: ma se è linux o mac ... ?
+            result = file_utils.search_for_file_type_in_subdirectory("input", ".exe")
+        except FilenameNotFoundError:
+            raise
+        gecko_driver_file = result[0]
+        self.gecko_driver_path = str(gecko_driver_file)
         self.firefox_path = firefox_path
         try:
-            self.init_headless_browser()
+            options = Options()
+            options.headless = True
+            self.options = options
+            self.binary = FirefoxBinary(self.firefox_path)
+            try:
+                self.driver = webdriver.Firefox(executable_path=self.gecko_driver_path, options=self.options,
+                                                firefox_binary=self.binary)
+            except selenium.common.exceptions.WebDriverException:
+                raise
+            self.driver.implicitly_wait(10)     # SAFETY
+            print("Headless browser initialized correctly.")
         except selenium.common.exceptions.WebDriverException:
             raise
 
-    def init_headless_browser(self):
-        options = Options()
-        options.headless = True
-        self.options = options
-        self.binary = FirefoxBinary(self.firefox_path)
-        try:
-            self.driver = webdriver.Firefox(executable_path=self.gecko_driver_path, options=self.options, firefox_binary=self.binary)
-        except selenium.common.exceptions.WebDriverException:
-            raise
-        print("Headless browser initialized correctly.")
+    def search_script_application_dependencies(self, string: str) -> Tuple[List[ContentDependencyEntry], List[str]]:
+        """
+        The method is the actual research of content dependencies from an url/domain name.
 
-    # TODO: ma a cosa serve?
-    def search_domain_dependencies(self, string: str) -> List[str]:
-        url = domain_name_utils.deduct_url(string)
-        mat = re.findall("/", url)
-        if len(mat) == 2:
-            match = re.search("//(.*)", url)
-            boundaries = match.span()
-            url_domain = url[boundaries[0] + 2:boundaries[1]]
-        else:
-            match = re.search("//(.*?)/", url)
-            boundaries = match.span()
-            url_domain = url[boundaries[0] + 2:boundaries[1] - 1]
-        print("Looking for software dependencies of domain: ", url_domain)
-        content_dependencies, domain_list = self.search_script_application_dependencies(url)
-        try:
-            for domain in domain_list:
-                if domain == url_domain:
-                    domain_list.remove(domain)
-        except Exception as e:
-            print("Error: ", e)
-        return domain_list
-
-    def search_script_application_dependencies(self, string: str) -> tuple:
-        url = domain_name_utils.deduct_url(string)
+        :param string: A string representing an url or a domain name. The latter will be changed to a https url.
+        :type string: str
+        :raise selenium.common.exceptions.WebDriverException: There was a problem getting the response form the request.
+        :returns: A tuple containing the list of ContentDependencyEntry, and the list of domain name list.
+        :rtype: Tuple[List[ContentDependencyEntry], List[str]]
+        """
+        url = domain_name_utils.deduct_http_url(string)
         print(f"Searching content dependencies for: {url}")
-        # Go to the url home page
         try:
             self.driver.get(url)
         except selenium.common.exceptions.WebDriverException:
@@ -97,13 +125,17 @@ class FirefoxContentDependenciesResolver:
         domain_list = list()
         content_dependencies = list()
         for request in self.driver.requests:
-            if request.response.headers["Content-Type"] != None:
+            if request.response.headers["Content-Type"] is not None:
                 if "javascript" in request.response.headers['Content-Type'] or "application/" in request.response.headers['Content-Type']:
                     content_dependencies.append(ContentDependencyEntry(request.host, request.url, request.response.status_code, request.response.headers['Content-Type']))
                     list_utils.append_with_no_duplicates(domain_list, request.host)
+        self.driver.requests.clear()
         return content_dependencies, domain_list
 
     def close(self):
-        self.driver.quit()      # shutdown selenium-wire and then quit the webdriver
+        """
+        This method closes the headless browser process.
+
+        """
         # self.driver.close()     # close the current window
-        # self.binary.kill()      # kill the browser (if it's stuck)
+        self.driver.quit()      # shutdown selenium-wire and then quit the webdriver

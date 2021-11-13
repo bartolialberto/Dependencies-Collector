@@ -1,4 +1,5 @@
 from typing import List
+from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from utils import list_utils
 
@@ -10,31 +11,27 @@ class Zone:
 
     ...
 
-    Attributes
-    ----------
+    Instance Attributes
+    -------------------
     name : `str`
         The name of the zone..
-    zone_nameservers : `list[str]`
+    zone_nameservers : `List[RRecord]`
         A list of all nameservers name of the zone.
     cnames : `list[str]`
         The aliases associated with all the nameservers of the zone.
     """
-    name: str
-    zone_nameservers: List[str]
-    cnames: List[str]
 
-    def __init__(self, zone_name: str, list_rr_a_of_nsz: List[str], list_cnames: List[str]):
+    def __init__(self, zone_name: str, list_rr_a_of_nsz: List[RRecord], list_cnames: List[str]):
         """
         Instantiate a Zone object initializing all the attributes defined above.
 
-        Parameters
-        ----------
-        zone_name : `str`
-            The zone name.
-        list_rr_a_of_nsz : `list[str]`
-            The list of all nameservers name of the zone.
-        list_cnames : `str` of 'list[str]`
-            The list of aliases associated with all the nameservers of the zone.
+        :param zone_name: The zone name.
+        :type zone_name: str
+        :param list_rr_a_of_nsz: The list of all nameservers name of the zone, as RRecord of type A (so there's the
+        mapping between domain name and ip address.
+        :type list_rr_a_of_nsz: List[RRecord]
+        :param list_cnames: The list of aliases associated with all the nameservers of the zone.
+        :type list_cnames: List[str]
         """
         if not list_utils.are_all_objects_RRecord_and_rr_type(list_rr_a_of_nsz, TypesRR.A):
             raise ValueError()
@@ -49,4 +46,3 @@ class Zone:
         else:
             self.cnames = list_cnames
         self.name = zone_name
-

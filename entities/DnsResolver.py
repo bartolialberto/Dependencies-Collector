@@ -14,9 +14,11 @@ from utils import domain_name_utils, list_utils
 
 
 class DnsResolver:
+    '''
     resolver: dns.resolver.Resolver
     cache: LocalResolverCache
     error_logs: ErrorLogger
+    '''
 
     def __init__(self):
         self.resolver = dns.resolver.Resolver()
@@ -52,7 +54,7 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def search_multiple_domains_dependencies(self, domain_list: List[str]) -> dict[str: List[Zone]]:
+    def search_multiple_domains_dependencies(self, domain_list: List[str]):
         if len(domain_list) == 0:
             raise ValueError
         results = dict()
@@ -177,8 +179,8 @@ class DnsResolver:
         return zone_list
 
     def export_all(self) -> None:
-        self.cache.write_to_csv_file()
-        self.error_logs.write_to_csv_file()
+        self.cache.write_to_csv_in_output_folder()
+        self.error_logs.write_to_csv_in_output_folder()
 
     @staticmethod
     def check_zone_list_by_name(zone_list: List[Zone], zone_name: str) -> (bool, Zone):

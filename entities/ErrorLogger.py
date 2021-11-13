@@ -1,8 +1,7 @@
 import csv
 from pathlib import Path
-from typing import List
 from entities.TypesRR import TypesRR
-from utils import file_utils
+from utils import file_utils, csv_utils
 
 
 class ErrorEntry:
@@ -11,8 +10,8 @@ class ErrorEntry:
 
     ...
 
-    Attributes
-    ----------
+    Instance Attributes
+    -------------------
     domain_name : `str`
         The domain name associated with the error occurred.
     type : `TypesRR` or `str`
@@ -20,22 +19,17 @@ class ErrorEntry:
     reason_phrase : `str`
         A brief reason phrase of the error occurred.
     """
-    domain_name: str
-    type: TypesRR or str
-    reason_phrase: str
 
     def __init__(self, name: str, type_rr: TypesRR or str, error_message: str):
         """
         Instantiate an ErrorEntry initializing all the attributes defined above.
 
-        Parameters
-        ----------
-        name : `str`
-            The domain name.
-        type_rr : `TypesRR` or `str`
-            The resource record type.
-        error_message : `str`
-            The reason phrase.
+        :param name: The domain name.
+        :type name: str
+        :param type_rr: The resource record type.
+        :type type_rr: TypesRR or str
+        :param error_message: The reason phrase.
+        :type error_message: str
         """
         self.domain_name = name
         self.type = type_rr
@@ -54,24 +48,20 @@ class ErrorLogger:
 
     ...
 
-    Attributes
-    ----------
+    Instance Attributes
+    -------------------
     logs : `list[ErrorEntry]`
         The list of entries associated with errors occurred.
     separator : `str`
         The character separator between all the attributes of an ErrorEntry object, used when logs is exported to file.
     """
-    logs: List[ErrorEntry]
-    separator: str
 
     def __init__(self, separator="\t"):
         """
         Instantiate an ErrorLogger initializing all the attributes defined above. You can set a personalized separator.
 
-        Parameters
-        ----------
-        separator : `str`, optional
-            The character separator used when exporting the file. Default is TAB (\t).
+        :param separator: The character separator used when exporting the file. Default is TAB (\t).
+        :type separator: str
         """
         self.logs = list()
         self.separator = separator
@@ -80,10 +70,8 @@ class ErrorLogger:
         """
         Adds an ErrorEntry.
 
-        Parameters
-        ----------
-        entry : `ErrorEntry`
-            The ErrorEntry.
+        :param entry: The ErrorEntry.
+        :type entry: ErrorEntry
         """
         self.logs.append(entry)
 
@@ -91,65 +79,128 @@ class ErrorLogger:
         """
         Set the separator.
 
-        Parameters
-        ----------
-        separator : `str`
-            The character separator.
+        :param separator: The character separator.
+        :type separator: str
         """
         self.separator = separator
 
-    def write_to_csv_file(self, filename="error_logs") -> None:
+    def write_to_csv(self, filepath: str) -> None:
+        """
+        Export logs in the list to a .csv file described by a filepath.
+
+        :param filepath: Path of file to write, as absolute or relative path.
+        :type filepath: str
+        :raise PermissionError: If filepath points to a directory.
+        :raises FileNotFoundError: If it is impossible to open the file.
+        :raises OSError: If a general I/O error occurs.
+        """
+        file = Path(filepath)
+        try:
+            with file.open('w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
+                for log in self.logs:
+                    temp_list = list()
+                    temp_list.append(log.domain_name)
+                    temp_list.append(str(log.type))  # .to_string() solo se è typeRR
+                    temp_list.append(log.reason_phrase)
+                    writer.writerow(temp_list)
+                f.close()
+        except PermissionError:
+            raise
+        except FileNotFoundError:
+            raise
+        except OSError:
+            raise
+
+    def write_to_txt(self, filepath: str) -> None:
+        """
+        Export logs in the list to a .txt file described by a filepath.
+
+        :param filepath: Path of file to write, as absolute or relative path.
+        :type filepath: str
+        :raise PermissionError: If filepath points to a directory.
+        :raises FileNotFoundError: If it is impossible to open the file.
+        :raises OSError: If a general I/O error occurs.
+        """
+        file = Path(filepath)
+        file_abs_path = str(file)
+        try:
+            with open(file_abs_path, 'w') as f:  # 'w' or 'x'
+                for log in self.logs:
+                    f.write(
+                        f"{log.domain_name}{self.separator}{str(log.type)}{self.separator}{log.reason_phrase}{self.separator}")  # .to_string() solo se è typeRR
+                if len(self.logs) == 0:
+                    f.write("No errors occurred.")
+                f.close()
+                f.close()
+        except PermissionError:
+            raise
+        except FileNotFoundError:
+            raise
+        except OSError:
+            raise
+
+    def write_to_csv_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
         """
         Export the logs in the list to a .csv file in the output folder of the project directory. It uses the separator
         set to separate every attribute of the entry.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
 
-        Parameters
-        ----------
-        filename : `str`, optional
-            The personalized filename without extension, default is error_logs.
+        :param filename: The personalized filename without extension, default is error_logs.
+        :type filename: str
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
+        :raise PermissionError: If filepath points to a directory.
+        :raises FileNotFoundError: If it is impossible to open the file.
+        :raises OSError: If a general I/O error occurs.
         """
-        file = file_utils.set_file_in_folder(Path.cwd().parent, "output", filename+".txt")
+        file = file_utils.set_file_in_folder("output", filename+".csv", project_root_directory)
         file_abs_path = str(file)
-        with file.open('w', encoding='utf-8', newline='') as f:
-            write = csv.writer(f)
-            for log in self.logs:
-                temp_list = list()
-                temp_list.append(log.domain_name)
-                temp_list.append(str(log.type))     # .to_string() solo se è typeRR
-                temp_list.append(log.reason_phrase)
-                write.writerow(temp_list)
-            f.close()
-            print(f".csv file '{file_abs_path}' successfully exported.")
+        try:
+            self.write_to_csv(file_abs_path)
+        except PermissionError:
+            raise
+        except FileNotFoundError:
+            raise
+        except OSError:
+            raise
 
-    def write_to_txt_file(self, filename="error_logs") -> None:
+    def write_to_txt_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
         """
         Export the logs in the list to a .txt file in the output folder of the project directory. It uses the separator
         set to separate every attribute of the entry.
 
-        Parameters
-        ----------
-        filename : `str`, optional
-            The personalized filename without extension, default is error_logs.
+        :param filename: The personalized filename without extension, default is error_logs.
+        :type filename: str
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
+        :raises PermissionError: If filepath points to a directory.
+        :raises FileNotFoundError: If it is impossible to open the file.
+        :raises OSError: If a general I/O error occurs.
         """
-        file = file_utils.set_file_in_folder(Path.cwd().parent, "output", filename+".txt")
+        file = file_utils.set_file_in_folder("output", filename+".txt", project_root_directory)
         file_abs_path = str(file)
-        with open(file_abs_path, 'w') as f:       # 'w' or 'x'
-            for log in self.logs:
-                f.write(f"{log.domain_name}{self.separator}{str(log.type)}{self.separator}{log.reason_phrase}{self.separator}")   # .to_string() solo se è typeRR
-            if len(self.logs) == 0:
-                f.write("No errors occurred.")
-            f.close()
-            print(f".txt file '{file_abs_path}' successfully exported.")
+        try:
+            self.write_to_txt(file_abs_path)
+        except PermissionError:
+            raise
+        except FileNotFoundError:
+            raise
+        except OSError:
+            raise
 
     def merge_from(self, other: 'ErrorLogger') -> None:       # FORWARD DECLARATIONS (REFERENCES)
         """
         Method that takes another ErrorLogger object and adds (without duplicates) all the logs from the other object
         to this (self object).
 
-        Parameters
-        ----------
-        other : `ErrorLogger`
-            Another ErrorLogger object.
+        :param other: Another ErrorLogger object.
+        :type other: ErrorLogger
         """
         for record in other.logs:
             if record not in self.logs:

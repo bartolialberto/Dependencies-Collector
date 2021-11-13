@@ -16,9 +16,8 @@ class TypesRR(Enum):
         """
         This method return a string representation of the type.
 
-        Returns
-        -------
-        The string representation of the type.
+        :returns: The string representation of the type.
+        :rtype: str
         """
         return self.value[0]
 
@@ -27,19 +26,11 @@ class TypesRR(Enum):
         """
         This method return a string representation of the type.
 
-        Parameters
-        ----------
-        string : `str`
-            The string parameter.
-
-        Returns
-        -------
-        The matched TypesRR enum.
-
-        Raises
-        ------
-        NotResourceRecordTypeError
-            If there is no match.
+        :param string: The string parameter.
+        :type string: str
+        :raise NotResourceRecordTypeError: If there is no match.
+        :returns: The matched TypesRR enum.
+        :rtype: TypesRR
         """
         if string == TypesRR.A.value[0]:
             return TypesRR.A

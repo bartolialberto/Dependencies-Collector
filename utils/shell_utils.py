@@ -7,6 +7,17 @@ from utils.file_utils import search_for_file_type_in_subdirectory
 
 
 def wait_yes_or_no_response(response_legend: str) -> str:
+    """
+    Asks to the user to type a positive or negative input, and if the response is not as expected, it repeat the
+    question+input. The input format is:
+        - 'y' or 'Y' means yes
+        - 'n' or 'N' means no
+
+    :param response_legend: Question to display.
+    :type response_legend: str
+    :returns: The character associated to the response.
+    :rtype: str
+    """
     done = False
     while not done:
         answer = input(response_legend)
@@ -19,9 +30,19 @@ def wait_yes_or_no_response(response_legend: str) -> str:
 
 
 def wait_how_to_load_domain_names_response() -> int:
+    """
+    Asks to the user to type a input as answer to the question about how to load domain names in the application. The
+    possibilities are 2:
+        - '0' means loading the domain names through a .txt file in the input folder
+        - '1' means loading the domain names by hand in the shell
+    If the answer is everything else, it reiterate the input listener.
+
+    :returns: The number digit associated to the response.
+    :rtype: int
+    """
     print(f"> No command line arguments found. Do you want to load them from file or write it down now?")
     print(f"> Press 0 for load a .txt file situated in the 'input' folder (application will take the first .txt file found)")
-    print(f"> Press 1 for write down each ofthem here")
+    print(f"> Press 1 for write down each of them here")
     done = False
     while not done:
         answer = input("> ")
@@ -39,6 +60,16 @@ def wait_how_to_load_domain_names_response() -> int:
 
 
 def wait_domain_names_typing() -> List[str]:
+    """
+    Handle the input listeners for domain names. The answer format expected is:
+        - 'ok' means finish the insertion of domain names
+        - 'del' means deleting the last element of the list
+        - everything else is taken as domain name. If is (grammatically) valid is accepted, otherwise an error message
+        will be displayed
+
+    :return: The domain name list.
+    :rtype: List[str]
+    """
     domain_name_list = list()
     done = False
     while not done:
@@ -66,8 +97,16 @@ def wait_domain_names_typing() -> List[str]:
 
 
 def handle_getting_domain_names_from_txt_file() -> List[str]:
+    """
+    Handle loading of domain name list from .txt file in input folder. It takes the first file found.
+
+    :raise FileWithExtensionNotFoundError: If there's no such file.
+    :raise NoValidDomainNamesFoundError: If in the file there's not a single valid domain name.
+    :return: The domain name list.
+    :rtype: List[str]
+    """
     try:
-        result = search_for_file_type_in_subdirectory(Path.cwd(), "input", ".txt")
+        result = search_for_file_type_in_subdirectory("input", ".txt")
     except FileWithExtensionNotFoundError:
         raise
     file = result[0]
@@ -89,7 +128,13 @@ def handle_getting_domain_names_from_txt_file() -> List[str]:
             return domain_list
 
 
-def wait_enter_to_confirm(title="Press enter to confirm.."):
+def wait_enter_to_confirm(title="> Press enter to confirm..") -> None:
+    """
+    Wait the user to simply press enter.
+
+    :param title: Question to display.
+    :type title: str
+    """
     print(title)
     done = False
     while not done:
