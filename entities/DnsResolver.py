@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Dict
 import dns.resolver
-from entities.ErrorLogger import ErrorLogger, ErrorEntry
-from entities.LocalResolverCache import LocalResolverCache
+from entities.DnsErrorLogger import DnsErrorLogger, DnsErrorEntry
+from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from entities.Zone import Zone
@@ -22,8 +22,8 @@ class DnsResolver:
 
     def __init__(self):
         self.resolver = dns.resolver.Resolver()
-        self.cache = LocalResolverCache()
-        self.error_logs = ErrorLogger()
+        self.cache = LocalDnsResolverCache()
+        self.error_logs = DnsErrorLogger()
 
     def search_resource_records(self, name: str, type_rr: TypesRR) -> tuple:
         cname_rrecords = list()
@@ -54,7 +54,7 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def search_multiple_domains_dependencies(self, domain_list: List[str]):
+    def search_multiple_domains_dependencies(self, domain_list: List[str]) -> dict:
         if len(domain_list) == 0:
             raise ValueError
         results = dict()
@@ -66,16 +66,16 @@ class DnsResolver:
                 pass
         return results
 
-    def search_domain_dependencies(self, domain: str):
+    def search_domain_dependencies(self, domain: str) -> List[Zone]:
         domain_name_utils.grammatically_correct(domain)
-        error_logs = ErrorLogger()
+        error_logs = DnsErrorLogger()
         start_cache_length = len(self.cache.cache)
         subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
         if len(subdomains) == 0:
             raise InvalidDomainNameError(domain)  # giusto???
         zone_list = list()  # si va a popolare con ogni iterazione
         print(f"Cache has {start_cache_length} entries.")
-        print(f"Looking at zone dependencies for '{domain}'..\n")
+        print(f"Looking at zone dependencies for '{domain}'..")
         for domain in subdomains:
             # reset all variables for new iteration
             rr_response = None
@@ -145,7 +145,7 @@ class DnsResolver:
                     list_utils.append_with_no_duplicates(self.cache.cache, rr_response)
                     authoritative_answer = True
                 except (UnknownReasonError, DomainNonExistentError) as e:
-                    error_logs.add_entry(ErrorEntry(current_name, TypesRR.NS.to_string(), e.message))
+                    error_logs.add_entry(DnsErrorEntry(current_name, TypesRR.NS.to_string(), e.message))
                     continue
                 except NoAnswerError:
                     continue  # is not a real error, it means is not a name for a zone
@@ -165,7 +165,7 @@ class DnsResolver:
                         nsz_rr_response, nsz_rr_alias = self.search_resource_records(nsz, TypesRR.A)
                         list_utils.append_with_no_duplicates(self.cache.cache, nsz_rr_response)
                     except (UnknownReasonError, NoAnswerError, DomainNonExistentError) as e:
-                        error_logs.add_entry(ErrorEntry(nsz, TypesRR.A, e.message))
+                        error_logs.add_entry(DnsErrorEntry(nsz, TypesRR.A, e.message))
                         continue
                 current_zone_nameservers.append(nsz_rr_response)
                 # qui non faccio verifica di CNAME perchè da regole protocollo in NS non hanno alias

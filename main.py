@@ -1,26 +1,31 @@
 import ipaddress
 import sys
+from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from entities.ROVPageScraper import ROVPageScraper
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from exceptions.NetworkNotFoundError import NetworkNotFoundError
+from exceptions.NotROVStateTypeError import NotROVStateTypeError
+from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, BaseModel, \
+    helper_ip_as_database, helper_entry_ip_as_database, helper_ip_network, helper_nameserver, helper_matches, \
+    helper_belonging_network, helper_entry_rov_page
+from persistence.BaseModel import EntryROVPageEntity
 from take_snapshot import take_snapshot
 from pathlib import Path
-import requests
 import selenium
 from entities.DnsResolver import DnsResolver
-from entities.FirefoxContentDependenciesResolver import FirefoxContentDependenciesResolver
+from entities.ContentDependenciesResolver import ContentDependenciesResolver
 from entities.IpAsDatabase import IpAsDatabase
-from entities.LandingSiteHttpResolver import LandingSiteHttpResolver
-from entities.LandingSiteHttpsResolver import LandingSiteHttpsResolver
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.GeckoDriverExecutableNotFoundError import GeckoDriverExecutableNotFoundError
 from exceptions.NoValidDomainNamesFoundError import NoValidDomainNamesFoundError
-from utils import network_utils, list_utils, shell_utils, downloads_utils
+from utils import network_utils, list_utils, shell_utils, requests_utils
 from utils import domain_name_utils
 
 
 def application_runner():
     print(f"Local IP: {network_utils.get_local_ip()}")
-    print(f"Current working directory: {Path.cwd()}")
+    print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
 
     firefox_string_path = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
     firefox_path = Path(firefox_string_path)
@@ -29,18 +34,6 @@ def application_runner():
     else:
         print(f"!!! firefoxpath: {firefox_string_path} is not valid. !!!")
         exit(1)
-
-    # d = "google.com"
-    # d = "www.google.com"
-    # d = "www.google.it"
-    # d = "www.darklyrics.com"
-    # d = "www.easupersian.com"
-    # d = "www.networkfabbio.ns0.it"
-    # d = "www.tubebooks.org"
-    # d = "www.dyndns.it"
-    # d = "www.units.it"
-    # d = "dia.units.it"
-    # d = "www.inginf.units.it"
 
     # Getting the domain list in one of the 3 possible ways: through command line, file or by hand.
     domain_name_list = list()
@@ -89,19 +82,23 @@ def application_runner():
     except (ValueError, FilenameNotFoundError, OSError) as exc:
         print(f"!!! {str(exc)} !!!")
     dns_resolver.cache.take_snapshot()
-    results = dns_resolver.search_multiple_domains_dependencies(domain_name_list)
+    dns_results = dns_resolver.search_multiple_domains_dependencies(domain_name_list)
     # export
     dns_resolver.cache.write_to_csv_in_output_folder()
     dns_resolver.error_logs.write_to_csv_in_output_folder()
+    print("Insertion into database... ", end='')
+    helper_domain_name.multiple_inserts(dns_results)
+    print("DONE.")
     print("END DNS DEPENDENCIES RESOLVER")
 
     print("\n\nSTART IP-AS RESOLVER")
     print(f"> Do you want to download latest ip-as database from https://iptoasn.com/ ?")
     answer = shell_utils.wait_yes_or_no_response("> ")
     if answer == 'y' or answer == 'Y':
+        print("Latest database is downloading and extracting... ", end='')
         try:
-            downloads_utils.download_latest_tsv_database()
-            print("Latest database was downloaded and extracted successfully.")
+            requests_utils.download_latest_tsv_database()
+            print("DONE.")
         except FileWithExtensionNotFoundError as err:
             print(f"!!! {str(err)} !!!")
     else:
@@ -111,74 +108,109 @@ def application_runner():
     except (FileWithExtensionNotFoundError, OSError) as exc:
         print(f"!!! {str(exc)} !!!")
         exit(1)
-    entries_found = list()
-    not_found_counter = 0
-    for index_domain, domain in enumerate(results.keys()):
+    entries_result = dict()
+    for index_domain, domain in enumerate(dns_results.keys()):
         print(f"Handling domain[{index_domain}] '{domain}'")
-        for index_zone, zone in enumerate(results[domain]):
+        for index_zone, zone in enumerate(dns_results[domain]):
             print(f"--> Handling zone[{index_zone}] '{zone.name}'")
-            for index_rr, rr in enumerate(zone.zone_nameservers):
+            for index_rr, rr in enumerate(zone.nameservers):
                 try:
                     ip = ipaddress.IPv4Address(rr.get_first_value())
                     entry = ip_as_db.resolve_range(ip)
-                    entries_found.append(entry)
                     try:
                         belonging_network, networks = entry.get_network_of_ip(ip)
-                        print(
-                            f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]. Belonging network: {belonging_network.compressed}")
+                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network.compressed}")
+                        entries_result[rr.name] = (rr.get_first_value(), entry, belonging_network)
                     except ValueError:
-                        print(
-                            f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]")
+                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]")
+                        entries_result[rr.name] = (rr.get_first_value(), entry, None)
                 except AutonomousSystemNotFoundError:
-                    not_found_counter += 1
-                    print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS record found.")
-    print(f"Found {len(entries_found)}/{len(entries_found)+not_found_counter} entries.")
+                    print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS found.")
+                    # entries_result[rr.name] = (None, None, None)      # TODO: tenerne traccia in qualche modo
+    print("Insertion into database... ", end='')
+    for nameserver in entries_result.keys():
+        ip_string = entries_result[nameserver][0]
+        entry_found = entries_result[nameserver][1]
+        belonging_network = entries_result[nameserver][2]
+
+        ns = helper_nameserver.insert_or_get(nameserver, ip_string)
+        ee = helper_entry_ip_as_database.insert_or_get(entry_found)
+        helper_matches.insert_or_get_only_entry_ip_as_db(ns, ee)
+        n = helper_ip_network.insert(belonging_network)
+        helper_belonging_network.insert_or_get(entry_found.as_number, n)
+    print("DONE.")
     print("END IP-AS RESOLVER")
 
+    print("\n\nSTART LANDING PAGE RESOLVER")
+    landing_page_results = dict()
+    for domain_name in domain_name_list:
+        print(f"\nTrying to connect to domain '{domain_name}' via https:")
+        try:
+            landing_url, redirection_path, hsts = requests_utils.resolve_landing_page(domain_name)
+            print(f"Landing url: {landing_url}")
+            print(f"HTTPS Strict Transport Security: {hsts}")
+            print(f"Redirection path:")
+            for index, url in enumerate(redirection_path):
+                print(f"[{index + 1}/{len(redirection_path)}]: {url}")
+            landing_page_results[domain_name] = (landing_url, redirection_path, hsts)
+        except Exception as exc:
+            print(f"!!! {str(exc)} !!!")
+    print("Insertion into database... ", end='')
+    helper_landing_page.multiple_inserts(landing_page_results)
+    print("DONE.")
+    print("END LANDING PAGE RESOLVER")
+
     print("\n\nSTART CONTENT DEPENDENCIES RESOLVER")
-    print("Make sure no instance of Firefox is already running in your computer.")
+    headless_browser = FirefoxHeadlessWebDriver()
     content_resolver = None
+    additional_domain_name_to_be_elaborated = list()
+    content_dependencies_result = dict()
     try:
-        content_resolver = FirefoxContentDependenciesResolver()
+        content_resolver = ContentDependenciesResolver(headless_browser)
     except selenium.common.exceptions.WebDriverException as exc1:
         print(f"!!! {str(exc1)} !!!")
     except GeckoDriverExecutableNotFoundError as exc2:
         print(f"!!! {exc2.message} !!!")
     for domain_name in domain_name_list:
-        print(f"Resolving content for: {domain_name}..")
+        print(f"Searching content dependencies for: {landing_page_results[domain_name][0]}")
         try:
-            content_dependencies, domain_list = content_resolver.search_script_application_dependencies(domain_name)
-            print(f"javascript/application dependencies found: {len(content_dependencies)} on {len(domain_list)} domains.")
+            content_dependencies = content_resolver.search_script_application_dependencies(landing_page_results[domain_name][0])
+            for index, dep in enumerate(content_dependencies):
+                print(f"--> [{index+1}]: {str(dep)}")
+
+            #for content_domain in content_domain_list:
+                #if content_domain not in domain_name_list:
+                    #list_utils.append_with_no_duplicates(additional_domain_name_to_be_elaborated, content_domain)
+
+            content_dependencies_result[landing_page_results[domain_name][0]] = content_dependencies
         except selenium.common.exceptions.WebDriverException as exc:
             print(f"!!! {str(exc)} !!!")
-    content_resolver.close()
-    print("END CONTENT DEPENDENCIES RESOLVER\n")
+    print("Insertion into database... ", end='')
+    helper_content_dependency.multiple_inserts(content_dependencies_result)
+    print("DONE.")
+    print("END CONTENT DEPENDENCIES RESOLVER")
 
-    print("START LANDING PAGE RESOLVER")
-    for domain_name in domain_name_list:
-        print(f"Trying to connect to domain '{domain_name}' via https:")
+    print("\n\nSTART ROV PAGE SCRAPING")
+    rov_scraping_result = dict()
+    rov_page_scraper = ROVPageScraper(True, headless_browser)
+    for nameserver in entries_result.keys():
+        ip_string = entries_result[nameserver][0]
+        entry_found = entries_result[nameserver][1]
+        print(f"Loading page for AS{entry_found.as_number}")
         try:
-            landing_site_resolver = LandingSiteHttpsResolver(domain_name)
-            print(f"Landing url: {landing_site_resolver.landing_url}\nLanding domain: {landing_site_resolver.landing_domain}")
-            print(f"Redirection path:")
-            for index, url in enumerate(landing_site_resolver.redirection_path):
-                print(f"[{index + 1}/{len(landing_site_resolver.redirection_path)}]: {url}")
-            print(f"Is there a domain redirection? {landing_site_resolver.domain_redirection}")
-        except requests.exceptions.ConnectionError:
-            try:
-                print(f"Seems that https is not supported.")
-                print(f"Trying to connect to domain '{domain_name}' via http:")
-                landing_site_resolver = LandingSiteHttpResolver(domain_name)
-                print(f"Landing url: {landing_site_resolver.landing_url}\nLanding domain: {landing_site_resolver.landing_domain}")
-                print(f"Redirection path:")
-                for index, url in enumerate(landing_site_resolver.redirection_path):
-                    print(f"[{index + 1}/{len(landing_site_resolver.redirection_path)}]: {url}")
-                print(f"Is there a domain redirection? {landing_site_resolver.domain_redirection}")
-            except Exception as exception:
-                print(f"!!! {str(exception)} !!!")
-        except Exception as exc:
-            print(f"!!! {str(exc)} !!!")
-    print("END LANDING PAGE RESOLVER")
+            rov_page_scraper.load_as_page(entry_found.as_number)
+            row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))
+            rov_scraping_result[nameserver] = row
+            print(f"Handling '{nameserver}' ({ip_string}) associated to AS{entry_found.as_number}, found: {str(row)}")
+        except (ValueError, NotROVStateTypeError, NetworkNotFoundError, selenium.common.exceptions.NoSuchElementException):
+            print(f"Handling '{nameserver}' ({ip_string}) associated to AS{entry_found.as_number}, found nothing.")
+    print("Insertion into database... ", end='')
+    for nameserver in rov_scraping_result.keys():
+        helper_entry_rov_page.insert(rov_scraping_result[nameserver])
+        helper_matches.insert_or_get_only_entry_rov_page(nameserver, rov_scraping_result[nameserver])       # TODO: non va...
+    print("DONE.")
+    print("END ROV PAGE SCRAPING")
+    headless_browser.close()
 
 
 print("********** START APPLICATION **********")

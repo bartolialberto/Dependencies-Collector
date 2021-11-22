@@ -4,7 +4,7 @@ from entities.TypesRR import TypesRR
 from utils import file_utils, csv_utils
 
 
-class ErrorEntry:
+class DnsErrorEntry:
     """
     This class represent an entry in An ErrorLogger object.
 
@@ -36,13 +36,13 @@ class ErrorEntry:
         self.reason_phrase = error_message
 
     def __eq__(self, other):
-        if isinstance(other, ErrorEntry):
+        if isinstance(other, DnsErrorEntry):
             return self.domain_name == other.domain_name
         else:
             return False
 
 
-class ErrorLogger:
+class DnsErrorLogger:
     """
     This class represent a simple sort of personalized Logger that keep tracks of all errors occurred in a list.
 
@@ -66,12 +66,12 @@ class ErrorLogger:
         self.logs = list()
         self.separator = separator
 
-    def add_entry(self, entry: ErrorEntry) -> None:
+    def add_entry(self, entry: DnsErrorEntry) -> None:
         """
         Adds an ErrorEntry.
 
         :param entry: The ErrorEntry.
-        :type entry: ErrorEntry
+        :type entry: DnsErrorEntry
         """
         self.logs.append(entry)
 
@@ -194,13 +194,13 @@ class ErrorLogger:
         except OSError:
             raise
 
-    def merge_from(self, other: 'ErrorLogger') -> None:       # FORWARD DECLARATIONS (REFERENCES)
+    def merge_from(self, other: 'DnsErrorLogger') -> None:       # FORWARD DECLARATIONS (REFERENCES)
         """
         Method that takes another ErrorLogger object and adds (without duplicates) all the logs from the other object
         to this (self object).
 
         :param other: Another ErrorLogger object.
-        :type other: ErrorLogger
+        :type other: DnsErrorLogger
         """
         for record in other.logs:
             if record not in self.logs:

@@ -1,7 +1,5 @@
 import unittest
 
-from old_thesis_work.ROVScrape import ROVScraper
-
 
 class IpAsDatabaseTest(unittest.TestCase):
     # All methods inherited: https://docs.python.org/3/library/unittest.html#unittest.TestCase.debug

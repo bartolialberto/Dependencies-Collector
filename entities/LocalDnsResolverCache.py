@@ -9,7 +9,7 @@ from entities.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 
 
-class LocalResolverCache:
+class LocalDnsResolverCache:
     """
     This class represent a simple sort of personalized Cache that keep tracks of all resource records in a list.
 
@@ -291,13 +291,13 @@ class LocalResolverCache:
         except OSError:
             raise
 
-    def merge_from(self, other: 'LocalResolverCache') -> None:       # FORWARD DECLARATIONS (REFERENCES)
+    def merge_from(self, other: 'LocalDnsResolverCache') -> None:       # FORWARD DECLARATIONS (REFERENCES)
         """
         Method that takes another LocalResolverCache object and adds (without duplicates) all the resource records from
         the other object cache to this (self object).
 
         :param other: Another LocalResolverCache object.
-        :type other: LocalResolverCache
+        :type other: LocalDnsResolverCache
         """
         for record in other.cache:
             if record not in self.cache:

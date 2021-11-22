@@ -1,14 +1,9 @@
-from pathlib import Path
 from typing import List, Tuple
 import selenium
-from selenium.webdriver.firefox.options import Options
-from seleniumwire import webdriver
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-import re
-from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from utils import list_utils, domain_name_utils, file_utils
+from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 
 
+# TODO: rifare tutta la doc
 class ContentDependencyEntry:
     """
     This class represent a personalized entry of content dependency.
@@ -45,8 +40,12 @@ class ContentDependencyEntry:
         self.response_code = response_code
         self.mime_type = mime_type
 
+    def __str__(self):
+        sep = '\t'
+        return f"{self.domain_name}{sep}{self.url}{sep}{self.response_code}{sep}{self.mime_type}"
 
-class FirefoxContentDependenciesResolver:
+
+class ContentDependenciesResolver:
     """
     This class concern is to start a headless browser and then, given an url, search for content dependencies to render
     that url, in particular dependencies of type javascript and application/*. The headless browser needs a valid
@@ -69,7 +68,7 @@ class FirefoxContentDependenciesResolver:
         Instance of the Firefox driver.
     """
 
-    def __init__(self, firefox_path="C:\\Program Files\\Mozilla Firefox\\firefox.exe"):
+    def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
         """
         This class concern is to start a headless browser and then, given an url, search for content dependencies to
         render that url, in particular dependencies of type javascript and application/*. The headless browser needs a
@@ -83,30 +82,9 @@ class FirefoxContentDependenciesResolver:
         :raise FilenameNotFoundError: The geckodriver file is not found.
         :raise selenium.common.exceptions.WebDriverException: There was a problem starting the firefox webdriver.
         """
-        try:
-            # TODO: ma se è linux o mac ... ?
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".exe")
-        except FilenameNotFoundError:
-            raise
-        gecko_driver_file = result[0]
-        self.gecko_driver_path = str(gecko_driver_file)
-        self.firefox_path = firefox_path
-        try:
-            options = Options()
-            options.headless = True
-            self.options = options
-            self.binary = FirefoxBinary(self.firefox_path)
-            try:
-                self.driver = webdriver.Firefox(executable_path=self.gecko_driver_path, options=self.options,
-                                                firefox_binary=self.binary)
-            except selenium.common.exceptions.WebDriverException:
-                raise
-            self.driver.implicitly_wait(10)     # SAFETY
-            print("Headless browser initialized correctly.")
-        except selenium.common.exceptions.WebDriverException:
-            raise
+        self.headless_browser = headless_browser
 
-    def search_script_application_dependencies(self, string: str) -> Tuple[List[ContentDependencyEntry], List[str]]:
+    def search_script_application_dependencies(self, url: str) -> List[ContentDependencyEntry]:
         """
         The method is the actual research of content dependencies from an url/domain name.
 
@@ -116,21 +94,25 @@ class FirefoxContentDependenciesResolver:
         :returns: A tuple containing the list of ContentDependencyEntry, and the list of domain name list.
         :rtype: Tuple[List[ContentDependencyEntry], List[str]]
         """
-        url = domain_name_utils.deduct_http_url(string)
-        print(f"Searching content dependencies for: {url}")
         try:
-            self.driver.get(url)
+            self.headless_browser.driver.get(url)
         except selenium.common.exceptions.WebDriverException:
             raise
-        domain_list = list()
+        # response.raise_for_status()     # TODO: mmm solo fare una stampa e ritornare? Meglio va..
         content_dependencies = list()
-        for request in self.driver.requests:
-            if request.response.headers["Content-Type"] is not None:
-                if "javascript" in request.response.headers['Content-Type'] or "application/" in request.response.headers['Content-Type']:
-                    content_dependencies.append(ContentDependencyEntry(request.host, request.url, request.response.status_code, request.response.headers['Content-Type']))
-                    list_utils.append_with_no_duplicates(domain_list, request.host)
-        self.driver.requests.clear()
-        return content_dependencies, domain_list
+        for request in self.headless_browser.driver.requests:
+            if request.response:
+                if request.response.headers["Content-Type"] is not None:
+                    if "javascript" in request.response.headers['Content-Type'] or "application/" in request.response.headers['Content-Type']:
+                        content_dependencies.append(ContentDependencyEntry(request.host, request.url, request.response.status_code, request.response.headers['Content-Type']))
+                        # list_utils.append_with_no_duplicates(domain_list, request.host)
+                    else:
+                        pass    # there is no javascript/application Content-Type header
+                else:
+                    pass    # there is no Content-Type header
+            else:
+                pass    # there is no response
+        return content_dependencies
 
     def close(self):
         """
@@ -138,4 +120,4 @@ class FirefoxContentDependenciesResolver:
 
         """
         # self.driver.close()     # close the current window
-        self.driver.quit()      # shutdown selenium-wire and then quit the webdriver
+        self.headless_browser.driver.quit()      # shutdown selenium-wire and then quit the webdriver

@@ -15,7 +15,7 @@ class Zone:
     -------------------
     name : `str`
         The name of the zone..
-    zone_nameservers : `List[RRecord]`
+    nameservers : `List[RRecord]`
         A list of all nameservers name of the zone.
     cnames : `list[str]`
         The aliases associated with all the nameservers of the zone.
@@ -36,9 +36,9 @@ class Zone:
         if not list_utils.are_all_objects_RRecord_and_rr_type(list_rr_a_of_nsz, TypesRR.A):
             raise ValueError()
         if list_rr_a_of_nsz is None or len(list_rr_a_of_nsz) == 0:
-            self.zone_nameservers = list()
+            self.nameservers = list()
         else:
-            self.zone_nameservers = list_rr_a_of_nsz
+            self.nameservers = list_rr_a_of_nsz
         if not list_utils.are_all_objects_RRecord_and_rr_type(list_cnames, TypesRR.CNAME):
             raise ValueError()
         if list_rr_a_of_nsz is None or len(list_cnames) == 0:

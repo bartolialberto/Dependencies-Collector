@@ -1,5 +1,6 @@
 import csv
 import ipaddress
+from pathlib import Path
 from typing import List, Tuple
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
@@ -34,7 +35,7 @@ class StringEntryIpAsDatabase:
     end_ip_range : `str`
         The end of the ip range. Should be an ip address
     as_number : `str`
-        Should be the Autonomous System number
+        Should be the Autonomous System number (without starting 'AS')
     country_code : `str`
         Should be the country code
     as_description : `str`
@@ -166,17 +167,26 @@ class IpAsDatabase:
         If the database is valid, these are all the entries of the database.
     """
 
-    def __init__(self, column_separator='\t'):      # FileNotFoundError, '\t' = TAB
+    def __init__(self, project_root_directory=Path.cwd(), column_separator='\t'):      # FileNotFoundError, '\t' = TAB
         """
         Instantiate an IpAsDatabase object setting the filepath of the .tsv database file and then the file is read
-        in order to populate a list with all the database entries.
+        in order to populate a list with all the database entries. You can set manually the separator used to separate
+        the columns in the entry of the database, and the project root directory (PRD).
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
 
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
         :param column_separator: The character separator between every column-value of each entry
         :type column_separator: str
         :raises FileWithExtensionNotFoundError: If the database .tsv file is not found.
         """
         try:
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".tsv")
+            result = file_utils.search_for_file_type_in_subdirectory("input", ".tsv", project_root_directory)
         except FileWithExtensionNotFoundError:
             raise
         file = result[0]
@@ -198,7 +208,7 @@ class IpAsDatabase:
 
         :param ip: The ip address parameter.
         :type ip: ipaddress.IPv4Address
-        :raises ValueError: If the binary search auxiliary method raises a ValueError exception. IN particular it is
+        :raises ValueError: If the binary search auxiliary method raises a ValueError exception. In particular it is
         impossible to instantiate a valid Ipv4Address from an entry of the .tsv database.
         If the matched entry is formatted wrongly, not as described in https://iptoasn.com/. In particular one of 3
         errors occurred:
@@ -252,6 +262,26 @@ class IpAsDatabase:
             if network_utils.is_in_ip_range(ip_param, ipaddress.ip_address(array_entries[i].start_ip_range), ipaddress.ip_address(array_entries[i].end_ip_range)):
                 return i
         return -1
+
+    def get_entry_from_as_number(self, as_number: int) -> EntryIpAsDatabase:
+        """
+        Method return the database entry that matches the autonomous system associated with the parameter. Number
+        obviously with the starting 'AS'. The method needs to control every single entry, so it is pretty slow.
+
+        :param as_number: The autonomous system number.
+        :type as_number: int
+        :raises AutonomousSystemNotFoundError: If no entry is found.
+        :raises ValueError: If the matched entry is not well-formatted.
+        :returns: An EntryIpAsDatabase object of the matched entry in the database.
+        :rtype: EntryIpAsDatabase
+        """
+        for entry in self.entries:
+            if int(entry.as_number) == as_number:
+                try:
+                    return EntryIpAsDatabase(entry)
+                except ValueError:
+                    raise
+        raise AutonomousSystemNotFoundError(as_number)
 
     def load(self):
         """

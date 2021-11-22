@@ -11,7 +11,7 @@ def take_snapshot(exception: Exception):
     seconds_passed_from_epoch = time.time()
     current_time = time.localtime(seconds_passed_from_epoch)
     # example: executed at 22:10 12/11/2021 ---> folder name: 12112021_2210
-    folder_name = f"{current_time.tm_mday}{current_time.tm_mon}{current_time.tm_year}_{current_time.tm_hour}{current_time.tm_min}{current_time.tm_sec}"
+    folder_name = f"{current_time.tm_mday:02}{current_time.tm_mon:02}{current_time.tm_year:02}_{current_time.tm_hour:02}{current_time.tm_min:02}{current_time.tm_sec:02}"
     folder = Path(f"{str(Path.cwd())}{os.sep}SNAPSHOTS{os.sep}{folder_name}")
     folder.mkdir(parents=True, exist_ok=False)
     starting_cache_file = Path(f"{str(folder)}{os.sep}starting_cache.csv")

@@ -1,7 +1,7 @@
 import os
 import unittest
 from pathlib import Path
-from entities.LocalResolverCache import LocalResolverCache
+from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 
@@ -27,7 +27,7 @@ class CacheExportingTest(unittest.TestCase):
 
     def setUp(self) -> None:
         # eseguito prima di OGNI metodo
-        self.cache = LocalResolverCache()
+        self.cache = LocalDnsResolverCache()
         self.cache.add_entry(RRecord("prova1", TypesRR.A, "167.83.69.0"))
         self.cache.add_entry(RRecord("prova2", TypesRR.A, ["144.200.1.34", "199.188.200.1", "94.87.13.4", "13.12.101.1"]))
         self.cache.add_entry(RRecord("prova3", TypesRR.CNAME, ["110.1.34.5", "144.76.9.10"]))

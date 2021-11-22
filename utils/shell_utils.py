@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.NoValidDomainNamesFoundError import NoValidDomainNamesFoundError

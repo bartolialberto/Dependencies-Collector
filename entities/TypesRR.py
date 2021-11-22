@@ -32,13 +32,13 @@ class TypesRR(Enum):
         :returns: The matched TypesRR enum.
         :rtype: TypesRR
         """
-        if string == TypesRR.A.value[0]:
+        if string == 'A' or string == 'a':
             return TypesRR.A
-        elif string == TypesRR.CNAME.value[0]:
+        elif string == 'CNAME' or string == 'cname':
             return TypesRR.CNAME
-        elif string == TypesRR.NS.value[0]:
+        elif string == 'NS' or string == 'ns':
             return TypesRR.NS
-        elif string == TypesRR.MX.value[0]:
+        elif string == 'MX' or string == 'mx':
             return TypesRR.MX
         else:
             raise NotResourceRecordTypeError(string)

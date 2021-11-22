@@ -1,6 +1,5 @@
 import csv
 import re
-from pathlib import Path
 from typing import List
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import file_utils
@@ -82,7 +81,6 @@ def get_subdomains_name_list(domain: str, root_included=False) -> List[str]:
     return subdomains
 
 
-# TODO: se finisce con un punto???
 def deduct_http_url(domain_name: str, as_https=True) -> str:
     """
     Method that tries to construct a http/https url from the domain name only.
@@ -115,9 +113,9 @@ def deduct_http_url(domain_name: str, as_https=True) -> str:
     else:
         if is_grammatically_correct(temp):
             if as_https:
-                return "https://www."+temp+"/"
+                return "https://"+temp+"/"
             else:
-                return "http://www."+temp+"/"
+                return "http://"+temp+"/"
         else:
             raise InvalidDomainNameError(temp)
 

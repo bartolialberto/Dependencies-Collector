@@ -1,8 +1,8 @@
 import os
 from typing import List
 import dns.resolver
-from entities.ErrorLogger import ErrorLogger, ErrorEntry
-from entities.LocalResolverCache import LocalResolverCache
+from entities.DnsErrorLogger import DnsErrorLogger, DnsErrorEntry
+from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
@@ -49,8 +49,8 @@ def search_domains_dns_dependencies(resolver: dns.resolver.Resolver, domain_list
     if len(domain_list) == 0:
         raise ValueError
     results = dict()
-    total_cache = LocalResolverCache()
-    total_error_logs = ErrorLogger()
+    total_cache = LocalDnsResolverCache()
+    total_error_logs = DnsErrorLogger()
     # First iteration needs to load cache from file
     results[domain_list[0]] = search_domain_dns_dependencies(resolver, domain_list[0], pre_booted_cache=None)
     total_cache.merge_from(results[domain_list[0]][1])
@@ -68,7 +68,7 @@ def search_domains_dns_dependencies(resolver: dns.resolver.Resolver, domain_list
 
 def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str, pre_booted_cache=None):
     domain_name_utils.grammatically_correct(domain)
-    cache = LocalResolverCache()    # contiene RRecord
+    cache = LocalDnsResolverCache()    # contiene RRecord
     if pre_booted_cache is None:
         try:
             cache.load_csv(f"output{os.sep}cache.csv")
@@ -77,11 +77,11 @@ def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str,
             print(f"!!! Impossible to load .csv file as cache. !!!")
             pass
     else:
-        if isinstance(pre_booted_cache, LocalResolverCache):
+        if isinstance(pre_booted_cache, LocalDnsResolverCache):
             cache = pre_booted_cache
         else:
             print(f"!!! Unable to set pre booted cache. !!!")
-    error_logs = ErrorLogger()
+    error_logs = DnsErrorLogger()
     start_cache_length = len(cache.cache)
     subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
     if len(subdomains) == 0:
@@ -157,7 +157,7 @@ def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str,
                 list_utils.append_with_no_duplicates(cache.cache, rr_response)
                 authoritative_answer = True
             except (UnknownReasonError, DomainNonExistentError) as e:
-                error_logs.add_entry(ErrorEntry(current_name, TypesRR.NS.to_string(), e.message))
+                error_logs.add_entry(DnsErrorEntry(current_name, TypesRR.NS.to_string(), e.message))
                 continue
             except NoAnswerError:
                 continue        # is not a real error, it means is not a name for a zone
@@ -177,7 +177,7 @@ def search_domain_dns_dependencies(resolver: dns.resolver.Resolver, domain: str,
                     nsz_rr_response, nsz_rr_alias = search_resource_records(resolver, nsz, TypesRR.A)
                     list_utils.append_with_no_duplicates(cache.cache, nsz_rr_response)
                 except (UnknownReasonError, NoAnswerError, DomainNonExistentError) as e:
-                    error_logs.add_entry(ErrorEntry(nsz, TypesRR.A, e.message))
+                    error_logs.add_entry(DnsErrorEntry(nsz, TypesRR.A, e.message))
                     continue
             current_zone_nameservers.append(nsz_rr_response)
             # qui non faccio verifica di CNAME perchè da regole protocollo in NS non hanno alias
