@@ -56,21 +56,14 @@ class RowPrefixesTable:
 
 
 class ROVPageScraper:
-    def __init__(self, dbg: bool, headless_browser: FirefoxHeadlessWebDriver):      # TODO: dbg inutile
+    def __init__(self, headless_browser: FirefoxHeadlessWebDriver):      # TODO: dbg inutile
         self.headless_browser = headless_browser
-        self.page_loaded = False
-        self.sleep_time = 30
-        self.dbg = dbg
 
     def load_page(self, url_page: str):
         try:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.WebDriverException:
             raise
-        self.page_loaded = True
-        # self.__wait_for_scripts()
-        #self.__scrape_table()
-        #self.get_prefixes_table_from_page()
 
     def load_as_page(self, as_number: int):
         self.load_page(ROVPageScraper.base_url(as_number))

@@ -11,6 +11,7 @@ seleniumwire
 ipaddress
 requests
 gzip
+peewee
 ```
 
 Make sure your python interpreter has all of them.
@@ -22,12 +23,13 @@ So you can install every one of them using pip (if present in the environment):
 pip install dnspython==2.0.0
 pip install selenium
 pip install selenium-wire
+pip install peewee
 ```
 
 You can install them all using one command:
 
 ```
-pip install selenium selenium-wire dnspython==2.0.0
+pip install selenium selenium-wire dnspython==2.0.0 peewee
 ```
 
 #Configuration

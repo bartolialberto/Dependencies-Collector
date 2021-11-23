@@ -5,7 +5,7 @@ from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from entities.Zone import Zone
 from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, helper_zone, BaseModel, \
-    helper_entry_ip_as_database
+    helper_entry_ip_as_database, helper_matches
 
 
 class DomainNameTest(unittest.TestCase):
@@ -166,8 +166,8 @@ class DomainNameTest(unittest.TestCase):
         e = helper_entry_ip_as_database.insert_or_get(entry)
         helper_entry_ip_as_database.populate_matches_association(nameserver, e)
 
-    def test_entry_ip_as_db_query(self):
-        pass
+    def test_test(self):
+        helper_matches.insert_or_get_only_entry_ip_as_db()
 
     def tearDown(self) -> None:
         pass

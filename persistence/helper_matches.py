@@ -6,9 +6,12 @@ def insert_or_get_only_entry_ip_as_db(n: NameserverEntity, eia: EntryIpAsDatabas
     ma, created = MatchesAssociation.get_or_create(nameserver=n.id, entry_rov_page=None, entry_ip_as_database=eia.id)
 
 
-def insert_or_get_only_entry_rov_page(nameserver: str, row: RowPrefixesTable):
+def insert_or_get(n: NameserverEntity, eia: EntryIpAsDatabaseEntity, erp: EntryROVPageEntity):
+    ma, created = MatchesAssociation.get_or_create(nameserver=n.id, entry_rov_page=erp.id, entry_ip_as_database=eia.id)
+
+
+def insert_or_get_only_entry_rov_page(nameserver: str, e: EntryROVPageEntity):
     n = NameserverEntity.get(NameserverEntity.name == nameserver)
-    e, created = EntryROVPageEntity.get_or_create(autonomous_system_number=row.as_number, visibility=row.visibility, rov_state=row.rov_state.to_string())
     ma = MatchesAssociation.get(MatchesAssociation.nameserver == n.id)
     ma.entry_rov_page = e.id
     ma.save()

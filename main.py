@@ -5,10 +5,9 @@ from entities.ROVPageScraper import ROVPageScraper
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
-from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, BaseModel, \
-    helper_ip_as_database, helper_entry_ip_as_database, helper_ip_network, helper_nameserver, helper_matches, \
-    helper_belonging_network, helper_entry_rov_page
-from persistence.BaseModel import EntryROVPageEntity
+from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, \
+    helper_entry_ip_as_database, helper_ip_network, helper_nameserver, helper_matches, \
+    helper_belonging_network, helper_entry_rov_page, helper_prefix
 from take_snapshot import take_snapshot
 from pathlib import Path
 import selenium
@@ -27,13 +26,6 @@ def application_runner():
     print(f"Local IP: {network_utils.get_local_ip()}")
     print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
 
-    firefox_string_path = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
-    firefox_path = Path(firefox_string_path)
-    if firefox_path.exists() and firefox_path.is_file():
-        print(f"Firefox executable filepath: {firefox_string_path}")
-    else:
-        print(f"!!! firefoxpath: {firefox_string_path} is not valid. !!!")
-        exit(1)
 
     # Getting the domain list in one of the 3 possible ways: through command line, file or by hand.
     domain_name_list = list()
@@ -118,27 +110,15 @@ def application_runner():
                     ip = ipaddress.IPv4Address(rr.get_first_value())
                     entry = ip_as_db.resolve_range(ip)
                     try:
-                        belonging_network, networks = entry.get_network_of_ip(ip)
-                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network.compressed}")
-                        entries_result[rr.name] = (rr.get_first_value(), entry, belonging_network)
+                        belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
+                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
+                        entries_result[rr.name] = rr.get_first_value(), entry, belonging_network_ip_as_db
                     except ValueError:
                         print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]")
-                        entries_result[rr.name] = (rr.get_first_value(), entry, None)
+                        entries_result[rr.name] = rr.get_first_value(), entry, None
                 except AutonomousSystemNotFoundError:
                     print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS found.")
                     # entries_result[rr.name] = (None, None, None)      # TODO: tenerne traccia in qualche modo
-    print("Insertion into database... ", end='')
-    for nameserver in entries_result.keys():
-        ip_string = entries_result[nameserver][0]
-        entry_found = entries_result[nameserver][1]
-        belonging_network = entries_result[nameserver][2]
-
-        ns = helper_nameserver.insert_or_get(nameserver, ip_string)
-        ee = helper_entry_ip_as_database.insert_or_get(entry_found)
-        helper_matches.insert_or_get_only_entry_ip_as_db(ns, ee)
-        n = helper_ip_network.insert(belonging_network)
-        helper_belonging_network.insert_or_get(entry_found.as_number, n)
-    print("DONE.")
     print("END IP-AS RESOLVER")
 
     print("\n\nSTART LANDING PAGE RESOLVER")
@@ -171,17 +151,12 @@ def application_runner():
         print(f"!!! {str(exc1)} !!!")
     except GeckoDriverExecutableNotFoundError as exc2:
         print(f"!!! {exc2.message} !!!")
-    for domain_name in domain_name_list:
+    for domain_name in landing_page_results.keys():
         print(f"Searching content dependencies for: {landing_page_results[domain_name][0]}")
         try:
             content_dependencies = content_resolver.search_script_application_dependencies(landing_page_results[domain_name][0])
             for index, dep in enumerate(content_dependencies):
                 print(f"--> [{index+1}]: {str(dep)}")
-
-            #for content_domain in content_domain_list:
-                #if content_domain not in domain_name_list:
-                    #list_utils.append_with_no_duplicates(additional_domain_name_to_be_elaborated, content_domain)
-
             content_dependencies_result[landing_page_results[domain_name][0]] = content_dependencies
         except selenium.common.exceptions.WebDriverException as exc:
             print(f"!!! {str(exc)} !!!")
@@ -191,23 +166,64 @@ def application_runner():
     print("END CONTENT DEPENDENCIES RESOLVER")
 
     print("\n\nSTART ROV PAGE SCRAPING")
-    rov_scraping_result = dict()
-    rov_page_scraper = ROVPageScraper(True, headless_browser)
+    rov_scraping_result_by_as = dict()      # better to be a dict[as_number: dict[nameserver: [info_list]]] ?
     for nameserver in entries_result.keys():
-        ip_string = entries_result[nameserver][0]
-        entry_found = entries_result[nameserver][1]
-        print(f"Loading page for AS{entry_found.as_number}")
+        ip_string = entries_result[nameserver][0]        # str
+        entry_ip_as_db = entries_result[nameserver][1]       # EntryIpAsDatabase
+        belonging_network_ip_as_db = entries_result[nameserver][2]   # ipaddress.IPv4Network
+        try:        # TODO: ci possono essere doppioni... Controllare solo dal nameserver?
+            rov_scraping_result_by_as[entry_ip_as_db.as_number].append([nameserver, ip_string, entry_ip_as_db, belonging_network_ip_as_db])
+        except KeyError:
+            _list = [nameserver, ip_string, entry_ip_as_db, belonging_network_ip_as_db]
+            rov_scraping_result_by_as[entry_ip_as_db.as_number] = [_list]
+    rov_page_scraper = ROVPageScraper(headless_browser)
+    for as_number in rov_scraping_result_by_as.keys():
+        print(f"Loading page for AS{as_number}")
         try:
-            rov_page_scraper.load_as_page(entry_found.as_number)
-            row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))
-            rov_scraping_result[nameserver] = row
-            print(f"Handling '{nameserver}' ({ip_string}) associated to AS{entry_found.as_number}, found: {str(row)}")
-        except (ValueError, NotROVStateTypeError, NetworkNotFoundError, selenium.common.exceptions.NoSuchElementException):
-            print(f"Handling '{nameserver}' ({ip_string}) associated to AS{entry_found.as_number}, found nothing.")
+            rov_page_scraper.load_as_page(as_number)
+        except selenium.common.exceptions.WebDriverException as exc:
+            print(f"!!! {str(exc)} !!!")
+            continue
+        for list_of_nameserver in rov_scraping_result_by_as[as_number]:
+            nameserver = list_of_nameserver[0]
+            ip_string = list_of_nameserver[1]
+            entry_ip_as_db = list_of_nameserver[2]
+            belonging_network_ip_as_db = list_of_nameserver[3]
+            try:
+                row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))
+                list_of_nameserver.insert(4, row) # .append(row)
+                print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
+            except selenium.common.exceptions.NoSuchElementException as exc:
+                print(f"!!! {str(exc)} !!!")
+                list_of_nameserver.append(None)
+            except (ValueError, NotROVStateTypeError) as exc:
+                print(f"!!! {str(exc)} !!!")
+                list_of_nameserver.append(None)
+            except NetworkNotFoundError as exc:
+                print(f"!!! {str(exc)} !!!")
+                list_of_nameserver.append(None)
+
     print("Insertion into database... ", end='')
-    for nameserver in rov_scraping_result.keys():
-        helper_entry_rov_page.insert(rov_scraping_result[nameserver])
-        helper_matches.insert_or_get_only_entry_rov_page(nameserver, rov_scraping_result[nameserver])       # TODO: non va...
+    for as_number in rov_scraping_result_by_as.keys():
+        for list_of_nameserver in rov_scraping_result_by_as[as_number]:
+            #
+            nameserver = list_of_nameserver[0]
+            ip_string = list_of_nameserver[1]
+            entry_ip_as_db = list_of_nameserver[2]
+            belonging_network_ip_as_db = list_of_nameserver[3]
+            entry_rov_page = list_of_nameserver[4]
+            #
+            ns = helper_nameserver.insert_or_get(nameserver, ip_string)
+            eia = helper_entry_ip_as_database.insert_or_get(entry_ip_as_db)
+            if entry_rov_page is None:
+                helper_matches.insert_or_get_only_entry_ip_as_db(ns, eia)
+            else:
+                erp = helper_entry_rov_page.insert(entry_rov_page)
+                helper_matches.insert_or_get(ns, eia, erp)
+                nrps = helper_ip_network.insert_or_get(entry_rov_page.prefix)
+                helper_prefix.insert(erp, nrps)
+            niad = helper_ip_network.insert_or_get(belonging_network_ip_as_db)
+            helper_belonging_network.insert_or_get(entry_ip_as_db.as_number, niad)
     print("DONE.")
     print("END ROV PAGE SCRAPING")
     headless_browser.close()
