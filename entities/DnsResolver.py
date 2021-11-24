@@ -1,5 +1,6 @@
-from typing import List, Dict
+from typing import List
 import dns.resolver
+from dns.name import Name
 from entities.DnsErrorLogger import DnsErrorLogger, DnsErrorEntry
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
@@ -32,12 +33,15 @@ class DnsResolver:
             for cname in answer.chaining_result.cnames:
                 temp = []
                 for key in cname.items.keys():
-                    temp.append(key.target)
+                    temp.append(str(key.target))        # ORIGINAL: key.target
                 debug = TypesRR.parse_from_string(dns.rdatatype.to_text(cname.rdtype))
                 cname_rrecords.append(RRecord(cname.name, debug, temp))
             rr_values = list()
             for ad in answer:
-                rr_values.append(ad.to_text())
+                if isinstance(ad, Name):
+                    rr_values.append(str(ad))
+                else:
+                    rr_values.append(ad.to_text())
             response_rrecords = RRecord(answer.canonical_name.to_text(), type_rr, rr_values)
             # risultato: tupla con:
             #       - RRecord di tipo ty con il risultato della query come campo RRecord.values
@@ -101,7 +105,7 @@ class DnsResolver:
                         if zone.name == cache_look_up.get_first_value():
                             is_domain_already_solved = True
                             list_utils.append_with_no_duplicates(zone.cnames, cache_look_up.name)
-                current_zone_cnames.append(cache_look_up.name)
+                current_zone_cnames.append(cache_look_up)
                 path_cnames.append(cache_look_up.name)
                 # continua il ciclo while True seguendo la catena di CNAME
                 current_name = cache_look_up.get_first_value()

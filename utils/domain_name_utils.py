@@ -1,6 +1,7 @@
 import csv
 import re
 from typing import List
+from urllib.parse import urlparse
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import file_utils
 
@@ -19,8 +20,10 @@ def grammatically_correct(domain_name: str) -> None:
     :return: True or False depending on the fact that is valid or not.
     :rtype: bool
     """
+    # original: '^([A-Za-z0-9]\\.|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9]\\.){1,3}[A-Za-z]{2,6}$'
+    temp = eliminate_trailing_point(domain_name)
     pattern = re.compile('^([A-Za-z0-9]\\.|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9]\\.){1,3}[A-Za-z]{2,6}$')
-    if re.match(pattern, domain_name):
+    if re.match(pattern, temp):
         pass
     else:
         raise InvalidDomainNameError(domain_name)
@@ -40,8 +43,9 @@ def is_grammatically_correct(domain_name: str) -> bool:
     :return: True or False depending on the fact that is valid or not.
     :rtype: bool
     """
+    temp = eliminate_trailing_point(domain_name)
     pattern = re.compile('^([A-Za-z0-9]\\.|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9]\\.){1,3}[A-Za-z]{2,6}$')
-    if re.match(pattern, domain_name):
+    if re.match(pattern, temp):
         return True
     else:
         return False
@@ -133,7 +137,7 @@ def eliminate_trailing_point(domain_name: str) -> str:
     if domain_name.endswith("."):
         return eliminate_trailing_point(domain_name[:-1])
     else:
-        return domain_name
+        return (domain_name+'.')[:-1]   # same string (DEEP COPY)
 
 
 def insert_trailing_point(domain_name: str) -> str:
@@ -146,13 +150,14 @@ def insert_trailing_point(domain_name: str) -> str:
     :return: The result.
     :rtype: str
     """
+    if not isinstance(domain_name, str):
+        print("ECCOLO")
     if domain_name.endswith("."):
-        return domain_name
+        return (domain_name+'.')[:-1]   # same string (DEEP COPY)
     else:
         return domain_name+"."
 
 
-# TODO: nessuna eccezione???
 def deduct_domain_name(url: str) -> str:
     """
     Method that tries to isolate a valid domain name from the url string parameter given.
@@ -163,36 +168,18 @@ def deduct_domain_name(url: str) -> str:
     :return: The deducted domain name.
     :rtype: str
     """
-    # temp = url.replace("www.", "")
-    temp = url
-    if temp.endswith("/"):
-        temp = temp[0:-1]
-    last_point_index = temp.rindex(".")
-    end_index = -1
-    for i, char in enumerate(temp, start=last_point_index):
-        if i == '/':
-            end_index = i
-    if end_index == -1:
-        pass
-    else:
-         temp = temp[:end_index]
-    if temp.startswith("http://"):
-        temp = temp.replace("http://", "")
-        return temp
-    elif temp.startswith("https://"):
-        temp = temp.replace("https://", "")
-        return temp
-    elif temp.startswith("ftp://"):
-        temp = temp.replace("ftp://", "")
-        return temp
-    elif temp.startswith("ftps://"):
-        temp = temp.replace("ftps://", "")
-        return temp
-    else:
-        return temp
+    return urlparse(url).netloc
 
 
-def take_snapshot(domain_name_list: List[str]):
+def take_snapshot(domain_name_list: List[str]) -> None:
+    """
+    Export the domain list as a .csv file in the SNAPSHOTS folder of the project root folder (PRD) with a predefined
+    filename.
+
+
+    :param domain_name_list: A list of domain name.
+    :type domain_name_list: List[str]
+    """
     file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_domain_names.csv")
     if not file.exists():
         pass
@@ -201,3 +188,39 @@ def take_snapshot(domain_name_list: List[str]):
         for domain_name in domain_name_list:
             write.writerow([domain_name])
         f.close()
+
+
+def equals(domain_name1: str, domain_name2: str) -> bool:
+    """
+    Return if 2 domain names (as string) are equals: this means if one of them (or all of them) has the trailing point
+    this method handle that.
+
+
+    :param domain_name1: First domain name.
+    :type domain_name1: str
+    :param domain_name2: Second domain name.
+    :type domain_name2: str
+    :returns: True or False
+    :rtype: bool
+    """
+    tmp1 = eliminate_trailing_point(domain_name1)
+    tmp2 = eliminate_trailing_point(domain_name2)
+    return tmp1 == tmp2
+
+
+def is_contained_in_list(_list: List[str], domain_name: str) -> bool:
+    """
+    Return if a domain name is contained in a list, taking care about the trailing point when comparing.
+
+
+    :param _list: A list of domain names.
+    :type _list: List[str]
+    :param domain_name: A domain name.
+    :type domain_name: str
+    :returns: True or False
+    :rtype: bool
+    """
+    for elem in _list:
+        if equals(elem, domain_name):
+            return True
+    return False

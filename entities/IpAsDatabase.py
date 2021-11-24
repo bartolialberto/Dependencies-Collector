@@ -28,8 +28,8 @@ class StringEntryIpAsDatabase:
     reiterate that:         range_start     range_end   AS_number   country_code    AS_description
     and every entity is TAB separated
 
-    Instance Attributes
-    -------------------
+    Attributes
+    ----------
     start_ip_range : `str`
         The start of the ip range. Should be an ip address
     end_ip_range : `str`

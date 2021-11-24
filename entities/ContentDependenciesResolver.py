@@ -1,17 +1,17 @@
 from typing import List, Tuple
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from utils import string_utils
 
 
-# TODO: rifare tutta la doc
 class ContentDependencyEntry:
     """
     This class represent a personalized entry of content dependency.
 
     ...
 
-    Instance Attributes
-    -------------------
+    Attributes
+    ----------
     domain_name : `str`
         The domain name.
     url : `str`
@@ -47,63 +47,52 @@ class ContentDependencyEntry:
 
 class ContentDependenciesResolver:
     """
-    This class concern is to start a headless browser and then, given an url, search for content dependencies to render
-    that url, in particular dependencies of type javascript and application/*. The headless browser needs a valid
-    installation of firefox with its executable file path, and geckodriver executable put in the input folder of the
-    project root folder.
+    This class concern is to search for content dependencies to render/view/elaborate a certain url. Requires a valid
+    headless browser to work associated to geckodriver. In particular geckodriver executable needs to be placed in the
+    input folder of the project root folder (PRD).
 
     ...
 
     Attributes
     ----------
-    firefox_path : `str`
-        The firefox.exe file path (absolute).
-    gecko_driver_path : `str`
-        The geckodriver.exe file path (absolute or relative).
-    options : `selenium.webdriver.firefox.options.Options`
-        Instance of the object representating the options in the browser.
-    binary : `selenium.webdriver.firefox.firefox_binary.FirefoxBinary`
-        Instance of Firefox binary.
-    driver : `seleniumwire.webdriver.Firefox`
-        Instance of the Firefox driver.
+    headless_browser : FirefoxHeadlessWebDriver
+        An instance of a headless browser, in particular Firefox.
     """
 
     def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
         """
-        This class concern is to start a headless browser and then, given an url, search for content dependencies to
-        render that url, in particular dependencies of type javascript and application/*. The headless browser needs a
-        valid installation of firefox with its executable file path, and geckodriver executable put in the input folder
-        of the project root folder. The method is the actual starting point of the headless browser. If everything goes
-        well, then the headless browser is set as attribute.
+        Self-explanatory.
 
 
-        :param firefox_path : The firefox.exe file path (absolute).
-        :type firefox_path: str
-        :raise FilenameNotFoundError: The geckodriver file is not found.
-        :raise selenium.common.exceptions.WebDriverException: There was a problem starting the firefox webdriver.
+        :param headless_browser: The instance of a Firefox headless browser.
+        :type headless_browser: FirefoxHeadlessWebDriver
         """
         self.headless_browser = headless_browser
 
-    def search_script_application_dependencies(self, url: str) -> List[ContentDependencyEntry]:
+    def search_script_application_dependencies(self, url: str, values_list: List[str]) -> List[ContentDependencyEntry]:
         """
-        The method is the actual research of content dependencies from an url/domain name.
+        The method is the actual research of content dependencies from an url/domain name. It searches for dependencies
+        of content-type that contains (as a string) one of the value string of the list parameter.
 
-        :param string: A string representing an url or a domain name. The latter will be changed to a https url.
-        :type string: str
+
+        :param url: A string representing an url.
+        :type url: str
+        :param values_list: A list of content type value string to be matched.
+        :type values_list: List[str]
         :raise selenium.common.exceptions.WebDriverException: There was a problem getting the response form the request.
         :returns: A tuple containing the list of ContentDependencyEntry, and the list of domain name list.
-        :rtype: Tuple[List[ContentDependencyEntry], List[str]]
+        :rtype: List[ContentDependencyEntry]
         """
         try:
             self.headless_browser.driver.get(url)
         except selenium.common.exceptions.WebDriverException:
             raise
-        # response.raise_for_status()     # TODO: mmm solo fare una stampa e ritornare? Meglio va..
+        # response.raise_for_status()
         content_dependencies = list()
         for request in self.headless_browser.driver.requests:
             if request.response:
                 if request.response.headers["Content-Type"] is not None:
-                    if "javascript" in request.response.headers['Content-Type'] or "application/" in request.response.headers['Content-Type']:
+                    if string_utils.multiple_contains(request.response.headers['Content-Type'], values_list):
                         content_dependencies.append(ContentDependencyEntry(request.host, request.url, request.response.status_code, request.response.headers['Content-Type']))
                         # list_utils.append_with_no_duplicates(domain_list, request.host)
                     else:

@@ -16,27 +16,37 @@ db.connect()
 
 
 def handle_tables_creation():       # execute at the end of the file
-    if len(db.get_tables()) > 10:
+    if len(db.get_tables()) > 18:
         pass
     else:
-        db.create_tables([BaseModel,
-                          DomainNameEntity,
-                          ZoneEntity,
-                          DependsAssociation,
-                          BelongsAssociation,
-                          NameserverEntity,
-                          PageEntity,
-                          LandingPageEntity,
-                          LandsAssociation,
-                          RedirectionPath,
-                          ContentDependencyEntity,
-                          ContentDependencyAssociation,
-                          IpNetworkEntity,
-                          EntryIpAsDatabaseEntity,
-                          EntryROVPageEntity,
-                          PrefixAssociation,
-                          BelongingNetworkAssociation,
-                          MatchesAssociation], safe=True)
+        db.create_tables([
+            BaseModel,
+            DomainNameEntity,
+            ZoneEntity,
+            DependsAssociation,
+            BelongsAssociation,
+            NameserverEntity,
+            PageEntity,
+            LandingPageEntity,
+            LandsAssociation,
+            RedirectionPathAssociation,
+            ContentDependencyEntity,
+            ContentDependencyAssociation,
+            IpNetworkEntity,
+            EntryIpAsDatabaseEntity,
+            EntryROVPageEntity,
+            PrefixAssociation,
+            BelongingNetworkAssociation,
+            MatchesAssociation,
+            AliasEntity,
+            CalledAssociation,
+            IpRangeEntity,
+            HasAssociation],    # 22
+            safe=True)
+
+
+def close_database():
+    db.close()
 
 
 class BaseModel(Model):
@@ -132,7 +142,7 @@ class LandsAssociation(BaseModel):
         db_table = 'lands'
 
 
-class RedirectionPath(BaseModel):
+class RedirectionPathAssociation(BaseModel):
     landing_page = ForeignKeyField(PageEntity)
     page = ForeignKeyField(PageEntity)
 
@@ -180,13 +190,11 @@ class IpNetworkEntity(BaseModel):
 
 class EntryIpAsDatabaseEntity(BaseModel):
     autonomous_system_number = IntegerField(null=False)
-    start_range_ip = CharField(null=False)
-    end_range_ip = CharField(null=False)
     country_code = CharField(null=True)     # some are None
     autonomous_system_description = TextField(null=False)
 
     def __str__(self):
-        return f"<{self.start_range_ip}, {self.end_range_ip}, {str(self.autonomous_system_number)}, {self.country_code}, {self.autonomous_system_description}>"
+        return f"<{str(self.autonomous_system_number)}, {self.country_code}, {self.autonomous_system_description}>"
 
     class Meta:
         db_table = 'entry_ip_as_db'
@@ -239,6 +247,51 @@ class MatchesAssociation(BaseModel):
     class Meta:
         primary_key = CompositeKey('nameserver', 'entry_ip_as_database', 'entry_rov_page')
         db_table = 'matches'
+
+
+class AliasEntity(BaseModel):
+    name = CharField(null=False)
+
+    def __str__(self):
+        return f"<{self.name}>"
+
+    class Meta:
+        db_table = 'alias'
+
+
+class CalledAssociation(BaseModel):
+    nameserver = ForeignKeyField(NameserverEntity)
+    alias = ForeignKeyField(AliasEntity)
+
+    def __str__(self):
+        return f"<{self.nameserver}, {self.alias}>"
+
+    class Meta:
+        primary_key = CompositeKey('nameserver', 'alias')
+        db_table = 'called'
+
+
+class IpRangeEntity(BaseModel):
+    start = CharField(null=False)
+    end = CharField(null=False)
+
+    def __str__(self):
+        return f"<{self.start}, {self.end}>"
+
+    class Meta:
+        db_table = 'range'
+
+
+class HasAssociation(BaseModel):
+    entry = ForeignKeyField(EntryIpAsDatabaseEntity)
+    range = ForeignKeyField(IpRangeEntity)
+
+    def __str__(self):
+        return f"<{self.entry}, {self.range}>"
+
+    class Meta:
+        primary_key = CompositeKey('entry', 'range')
+        db_table = 'has'
 
 
 handle_tables_creation()

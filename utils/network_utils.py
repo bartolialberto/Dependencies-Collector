@@ -1,6 +1,5 @@
 import ipaddress
 import socket
-import urllib.request
 
 
 def get_local_ip() -> str:
@@ -11,11 +10,6 @@ def get_local_ip() -> str:
     :rtype: str
     """
     return socket.gethostbyname(socket.gethostname())
-
-
-# TODO: inutile??
-def get_public_ip_from_ident_me():
-    return urllib.request.urlopen('https://ident.me').read().decode('utf8')
 
 
 def is_ip_address(string: str) -> bool:

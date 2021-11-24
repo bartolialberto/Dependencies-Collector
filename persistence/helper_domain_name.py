@@ -1,9 +1,8 @@
 from typing import List
-
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from entities.Zone import Zone
-from persistence.BaseModel import NameserverEntity, ZoneEntity, DomainNameEntity, DependsAssociation, BelongsAssociation
+from persistence.BaseModel import ZoneEntity, NameserverEntity, BelongsAssociation, DomainNameEntity, DependsAssociation
 
 
 def multiple_inserts(result_dict: dict):
@@ -16,7 +15,7 @@ def insert(domain_name: str, zone: Zone):
     z, created = ZoneEntity.get_or_create(name=zone.name)        # z: Tuple[Model, bool]
     for nameserver_rr in zone.nameservers:
         n, created = NameserverEntity.get_or_create(name=nameserver_rr.name, ip=nameserver_rr.get_first_value())
-        BelongsAssociation.get_or_create(zone=z, nameserver=n)
+        ba, created = BelongsAssociation.get_or_create(zone=z, nameserver=n)
     d, created = DomainNameEntity.get_or_create(name=domain_name)
     DependsAssociation.get_or_create(domain=d, zone=z)
 

@@ -5,7 +5,7 @@ from utils import domain_name_utils, file_utils
 from utils.file_utils import search_for_file_type_in_subdirectory
 
 
-def wait_yes_or_no_response(response_legend: str) -> str:
+def wait_yes_or_no_response(response_legend: str) -> bool:
     """
     Asks to the user to type a positive or negative input, and if the response is not as expected, it repeat the
     question+input. The input format is:
@@ -21,9 +21,9 @@ def wait_yes_or_no_response(response_legend: str) -> str:
     while not done:
         answer = input(response_legend)
         if answer == 'y' or answer == 'Y':
-            return 'y'
+            return True
         elif answer == 'n' or answer == 'N':
-            return 'n'
+            return False
         else:
             pass
 

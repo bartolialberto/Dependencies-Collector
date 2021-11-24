@@ -6,24 +6,13 @@ from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 
 
-class CacheExportingTest(unittest.TestCase):
-    # All methods inherited: https://docs.python.org/3/library/unittest.html#unittest.TestCase.debug
+class CacheImportingExportingTestCase(unittest.TestCase):
     temp_folder = None
 
     @classmethod
     def setUpClass(cls) -> None:
-        # eseguito all'inizio di tutti i test UNA volta
-        path_geckodriver = "C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\input\\geckodriver.exe"
-        path_firefox = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
         cls.temp_folder = Path(f"{str(Path.cwd())}{os.sep}temp")
         cls.temp_folder.mkdir(parents=True, exist_ok=True)
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        # eseguito alla fine di tutti i test UNA volta
-        for file in cls.temp_folder.iterdir():
-            file.unlink()
-        cls.temp_folder.rmdir()
 
     def setUp(self) -> None:
         # eseguito prima di OGNI metodo
@@ -51,12 +40,12 @@ class CacheExportingTest(unittest.TestCase):
         except PermissionError:
             self.fail("test_export_file() raised PermissionError!")
 
-    def tearDown(self) -> None:
-        pass
-
-
-# se ci sono file/db da testare e che uitilizzano una directory temporanea, qui alla fine si cancella tutto
-# per avere directory pulite per il prossimo test. Eseguito per ultimo PER OGNI test.
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # eseguito alla fine di tutti i test UNA volta
+        for file in cls.temp_folder.iterdir():
+            file.unlink()
+        cls.temp_folder.rmdir()
 
 
 if __name__ == '__main__':

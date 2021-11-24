@@ -6,10 +6,59 @@ from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.ROVStates import ROVStates
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
+from exceptions.TableEmptyError import TableEmptyError
 
 
 class RowPrefixesTable:
+    """
+    This class represent a row of the pfx_table_div (id of html element) table in the page (ROV page):
+            https://stats.labs.apnic.net/roa/ASXXXX?c=IT&l=1&v=4&t=thist&d=thisd
+    where XXXX is the autonomous system number.
+
+    ...
+
+    Attributes
+    ----------
+    as_number : `int`
+        The autonomous system number.
+    prefix : `ipaddress.IPv4Network`
+        The row prefix announced from the current autonomous system.
+    span : `int`
+        The span.
+    cc : `str`
+        The cc.
+    visibility : `int`
+        The visibility.
+    rov_state : `ROVStates`
+        The ROV state (UNKNOWN, INVALID, VALID).
+    roas : `str`
+        The ROAS.
+    """
     def __init__(self, as_number: str, prefix: str, span: str, cc: str, visibility: str, rov_state: str, roas: str):
+        """
+        Initialize an object from a string representation of every attribute.
+
+        :param as_number:
+        :type as_number: str
+        :param prefix:
+        :type as_number: str
+        :param span:
+        :type span: str
+        :param cc:
+        :type cc: str
+        :param visibility:
+        :type visibility: str
+        :param rov_state:
+        :type rov_state: str
+        :param roas:
+        :type roas: str
+        :raise ValueError: If as_number is not a parsable integer number or it's an integer number < 0.
+        :raise ValueError: If prefix is not a valid string representation of a IPv4Network.
+        :raise ValueError: If span is not a parsable integer number.
+        :raise ValueError: If cc is a string with length != 2.
+        :raise ValueError: If visibility is not a parsable integer number.
+        :raise NotROVStateTypeError: If rov_state is not a parsable ROV state.
+        """
         tmp = as_number.strip('AS')
         try:
             int_as_number = int(tmp)
@@ -56,20 +105,71 @@ class RowPrefixesTable:
 
 
 class ROVPageScraper:
-    def __init__(self, headless_browser: FirefoxHeadlessWebDriver):      # TODO: dbg inutile
+    """
+    This class represent a scraper that looks for the pfx_table_div (id of html element) table in the page (ROV page):
+            https://stats.labs.apnic.net/roa/ASXXXX?c=IT&l=1&v=4&t=thist&d=thisd
+    where XXXX is the autonomous system number. Requires a valid headless browser to work associated to geckodriver.
+    In particular geckodriver executable needs to be placed in the input folder of the project root folder (PRD).
+
+    ...
+
+    Attributes
+    ----------
+    headless_browser : FirefoxHeadlessWebDriver
+        An instance of a headless browser, in particular Firefox.
+    """
+
+    def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
+        """
+        Self-explanatory.
+
+        :param headless_browser: The instance of a Firefox headless browser.
+        :type headless_browser: FirefoxHeadlessWebDriver
+        """
         self.headless_browser = headless_browser
 
-    def load_page(self, url_page: str):
+    def load_page(self, url_page: str) -> None:
+        """
+        Execute a GET of the url in the headless browser. The result is in the state of the headless browser.
+
+        :param url_page: The url.
+        :type url_page: str
+        """
         try:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.WebDriverException:
             raise
 
-    def load_as_page(self, as_number: int):
-        self.load_page(ROVPageScraper.base_url(as_number))
+    def load_as_page(self, as_number: int) -> None:
+        """
+        Execute a GET of the url that is associated with the autonomous system number parameter. The result is in the
+        state of the headless browser.
 
-    # TODO: e se la tabella è vuota?
+        :param as_number: The autonomous system number.
+        :type as_number: int
+        :raise ValueError: If the autonomous system number is < 0.
+        """
+        if as_number < 0:
+            raise ValueError
+        else:
+            self.load_page(ROVPageScraper.base_url(as_number))
+
     def get_prefixes_table_from_page(self) -> List[RowPrefixesTable]:
+        """
+        This method scrape the current page in the headless browser to find the pfx_table_div (id html element) table
+        constructed (normally) in the ROV page. Obviously it needs a previous load of a valid autonomous system page.
+        See method: load_as_page().
+
+        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
+        elements to reach the pfx_table_div (id html element) table.
+        :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
+        :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
+        :return: A list of RowPrefixesTable objects to represent the pfx_table_div (id html element) table.
+        :rtype: List[RowPrefixesTable]
+        """
         try:
             div = self.headless_browser.driver.find_element(By.ID, 'pfx_table_div')
         except selenium.common.exceptions.NoSuchElementException:
@@ -85,7 +185,7 @@ class ROVPageScraper:
         try:
             trs = tbody.find_elements(By.TAG_NAME, "tr")
         except selenium.common.exceptions.NoSuchElementException:
-            raise
+            raise TableEmptyError
         prefixes_table = list()
         for tr in trs:
             try:
@@ -101,6 +201,25 @@ class ROVPageScraper:
         return prefixes_table
 
     def get_network_if_present(self, ip: ipaddress.IPv4Address) -> RowPrefixesTable:
+        """
+        This method scrape the current page in the headless browser to find the pfx_table_div (id html element) table
+        constructed (normally) in the ROV page and then search for all the prefixes (networks) and controls if the
+        ip parameter is contained in one of such prefixes (networks).
+
+
+        :param ip: An ip v4 address.
+        :type ip: ipaddress.IPv4Address
+        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
+        elements to reach the pfx_table_div (id html element) table.
+        :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
+        :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
+        :raise NetworkNotFoundError: If a network that contains the ip parameter is not found in the table.
+        :return: The matched row (from the prefix) in the table.
+        :rtype: RowPrefixesTable
+        """
         try:
             div = self.headless_browser.driver.find_element(By.ID, 'pfx_table_div')
         except selenium.common.exceptions.NoSuchElementException:
@@ -116,7 +235,7 @@ class ROVPageScraper:
         try:
             trs = tbody.find_elements(By.TAG_NAME, "tr")
         except selenium.common.exceptions.NoSuchElementException:
-            raise
+            raise TableEmptyError
         for tr in trs:
             try:
                 tds = tr.find_elements(By.TAG_NAME, 'td')
@@ -138,4 +257,12 @@ class ROVPageScraper:
 
     @staticmethod
     def base_url(as_number: int) -> str:
+        """
+        Construct the base ROV page url from an autonomous system number.
+
+        :param as_number: An integer that represents an autonomous system number.
+        :type as_number: int
+        :return: The ROV page url of that autonomous system number.
+        :rtype: str
+        """
         return 'https://stats.labs.apnic.net/roa/AS'+str(as_number)+'?c=IT&l=1&v=4&t=thist&d=thisd'

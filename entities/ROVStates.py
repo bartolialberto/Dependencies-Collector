@@ -3,15 +3,35 @@ from exceptions.NotROVStateTypeError import NotROVStateTypeError
 
 
 class ROVStates(Enum):
+    """
+    This class represent all the states of a ROV in the ROVPage (web page).
+
+    """
     UNK = "UNK",
     INV = "INV",
-    VLD = "VLD"
+    VLD = "VLD",
 
     def to_string(self) -> str:
+        """
+        This method return a string representation of the type, which is also the exact representation used in the web
+        page.
+
+        :returns: The string representation of the type.
+        :rtype: str
+        """
         return str(self.value[0])
 
     @staticmethod
     def parse_from_string(string: str) -> 'ROVStates':
+        """
+        This method parse a string and returns if it match a representation of one of the type.
+
+        :param string: The string parameter.
+        :type string: str
+        :raise NotROVStateTypeError: If there is no match.
+        :returns: The matched ROVStates enum.
+        :rtype: ROVStates
+        """
         if string == 'UNK' or string == 'unk' or string == 'UNKNOWN' or string == 'unknown':
             return ROVStates.UNK
         elif string == 'INV' or string == 'inv' or string == 'INVALID' or string == 'invalid':

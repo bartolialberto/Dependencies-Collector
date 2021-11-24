@@ -10,7 +10,7 @@ class TypesRR(Enum):
     A = "A",
     CNAME = "CNAME",
     NS = "NS",
-    MX = "MX"
+    MX = "MX",
 
     def to_string(self) -> str:
         """
@@ -24,7 +24,7 @@ class TypesRR(Enum):
     @staticmethod
     def parse_from_string(string: str) -> 'TypesRR':
         """
-        This method return a string representation of the type.
+        This method parse a string and returns if it match a representation of one of the type.
 
         :param string: The string parameter.
         :type string: str
@@ -34,11 +34,11 @@ class TypesRR(Enum):
         """
         if string == 'A' or string == 'a':
             return TypesRR.A
-        elif string == 'CNAME' or string == 'cname':
+        elif string == 'CNAME' or string == 'cname' or string == 'Cname':
             return TypesRR.CNAME
-        elif string == 'NS' or string == 'ns':
+        elif string == 'NS' or string == 'ns' or string == 'Ns':
             return TypesRR.NS
-        elif string == 'MX' or string == 'mx':
+        elif string == 'MX' or string == 'mx' or string == 'Mx':
             return TypesRR.MX
         else:
             raise NotResourceRecordTypeError(string)

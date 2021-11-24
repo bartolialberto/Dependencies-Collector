@@ -1,3 +1,4 @@
+from typing import Tuple, List
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import domain_name_utils
 import os
@@ -8,7 +9,26 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-def resolve_landing_page(domain_name: str):
+def resolve_landing_page(domain_name: str) -> Tuple[str, List[str], bool]:
+    """
+    This method returns the landing page, the redirecction path and the HTTP Strict Transport Security validity from a
+    domain name. In particular it creates an url from the domain name and then tries a GET HTTP method with it.
+
+    :param domain_name: A domain name.
+    :type domain_name: str
+    :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.
+    Requests that produced this error are safe to retry.
+    :raise requests.exceptions.ConnectionError: A Connection error occurred. This occurs if https is not supported by
+    the server.
+    :raise requests.exceptions.URLRequired: A valid URL is required to make a request.
+    :raise requests.exceptions.TooManyRedirects: Too many redirects.
+    :raise requests.exceptions.ReadTimeout: The server did not send any data in the allotted amount of time.
+    :raise requests.exceptions.Timeout: The request timed out. Catching this error will catch both ConnectTimeout and
+    ReadTimeout errors.
+    :raise requests.exceptions.RequestException: There was an ambiguous exception that occurred while handling your
+    :return: A tuple containing the landing url, all the url redirection and the HSTS validity.
+    :rtype: Tuple[str, List[str], bool]
+    """
     redirection_path = list()
     try:
         domain_name_utils.grammatically_correct(domain_name)
@@ -18,7 +38,7 @@ def resolve_landing_page(domain_name: str):
     try:
         url = domain_name_utils.deduct_http_url(domain_name, as_https=True)
         print(f"URL deducted: {domain_name} ---> {url}")
-        response = requests.get(url, headers={'Connection': 'close'})
+        response = requests.get(url, headers={'Connection': 'close'})       # FIXME: giusto chiudere subito?
     except requests.exceptions.ConnectTimeout:
         # The request timed out while trying to connect to the remote server.
         # Requests that produced this error are safe to retry.

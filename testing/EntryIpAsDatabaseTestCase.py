@@ -1,26 +1,23 @@
 import ipaddress
 import unittest
 from pathlib import Path
-from entities.IpAsDatabase import IpAsDatabase, EntryIpAsDatabase
+from entities.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 
 
-class ListingNetworkOfAutonomousSystem(unittest.TestCase):
-    # All methods inherited: https://docs.python.org/3/library/unittest.html#unittest.TestCase.debug
-
+class EntryIpAsDatabaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        # eseguito all'inizio di tutti i test UNA volta
         cls.db = IpAsDatabase(project_root_directory=Path.cwd().parent)
 
-    def test_listing_networks_from_ip_address(self):
+    def test_from_ip_addresses(self):
         # PARAMETERS
-        params = ["194.119.192.34", "192.12.94.30", "192.42.177.30", "192.58.128.30"]
+        params = ['192.5.6.30']
         # Actual test
         ip_params = list()
         for param in params:
             ip_params.append(ipaddress.ip_address(param))
-        print(f"test_listing_networks_from_ip_address ****************************************************************")
+        print(f"test_from_ip_addresses ****************************************************************")
         print(f"ips: {str(ip_params)}")
         for ip in ip_params:
             try:
@@ -37,11 +34,11 @@ class ListingNetworkOfAutonomousSystem(unittest.TestCase):
             except ValueError as e:
                 print(f"!!! {str(e)} !!!")
 
-    def test_listing_networks_from_as_number(self):
+    def test_from_as_number(self):
         # PARAMETERS
         params = [31034]
         # Actual test
-        print(f"\ntest_listing_networks_from_as_number ****************************************************************")
+        print(f"\ntest_from_as_number ****************************************************************")
         print(f"AS numbers: {str(params)}")
         for param in params:
             try:
