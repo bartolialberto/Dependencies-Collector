@@ -49,9 +49,11 @@ def get_domain_names() -> List[str]:
             result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
         except FileWithExtensionNotFoundError:
             print(f"> No .txt file found in input folder found.")
-            print(f"> Starting application with default domain names as sample.")
+            print(f"> Starting application with default domain names as sample:")
             domain_name_list.append('google.it')
             domain_name_list.append('youtube.it')
+            for index, domain_name in enumerate(domain_name_list):
+                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
             return domain_name_list
         file = result[0]
         abs_filepath = str(file)
@@ -267,7 +269,7 @@ def application_runner():
     total_content_dependencies_result = dict()
     tsv_db_is_updated = file_utils.is_tsv_database_updated()
     if tsv_db_is_updated:
-        pass
+        print("> .tsv database file is updated.")
     else:
         print("> Latest .tsv database (~25 MB) is downloading and extracting... ", end='')
         requests_utils.download_latest_tsv_database()
