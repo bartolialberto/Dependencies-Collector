@@ -33,7 +33,7 @@ You can install them all using one command:
 pip install selenium selenium-wire dnspython==2.1.0 peewee
 ```
 
-##Configuration
+## Configuration
 To configure the application you have to:
 1) Use Windows as OS
 2) Have Firefox installed
@@ -45,7 +45,7 @@ it is controlled by the application itself, and if it is absent (or updated less
 downloaded, extracted and replaced automatically.
 Obviously you can copy such database in the folder manually.
 
-##Run application
+## How to run
 The application starts executing the main.py file.
 The only application input/argument is a list of domain name. You can set them in 2 ways:
 1) via command line
@@ -57,7 +57,7 @@ google.it
 youtube.it
 ```
 
-##Snapshot exception mechanism
+## Snapshot exception mechanism
 If an unwanted exception occurs, the application will notice that and will take a snapshot of the initial state of
 the execution to be studied/resolved later. It will create a sub-folder (relative to the SNAPSHOTS folder) using
 the current timestamp (as name) containing:
@@ -66,7 +66,7 @@ the current timestamp (as name) containing:
 3) a .txt containing the type of the exception, the result of the str(.) method used on the exception and the traceback
 object print
 
-##Results
+## Execution results
 The final state of the DNS cache will be exported as .csv file, and so will be the DNS error logs. Everything will be
 put in the 'output' folder.
 Results of each entity are saved in the sqlite database put in the 'output' folder with name: 'results.sqlite' .
