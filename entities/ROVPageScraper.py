@@ -117,6 +117,13 @@ class ROVPageScraper:
     ----------
     headless_browser : FirefoxHeadlessWebDriver
         An instance of a headless browser, in particular Firefox.
+    prefixes_table : List[RowPrefixesTable]
+        A list that represents the pfx_table_div (id of html element) table in the page (ROV page) saved state of this
+        object to save computational time when asked to see if an ip address is contained in one of the prefixes in
+        such table. We wanna avoid traversing the DOM for each address query.
+    current_as_number : int
+        An integer that saves the current as page loaded.
+
     """
 
     def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
@@ -127,6 +134,8 @@ class ROVPageScraper:
         :type headless_browser: FirefoxHeadlessWebDriver
         """
         self.headless_browser = headless_browser
+        self.prefixes_table = list()
+        self.current_as_number = -1
 
     def load_page(self, url_page: str) -> None:
         """
@@ -134,11 +143,14 @@ class ROVPageScraper:
 
         :param url_page: The url.
         :type url_page: str
+        :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
         """
         try:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.WebDriverException:
             raise
+        self.prefixes_table.clear()
+        self.current_as_number = -1
 
     def load_as_page(self, as_number: int) -> None:
         """
@@ -148,13 +160,24 @@ class ROVPageScraper:
         :param as_number: The autonomous system number.
         :type as_number: int
         :raise ValueError: If the autonomous system number is < 0.
+        :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
+        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
+        elements to reach the pfx_table_div (id html element) table.
+        :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
+        :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
+        RowPrefixesTable.
         """
         if as_number < 0:
             raise ValueError
         else:
             self.load_page(ROVPageScraper.base_url(as_number))
+            self.prefixes_table.clear()
+            self.current_as_number = as_number
+            self.scrape_prefixes_table_from_page()
 
-    def get_prefixes_table_from_page(self) -> List[RowPrefixesTable]:
+    def scrape_prefixes_table_from_page(self) -> List[RowPrefixesTable]:
         """
         This method scrape the current page in the headless browser to find the pfx_table_div (id html element) table
         constructed (normally) in the ROV page. Obviously it needs a previous load of a valid autonomous system page.
@@ -198,61 +221,28 @@ class ROVPageScraper:
                 prefixes_table.append(tmp)
             except (ValueError, NotROVStateTypeError):
                 raise
+        self.prefixes_table = prefixes_table
         return prefixes_table
 
     def get_network_if_present(self, ip: ipaddress.IPv4Address) -> RowPrefixesTable:
         """
-        This method scrape the current page in the headless browser to find the pfx_table_div (id html element) table
-        constructed (normally) in the ROV page and then search for all the prefixes (networks) and controls if the
-        ip parameter is contained in one of such prefixes (networks).
+        This method search in the table saved in the state of this ROVPageScraper object a row containing a prefix which
+        contains the address parameter. In other words, before this method you have to invoke load_as_page(as_number)
+        method.
 
 
         :param ip: An ip v4 address.
         :type ip: ipaddress.IPv4Address
-        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
-        elements to reach the pfx_table_div (id html element) table.
-        :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
-        RowPrefixesTable.
         :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
-        :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
-        RowPrefixesTable.
         :raise NetworkNotFoundError: If a network that contains the ip parameter is not found in the table.
         :return: The matched row (from the prefix) in the table.
         :rtype: RowPrefixesTable
         """
-        try:
-            div = self.headless_browser.driver.find_element(By.ID, 'pfx_table_div')
-        except selenium.common.exceptions.NoSuchElementException:
-            raise
-        try:
-            table = div.find_element(By.TAG_NAME, 'table')
-        except selenium.common.exceptions.NoSuchElementException:
-            raise
-        try:
-            tbody = table.find_element(By.TAG_NAME, "tbody")
-        except selenium.common.exceptions.NoSuchElementException:
-            raise
-        try:
-            trs = tbody.find_elements(By.TAG_NAME, "tr")
-        except selenium.common.exceptions.NoSuchElementException:
-            raise TableEmptyError
-        for tr in trs:
-            try:
-                tds = tr.find_elements(By.TAG_NAME, 'td')
-            except selenium.common.exceptions.NoSuchElementException:
-                raise
-            try:
-                network = ipaddress.ip_network(tds[2].text)
-                if ip in network:
-                    try:
-                        # tds[0].text is the index number
-                        return RowPrefixesTable(tds[1].text, tds[2].text, tds[3].text, tds[4].text, tds[5].text, tds[6].text, tds[7].text)
-                    except (ValueError, NotROVStateTypeError):
-                        raise
-                else:
-                    pass
-            except ValueError:
-                raise
+        if len(self.prefixes_table) == 0:
+            raise TableEmptyError(self.current_as_number)
+        for row in self.prefixes_table:
+            if ip in row.prefix:
+                return row
         raise NetworkNotFoundError(ip.compressed)
 
     @staticmethod

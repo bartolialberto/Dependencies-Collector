@@ -7,9 +7,7 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
-from persistence import helper_domain_name, helper_landing_page, helper_content_dependency,\
-    helper_entry_ip_as_database, helper_ip_network, helper_nameserver, helper_matches, helper_belonging_network,\
-    helper_entry_rov_page, helper_prefix
+from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, helper_matches
 from persistence.BaseModel import db
 from take_snapshot import take_snapshot
 from pathlib import Path
@@ -19,15 +17,13 @@ from entities.ContentDependenciesResolver import ContentDependenciesResolver
 from entities.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
-from exceptions.NoValidDomainNamesFoundError import NoValidDomainNamesFoundError
-from utils import network_utils, list_utils, shell_utils, requests_utils, results_utils
+from utils import network_utils, list_utils, shell_utils, requests_utils, results_utils, file_utils
 from utils import domain_name_utils
 
 # entities
 dns_resolver = DnsResolver()
 ip_as_db = None
 headless_browser = None
-content_resolver = None
 try:
     ip_as_db = IpAsDatabase()
 except (FileWithExtensionNotFoundError, OSError) as e:
@@ -48,24 +44,30 @@ rov_page_scraper = ROVPageScraper(headless_browser)
 def get_domain_names() -> List[str]:
     domain_name_list = list()
     if len(sys.argv) == 1:
-        answer = shell_utils.wait_how_to_load_domain_names_response()
-        if answer == 0:
-            try:
-                domain_name_list = shell_utils.handle_getting_domain_names_from_txt_file()
-                print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-                for index, domain_name in enumerate(domain_name_list):
-                    print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-            except FileWithExtensionNotFoundError:
-                print(f"!!! No .txt file found in input folder. !!!")
-                exit(1)
-            except NoValidDomainNamesFoundError as exc:
-                print(f"!!! {exc.message} !!!")
-                exit(1)
-        else:
-            domain_name_list = shell_utils.wait_domain_names_typing()
-            print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-            for index, domain_name in enumerate(domain_name_list):
-                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
+        print(f"> No domain names found in command line.")
+        try:
+            result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
+        except FileWithExtensionNotFoundError:
+            print(f"> No .txt file found in input folder found.")
+            print(f"> Starting application with default domain names as sample.")
+            domain_name_list.append('google.it')
+            domain_name_list.append('youtube.it')
+            return domain_name_list
+        file = result[0]
+        abs_filepath = str(file)
+        with open(abs_filepath, 'r') as f:  # 'w' or 'x'
+            print(f"> Found file: {abs_filepath}")
+            lines = f.readlines()
+            for line in lines:
+                candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
+                if domain_name_utils.is_grammatically_correct(candidate):
+                    domain_name_list.append(candidate)
+                else:
+                    pass
+            f.close()
+            if len(domain_name_list) == 0:
+                print(f"> The .txt file in input folder doesn't contain any valid domain name.")
+                exit(0)
     else:
         print('> Argument List:', str(sys.argv))
         for arg in sys.argv[1:]:
@@ -93,7 +95,6 @@ def reformat_entries(ip_as_db_entries_result: dict) -> dict:
         if entry_ip_as_db is None:
             continue
         belonging_network_ip_as_db = ip_as_db_entries_result[nameserver][2]   # ipaddress.IPv4Network
-
         try:
             all_entries_result_by_as[entry_ip_as_db.as_number]
             try:
@@ -108,10 +109,6 @@ def reformat_entries(ip_as_db_entries_result: dict) -> dict:
 
 def dns_resolving(domain_names: List[str]) -> dict:
     print("\n\nSTART DNS DEPENDENCIES RESOLVER")
-    try:
-        dns_resolver.cache.load_csv_from_output_folder()
-    except (ValueError, FilenameNotFoundError, OSError) as exc:
-        print(f"!!! {str(exc)} !!!")
     dns_resolver.cache.take_snapshot()
     dns_results = dns_resolver.search_multiple_domains_dependencies(domain_names)
     print("END DNS DEPENDENCIES RESOLVER")
@@ -187,6 +184,23 @@ def rov_page_scraping(ip_as_db_entries_result) -> dict:
             rov_page_scraper.load_as_page(as_number)
         except selenium.common.exceptions.WebDriverException as exc:
             print(f"!!! {str(exc)} !!!")
+            all_entries_result_by_as[as_number][nameserver].append(None)
+            continue
+        except ValueError as exc:
+            print(f"!!! {str(exc)} !!!")
+            all_entries_result_by_as[as_number][nameserver].append(None)
+            continue
+        except selenium.common.exceptions.NoSuchElementException as exc:
+            print(f"!!! {str(exc)} !!!")
+            all_entries_result_by_as[as_number][nameserver].append(None)
+            continue
+        except TableEmptyError as exc:
+            print(f"!!! {exc.message} !!!")
+            all_entries_result_by_as[as_number][nameserver].append(None)
+            continue
+        except NotROVStateTypeError as exc:
+            print(f"!!! {exc.message} !!!")
+            all_entries_result_by_as[as_number][nameserver].append(None)
             continue
         for nameserver in all_entries_result_by_as[as_number].keys():
             ip_string = all_entries_result_by_as[as_number][nameserver][0]
@@ -194,19 +208,14 @@ def rov_page_scraping(ip_as_db_entries_result) -> dict:
             belonging_network_ip_as_db = all_entries_result_by_as[as_number][nameserver][2]
             try:
                 row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))
-                all_entries_result_by_as[as_number][nameserver].append(row)        #.insert(3m row)
+                all_entries_result_by_as[as_number][nameserver].append(row)
                 print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
-            except selenium.common.exceptions.NoSuchElementException as exc:
-                print(f"!!! {str(exc)} !!!")
-                all_entries_result_by_as[as_number][nameserver].append(None)
-            except (ValueError, NotROVStateTypeError) as exc:
-                print(f"!!! {str(exc)} !!!")
+            except TableEmptyError as exc:
+                print(f"!!! {exc.message} !!!")
                 all_entries_result_by_as[as_number][nameserver].append(None)
             except NetworkNotFoundError as exc:
-                print(f"!!! {str(exc)} !!!")
+                print(f"!!! {exc.message} !!!")
                 all_entries_result_by_as[as_number][nameserver].append(None)
-            except TableEmptyError:
-                pass
     print("END ROV PAGE SCRAPING")
     return all_entries_result_by_as
 
@@ -217,12 +226,13 @@ def do_recursive_execution(new_domain_names: List[str], total_domain_names: List
         return
     new_dns_results = dns_resolving(new_domain_names)
     results_utils.merge_dns_results(total_dns_results, new_dns_results)
-    results_utils.merge_ip_as_db_results(total_ip_as_results, ip_as_resolving(new_dns_results))
+    new_ip_as_results = ip_as_resolving(new_dns_results)
+    results_utils.merge_ip_as_db_results(total_ip_as_results, new_ip_as_results)
     new_landing_page_results = landing_page_resolving(new_domain_names)
     results_utils.merge_landing_page_results(total_landing_page_results, new_landing_page_results)
     new_content_dependencies_results = content_resolving(new_landing_page_results)
     results_utils.merge_content_dependencies_results(total_content_dependencies_result, new_content_dependencies_results)
-    # copy every new name in the old list
+    # copy every new name in the total list
     for domain_name in new_domain_names:
         list_utils.append_with_no_duplicates(total_domain_names, domain_name)
     for i in range(len(new_domain_names)):
@@ -246,25 +256,25 @@ def application_runner():
     total_domain_names = list()
     new_domain_names = get_domain_names()
     domain_name_utils.take_snapshot(new_domain_names)
-    # components results that will be populated
+    try:
+        dns_resolver.cache.load_csv_from_output_folder()
+    except (ValueError, FilenameNotFoundError, OSError) as exc:
+        print(f"!!! {str(exc)} !!!")
+    # component's results that will be populated
     total_dns_results = dict()
     total_ip_as_results = dict()
     total_landing_page_results = dict()
     total_content_dependencies_result = dict()
-    print(f"> Do you want to download latest ip-as database from https://iptoasn.com/ ?")
-    answer = shell_utils.wait_yes_or_no_response("> ")
-    if answer:
-        print("Latest database is downloading and extracting... ", end='')
-        try:
-            requests_utils.download_latest_tsv_database()
-            print("DONE.")
-        except FileWithExtensionNotFoundError as err:
-            print(f"!!! {str(err)} !!!")
-    else:
+    tsv_db_is_updated = file_utils.is_tsv_database_updated()
+    if tsv_db_is_updated:
         pass
+    else:
+        print("> Latest .tsv database (~25 MB) is downloading and extracting... ", end='')
+        requests_utils.download_latest_tsv_database()
+        print("DONE.")
     # actual elaboration
     do_recursive_execution(new_domain_names, total_domain_names, total_dns_results, total_ip_as_results, total_landing_page_results, total_content_dependencies_result)
-    # rov scraping can be done outside the recursive cycle
+    # rov scraping is done outside the recursive cycle
     total_entries_result_by_as = rov_page_scraping(total_ip_as_results)
     print("Insertion into database... ", end='')
     helper_domain_name.multiple_inserts(total_dns_results)
@@ -280,12 +290,13 @@ def application_runner():
     db.close()
 
 
-print("********** START APPLICATION **********")
-try:
-    application_runner()
-except Exception as e:
-    take_snapshot(e)
-    headless_browser.close()
-    print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
-    print(f"!!! {str(e)} !!!")
-print("********** APPLICATION END **********")
+if __name__ == "__main__":
+    print("********** START APPLICATION **********")
+    try:
+        application_runner()
+    except Exception as e:
+        take_snapshot(e)
+        headless_browser.close()
+        print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
+        print(f"!!! {str(e)} !!!")
+    print("********** APPLICATION END **********")

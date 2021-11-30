@@ -1,6 +1,0 @@
-accounts.google.com
-login.microsoftonline.com
-www.facebook.com
-auth.digidentity.eu
-clave-dninbrt.seg-social.gob.es
-pasarela.clave.gob.es

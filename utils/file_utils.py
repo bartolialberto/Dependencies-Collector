@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
@@ -130,3 +131,43 @@ def set_file_in_folder(subdirectory_name: str, filename: str, project_root_direc
     return file
 
 
+def last_modified(path_to_file: str) -> float:
+    """
+    Get the date that a file was last modified in seconds (since epoch).
+
+    :raise OSError: If something happened.
+    :returns: The date expressed as seconds since epoch.
+    :rtype: float
+    """
+    try:
+        stat = os.stat(path_to_file)
+    except OSError:
+        raise
+    return stat.st_mtime
+
+
+def is_tsv_database_updated(project_root_directory=Path.cwd()) -> bool:
+    """
+    This method checks if the .tsv database downloaded in the input folder is updated: we consider the database
+    'updated' if it was downloaded at most one hour ago; this because in https://iptoasn.com/ it is said that the
+    database is updated hourly. It returns False even in the case that the file is absent.
+
+    :return: A boolean saying if it is updated or not (or there is no file).
+    :rtype: bool
+    """
+    try:
+        paths = search_for_file_type_in_subdirectory('input', '.tsv', project_root_directory)
+    except FileWithExtensionNotFoundError:
+        return False
+    file = paths[0]
+    try:
+        ct = last_modified(str(file))
+    except OSError:
+        return False
+    dt = datetime.fromtimestamp(ct)
+    now = datetime.now()
+    diff_sec = (now - dt).seconds
+    if diff_sec / (60*24) >= 1:  # more than 1 hour is passed
+        return False
+    else:
+        return True
