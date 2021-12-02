@@ -12,18 +12,22 @@ class StringEntryIpAsDatabase:
     """
     This class represent the same entity as EntryIpAsDatabase, the only difference is that all attributes are string.
     This is done because the basic idea is:
-    1) download the database (see https://iptoasn.com/) and put downloaded file in the input folder
-        (in project root folder)
-    2) instantiating an IpAsDatabase object will load all entries of the database in the entries attribute automatically
-        because the code will navigate the input folder searching the first occurrence of a .tsv file.
-        The entries attribute is a list of StringEntryIpAsDatabase and not EntryIpAsDatabase because the database will
-        contain around half a million entries, so if we instantiate for every entry (entry == row) an
-        EntryIpAsDatabase performance will be worse than instantiating a StringEntryIpAsDatabase. In this manner to
-        resolve the ip parameter will require only an instantiation of the first ip address in the entry
-        (start_ip_range as ipaddress.Ipv4Address object).
-    3) only after the resolution of the ip address to an entry of the database, the entry is instantiated as a
-        EntryIpAsDatabase object. Therefore EntryIpAsDatabase is use only for yielding the result of the method that
-        is concerned with the resolution.
+
+    1- download the database (see https://iptoasn.com/) and put downloaded file in the input folder
+    (in project root folder)
+
+    2- instantiating an IpAsDatabase object will load all entries of the database in the entries attribute automatically
+    because the code will navigate the input folder searching the first occurrence of a .tsv file.
+    The entries attribute is a list of StringEntryIpAsDatabase and not EntryIpAsDatabase because the database will
+    contain around half a million entries, so if we instantiate for every entry (entry == row) an
+    EntryIpAsDatabase performance will be worse than instantiating a StringEntryIpAsDatabase. In this manner to
+    resolve the ip parameter will require only an instantiation of the first ip address in the entry
+    (start_ip_range as ipaddress.Ipv4Address object).
+
+    3- only after the resolution of the ip address to an entry of the database, the entry is instantiated as a
+    EntryIpAsDatabase object. Therefore EntryIpAsDatabase is use only for yielding the result of the method that
+    is concerned with the resolution.
+
     The format of an entry as StringEntryIpAsDatabase is exactly described as in https://iptoasn.com/. If we want to
     reiterate that:         range_start     range_end   AS_number   country_code    AS_description
     and every entity is TAB separated

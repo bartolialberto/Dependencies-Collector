@@ -9,13 +9,15 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-def resolve_landing_page(domain_name: str) -> Tuple[str, List[str], bool]:
+def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str], bool]:
     """
     This method returns the landing page, the redirecction path and the HTTP Strict Transport Security validity from a
     domain name. In particular it creates an url from the domain name and then tries a GET HTTP method with it.
 
     :param domain_name: A domain name.
     :type domain_name: str
+    :param as_https: A boolean setting if the url constructed from the domain name parameter uses HTTPS or HTTP.
+    :type as_https: bool
     :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.
     Requests that produced this error are safe to retry.
     :raise requests.exceptions.ConnectionError: A Connection error occurred. This occurs if https is not supported by
@@ -36,7 +38,7 @@ def resolve_landing_page(domain_name: str) -> Tuple[str, List[str], bool]:
         raise
     hsts = False
     try:
-        url = domain_name_utils.deduct_http_url(domain_name, as_https=True)
+        url = domain_name_utils.deduct_http_url(domain_name, as_https)
         print(f"URL deducted: {domain_name} ---> {url}")
         response = requests.get(url, headers={'Connection': 'close'})       # FIXME: giusto chiudere subito?
     except requests.exceptions.ConnectTimeout:
@@ -82,11 +84,14 @@ def resolve_landing_page(domain_name: str) -> Tuple[str, List[str], bool]:
             break
     redirection_path.append(response.url)  # final page
     landing_url = response.url
-    landing_domain = domain_name_utils.deduct_domain_name(response.url)
     return landing_url, redirection_path, hsts
 
 
-def download_latest_tsv_database():
+def download_latest_tsv_database() -> None:
+    """
+    Download the .tsv database from the site, extract it and finally delete the archive. Everything in the input folder.
+
+    """
     url = 'https://iptoasn.com/data/ip2asn-v4.tsv.gz'
     r = requests.get(url, allow_redirects=True)
     with open(f"{str(Path.cwd())}{os.sep}input{os.sep}ip2asn-v4.tsv.gz", 'wb') as d:
@@ -95,7 +100,12 @@ def download_latest_tsv_database():
         extract_gz_archive()
 
 
-def extract_gz_archive():
+def extract_gz_archive() -> None:
+    """
+    Extract the first .gz archive found in the input folder.
+    Then it deletes the archive.
+
+    """
     try:
         result = file_utils.search_for_file_type_in_subdirectory("input", ".gz")
     except FileWithExtensionNotFoundError:

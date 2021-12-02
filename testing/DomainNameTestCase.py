@@ -5,6 +5,7 @@ from utils import domain_name_utils
 class MyTestCase(unittest.TestCase):
     def test_correctness(self):
         domain_name = 'tracking-protection.cdn.mozilla.net.'
+        # domain_name = 'firefox.settings.services.mozilla.com'     # No
         is_right = domain_name_utils.is_grammatically_correct(domain_name)
         print(f"Domain name: {domain_name}")
         print(f"Is that right? {is_right}")

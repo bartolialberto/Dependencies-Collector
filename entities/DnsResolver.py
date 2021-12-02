@@ -178,8 +178,7 @@ class DnsResolver:
                     if ns not in subdomains:
                         subdomains.append(ns)
             zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames))
-        print(
-            f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs.logs)} errors.\n")
+        print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs.logs)} errors.\n")
         return zone_list
 
     def export_all(self) -> None:

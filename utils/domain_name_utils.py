@@ -14,6 +14,7 @@ def grammatically_correct(domain_name: str) -> None:
         - the domain name should not start or end with a hyphen(-) (e.g. -geeksforgeeks.org or geeksforgeeks.org-).
         - the last TLD (Top level domain) must be at least two characters and a maximum of 6 characters.
         - the domain name can be a subdomain (e.g. contribute.geeksforgeeks.org)
+    Also, it is considered valid even with the trailing point.
 
     :param domain_name: The candidate domain name.
     :type domain_name: str
@@ -37,6 +38,7 @@ def is_grammatically_correct(domain_name: str) -> bool:
         - the domain name should not start or end with a hyphen(-) (e.g. -geeksforgeeks.org or geeksforgeeks.org-).
         - the last TLD (Top level domain) must be at least two characters and a maximum of 6 characters.
         - the domain name can be a subdomain (e.g. contribute.geeksforgeeks.org)
+    Also, it is considered valid even with the trailing point.
 
     :param domain_name: The candidate domain name.
     :type domain_name: str
@@ -150,8 +152,6 @@ def insert_trailing_point(domain_name: str) -> str:
     :return: The result.
     :rtype: str
     """
-    if not isinstance(domain_name, str):
-        print("ECCOLO")
     if domain_name.endswith("."):
         return (domain_name+'.')[:-1]   # same string (DEEP COPY)
     else:

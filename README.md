@@ -34,6 +34,10 @@ pip install selenium selenium-wire dnspython==2.1.0 peewee
 ```
 
 ## Configuration
+The application uses 2 vital folders: the 'input' folder used to contain all the necessary files to function
+(described later), and the 'output' folder that contains the results of an execution gone well.
+Both folders are created in the project root directory: LavoroTesi.
+
 To configure the application you have to:
 1) Use Windows as OS
 2) Have Firefox installed
@@ -74,7 +78,7 @@ Results of each entity are saved in the sqlite database put in the 'output' fold
 The ER schema of such database is shown at the end of this readme file.
 
 The application can be seen as a block diagram:
-![alt text](schema_blocchi_tesi.drawio.png)
+![alt text](res/schema_blocchi_tesi.drawio.png)
 
 The expected prints during its execution of each component are:
 
@@ -171,12 +175,10 @@ END CONTENT DEPENDENCIES RESOLVER
 If there are new domain names, will be printed:
 ```
 
-NEW DOMAIN NAME[1/6]: tracking-protection.cdn.mozilla.net
-NEW DOMAIN NAME[2/6]: consent.google.it
-NEW DOMAIN NAME[3/6]: www.gstatic.com
-NEW DOMAIN NAME[4/6]: apis.google.com
-NEW DOMAIN NAME[5/6]: www.youtube.com
-NEW DOMAIN NAME[6/6]: youtube.com
+NEW DOMAIN NAME[1/4]: tracking-protection.cdn.mozilla.net
+NEW DOMAIN NAME[2/4]: consent.google.it
+NEW DOMAIN NAME[3/4]: www.gstatic.com
+NEW DOMAIN NAME[4/4]: apis.google.com
 
 ```
 and the prints will start again from the DnsResolver with the new domain names.
@@ -215,6 +217,6 @@ END ROV PAGE SCRAPING
 ```
 
 The database result ER schema is:
-![alt text](SchemaEReffettivo.drawio.png)
+![alt text](res/SchemaEReffettivo.drawio.png)
 
 Every entity has an implicit numerical primary key.  
