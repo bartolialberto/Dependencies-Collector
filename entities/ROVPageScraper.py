@@ -172,10 +172,22 @@ class ROVPageScraper:
         if as_number < 0:
             raise ValueError
         else:
-            self.load_page(ROVPageScraper.base_url(as_number))
+            try:
+                self.load_page(ROVPageScraper.base_url(as_number))
+            except selenium.common.exceptions.WebDriverException:
+                raise
             self.prefixes_table.clear()
             self.current_as_number = as_number
-            self.scrape_prefixes_table_from_page()
+            try:
+                self.scrape_prefixes_table_from_page()
+            except selenium.common.exceptions.NoSuchElementException:
+                raise
+            except ValueError:
+                raise
+            except TableEmptyError:
+                raise
+            except NotROVStateTypeError:
+                raise
 
     def scrape_prefixes_table_from_page(self) -> List[RowPrefixesTable]:
         """

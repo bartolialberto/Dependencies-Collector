@@ -126,7 +126,7 @@ def set_file_in_folder(subdirectory_name: str, filename: str, project_root_direc
         else:
             pass
     folder = Path(f"{str(Path.cwd())}{os.sep}{subdirectory_name}")
-    folder.mkdir(parents=True, exist_ok=False)
+    folder.mkdir(parents=True, exist_ok=True)
     file = Path(f"{str(folder)}{os.sep}{filename}")
     return file
 

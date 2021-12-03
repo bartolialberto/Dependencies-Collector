@@ -77,10 +77,10 @@ if __name__ == "__main__":
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
         new_domain_names = get_domain_names()
-        domain_name_utils.take_snapshot(new_domain_names)   # for error future reproducibility
+        domain_name_utils.take_snapshot(new_domain_names)   # for future error reproducibility
         # entities
         resolvers = ApplicationResolvers()
-        resolvers.dns_resolver.cache.take_snapshot()        # for error future reproducibility
+        resolvers.dns_resolver.cache.take_snapshot()        # for future error reproducibility
         # actual elaboration of all resolvers
         resolvers.do_recursive_cycle_execution(new_domain_names)
         # rov scraping is done outside the recursive cycle

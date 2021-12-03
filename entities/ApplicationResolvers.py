@@ -143,9 +143,9 @@ class ApplicationResolvers:
         This method concern is to execute the so called recursive cycle as described in the README.md file.
         It starts from the domain names to be checked (the parameter of this method), then in sequence are performed:
 
-        1- DNS Resolver to check zone dependencies.
+        1- DNS Resolver to check zone dependencies
 
-        2- Network's number database resolver to find an AS associated to every nameserver with a valid IP from the.
+        2- Network's number database resolver to find an AS associated to every nameserver with a valid IP from the
         previous component (and a possible belonging network)
 
         3- Landing page resolver to find a landing page (url) from each domain name from the start of the DNS resolver
@@ -153,13 +153,12 @@ class ApplicationResolvers:
         4- Content dependencies resolver to find all the script dependencies from all landing page from previous
         component
 
-        At this point, from all the content dependencies, it extracts all the domain name and compare them to the
+        At this point, from all the content dependencies, it extracts all the domain names and compare them to the
         initial domain names: if some domain names are new then the cycle repeats using such new domain names.
         The cycle ends when there aren't new domain names to check.
 
         :param new_domain_names: A list of domain name.
         :type new_domain_names: List[str]
-        :return: Itself
         """
         if len(new_domain_names) == 0:
             print(f"NO NEW DOMAIN NAME.")
@@ -236,7 +235,7 @@ class ApplicationResolvers:
                     except AutonomousSystemNotFoundError as exc:
                         print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS found.")
                         self.error_logger.add_entry(ErrorLog(exc, rr.get_first_value(), f"No AS found in the database."))
-                        ip_as_db_entries_result[rr.name] = (None, None, None)  # TODO: tenerne traccia in qualche modo
+                        ip_as_db_entries_result[rr.name] = (ip, None, None)  # TODO: tenerne traccia in qualche modo
         print("END IP-AS RESOLVER")
         return ip_as_db_entries_result
 
@@ -329,27 +328,13 @@ class ApplicationResolvers:
                 self.rov_page_scraper.load_as_page(as_number)
             except selenium.common.exceptions.WebDriverException as exc:
                 print(f"!!! {str(exc)} !!!")
-                entries_result_by_as[as_number][nameserver].append(None)  # FIXME: anche [nameserver]? Perché?
+                # non tengo neanche traccia di ciò
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
-            except ValueError as exc:
+            # FIXME: differenziare meglio, TableNonExistent e TableEmpty
+            except (selenium.common.exceptions.NoSuchElementException, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
                 print(f"!!! {str(exc)} !!!")
-                entries_result_by_as[as_number][nameserver].append(None)
-                self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
-                continue
-            except selenium.common.exceptions.NoSuchElementException as exc:
-                print(f"!!! {str(exc)} !!!")
-                entries_result_by_as[as_number][nameserver].append(None)
-                self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
-                continue
-            except TableEmptyError as exc:  # FIXME: differenziare meglio, TableNonExistent e TableEmpty
-                print(f"!!! {exc.message} !!!")
-                entries_result_by_as[as_number][nameserver].append(None)
-                self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
-                continue
-            except NotROVStateTypeError as exc:
-                print(f"!!! {exc.message} !!!")
-                entries_result_by_as[as_number][nameserver].append(None)
+                entries_result_by_as[as_number] = None
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
             for nameserver in entries_result_by_as[as_number].keys():
