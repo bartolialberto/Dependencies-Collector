@@ -28,5 +28,11 @@ class ErrorLog:
         self.entity_cause = entity_cause
         self.reason_phrase = reason_phrase
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.error_type}\t{self.entity_cause}\t{self.reason_phrase}"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ErrorLog):
+            return self.error_type == other.error_type and self.entity_cause == other.entity_cause
+        else:
+            return False

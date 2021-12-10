@@ -152,8 +152,14 @@ class EntryIpAsDatabase:
                 return network, networks
         raise ValueError()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{str(self.start_ip_range)}\t{str(self.end_ip_range)}\t{str(self.as_number)}\t{self.country_code}\t{self.as_description}"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, EntryIpAsDatabase):
+            return self.as_number == other.as_number
+        else:
+            return False
 
 
 class IpAsDatabase:

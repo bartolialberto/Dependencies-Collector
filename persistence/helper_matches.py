@@ -1,10 +1,20 @@
+from peewee import DoesNotExist
 from persistence import helper_nameserver, helper_entry_ip_as_database, helper_entry_rov_page, helper_ip_network, \
     helper_prefix, helper_belonging_network, helper_range, helper_has
-from persistence.BaseModel import EntryIpAsDatabaseEntity, MatchesAssociation, NameserverEntity, EntryROVPageEntity
+from persistence.BaseModel import MatchesAssociation, NameserverEntity, EntryIpAsDatabaseEntity, EntryROVPageEntity
 
 
-def insert_or_get_only_entry_ip_as_db(n: NameserverEntity, eia: EntryIpAsDatabaseEntity):
+def insert_entry_ip_as_db(n: NameserverEntity, eia: EntryIpAsDatabaseEntity):
     ma, created = MatchesAssociation.get_or_create(nameserver=n.id, entry_rov_page=None, entry_ip_as_database=eia.id)
+
+
+def temp_insert_entry_ip_as_db(ne: NameserverEntity, eia: EntryIpAsDatabaseEntity) -> MatchesAssociation:
+    try:
+        ma = MatchesAssociation.get(MatchesAssociation.nameserver == ne, MatchesAssociation.entry_ip_as_database == eia)
+    except DoesNotExist:
+        return MatchesAssociation.create(nameserver=ne, entry_rov_page=None, entry_ip_as_database=eia)
+    result_ma, created = MatchesAssociation.get_or_create(nameserver=ne, entry_rov_page=ma.entry_rov_page, entry_ip_as_database=eia)
+    return result_ma
 
 
 def insert_or_get(n: NameserverEntity, eia: EntryIpAsDatabaseEntity, erp: EntryROVPageEntity):
@@ -28,15 +38,15 @@ def insert_all_entries_associated(all_entries_result_by_as: dict):
             entry_rov_page = all_entries_result_by_as[as_number][nameserver][3]
             #
             ns = helper_nameserver.insert_or_get(nameserver, ip_string)
-            eia = helper_entry_ip_as_database.insert_or_get(entry_ip_as_db)
-            r = helper_range.insert_or_get(entry_ip_as_db.start_ip_range, entry_ip_as_db.end_ip_range)
-            h = helper_has.insert_or_get(eia, r)
+            eia = helper_entry_ip_as_database.insert(entry_ip_as_db)
+            r = helper_range.insert(entry_ip_as_db.start_ip_range, entry_ip_as_db.end_ip_range)
+            h = helper_has.insert(eia, r)
             if entry_rov_page is None:
-                insert_or_get_only_entry_ip_as_db(ns, eia)
+                insert_entry_ip_as_db(ns, eia)
             else:
                 erp = helper_entry_rov_page.insert(entry_rov_page)
                 insert_or_get(ns, eia, erp)
                 nrps = helper_ip_network.insert_or_get(entry_rov_page.prefix)
                 helper_prefix.insert(erp, nrps)
             niad = helper_ip_network.insert_or_get(belonging_network_ip_as_db)
-            helper_belonging_network.insert_or_get(entry_ip_as_db.as_number, niad)
+            helper_belonging_network.insert(entry_ip_as_db.as_number, niad)

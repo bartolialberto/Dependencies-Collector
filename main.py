@@ -2,15 +2,15 @@ import sys
 from typing import List
 from entities.ApplicationResolvers import ApplicationResolvers
 from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, helper_matches
-from persistence.BaseModel import db
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils
 from utils import domain_name_utils
 
 
-def get_domain_names() -> List[str]:
+def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[str]:
     """
     Start of the application: getting the domain names, and returning them as a list of string.
     They can be set from command line and from a .txt file put in the input folder in which each domain name is written
@@ -32,11 +32,14 @@ def get_domain_names() -> List[str]:
         except FileWithExtensionNotFoundError:
             print(f"> No .txt file found in input folder found.")
             print(f"> Starting application with default domain names as sample:")
-            domain_name_list.append('google.it')       # darklyrics.com works only on HTTP
-            domain_name_list.append('youtube.it')
-            for index, domain_name in enumerate(domain_name_list):
-                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-            return domain_name_list
+            #default_domain_names = list(default_domain_names)
+            # default_domain_names.append('google.it')       # darklyrics.com works only on HTTP
+            # default_domain_names.append('youtube.it')
+            # default_domain_names.append('unipd.it')
+            # default_domain_names.append('ocsp.digicert.com')
+            for index, domain_name in enumerate(default_domain_names):
+                print(f"> [{index + 1}/{len(default_domain_names)}]: {domain_name}")
+            return default_domain_names
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
@@ -70,6 +73,17 @@ def get_domain_names() -> List[str]:
     return domain_name_list
 
 
+def get_flag(default_persist_errors=False) -> bool:
+    """
+    Star
+    """
+    print('> Argument List:', str(sys.argv))
+    for arg in sys.argv[1:]:
+        if arg == 'qualcosa_da_definire':
+            default_persist_errors = True
+    return default_persist_errors
+
+
 if __name__ == "__main__":
     print("********** START APPLICATION **********")
     try:
@@ -77,9 +91,11 @@ if __name__ == "__main__":
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
         new_domain_names = get_domain_names()
-        domain_name_utils.take_snapshot(new_domain_names)   # for future error reproducibility
+        persist_errors = get_flag()
         # entities
         resolvers = ApplicationResolvers()
+        # auxiliary elaborations
+        domain_name_utils.take_snapshot(new_domain_names)   # for future error reproducibility
         resolvers.dns_resolver.cache.take_snapshot()        # for future error reproducibility
         # actual elaboration of all resolvers
         resolvers.do_recursive_cycle_execution(new_domain_names)
@@ -92,9 +108,9 @@ if __name__ == "__main__":
         helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)  # FIXME: controllare sul database gli inserimenti
         helper_matches.insert_all_entries_associated(results)       # FIXME: controllare sul database gli inserimenti
         print("DONE.")
-        # export cache and error_logs
+        # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
-        resolvers.error_logger.write_to_csv_in_output_folder('error_logs')
+        resolvers.error_logger.write_to_csv_in_output_folder()
         # closing
         resolvers.headless_browser.close()
         db.close()

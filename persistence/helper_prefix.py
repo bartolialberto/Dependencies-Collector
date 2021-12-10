@@ -1,4 +1,4 @@
-from persistence.BaseModel import EntryROVPageEntity, IpNetworkEntity, PrefixAssociation
+from persistence.BaseModel import IpNetworkEntity, PrefixAssociation, EntryROVPageEntity
 
 
 def insert(e: EntryROVPageEntity, n: IpNetworkEntity) -> PrefixAssociation:

@@ -15,7 +15,6 @@ class CacheImportingExportingTestCase(unittest.TestCase):
         cls.temp_folder.mkdir(parents=True, exist_ok=True)
 
     def setUp(self) -> None:
-        # eseguito prima di OGNI metodo
         self.cache = LocalDnsResolverCache()
         self.cache.add_entry(RRecord("prova1", TypesRR.A, "167.83.69.0"))
         self.cache.add_entry(RRecord("prova2", TypesRR.A, ["144.200.1.34", "199.188.200.1", "94.87.13.4", "13.12.101.1"]))

@@ -31,6 +31,8 @@ def is_ip_address(string: str) -> bool:
 def is_in_ip_range(ip: ipaddress.IPv4Address, start_ip_range: ipaddress.IPv4Address, end_ip_range: ipaddress.IPv4Address) -> bool:
     """
     Given a range of ip address, it controls if another ip address is contained in such range.
+    Remember this is not commutative: if an address is contained between address A (start_ip_range) and address B
+    (end_ip_range), it is not contained between address B (end_ip_range) and address A (start_ip_range).
 
     :param ip: Ip address to query in the range.
     :type ip: ipaddress.IPv4Address

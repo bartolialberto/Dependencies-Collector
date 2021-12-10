@@ -45,7 +45,7 @@ class RRecord:
 
     def __eq__(self, other):
         if isinstance(other, RRecord):
-            if self.name == other.name and self.type is other.type:
+            if self.name == other.name and self.type == other.type:
                 return True
             else:
                 return False
@@ -87,3 +87,6 @@ class RRecord:
         for val in split_values:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)
+
+    def __str__(self):
+        return f"{self.name}\t{self.type.to_string()}\t{str(self.values)}"

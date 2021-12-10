@@ -267,6 +267,7 @@ class ApplicationResolvers:
                 try:
                     # TODO: caso in cui c'è una ConnectionError ma non è il caso in cui è supportato solo http... Come si fa?
                     (landing_url, redirection_path, hsts) = requests_utils.resolve_landing_page(domain_name, as_https=False)
+                    self.error_logger.add_entry(ErrorLog(exc, domain_name, "Connection only works on HTTP."))
                     print(f"It seems that HTTPS is not supported by server. Trying with HTTP:")
                     print(f"Landing url: {landing_url}")
                     print(f"HTTP Strict Transport Security: {hsts}")
@@ -329,12 +330,14 @@ class ApplicationResolvers:
             except selenium.common.exceptions.WebDriverException as exc:
                 print(f"!!! {str(exc)} !!!")
                 # non tengo neanche traccia di ciò
+                entries_result_by_as[as_number] = None
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
             # FIXME: differenziare meglio, TableNonExistent e TableEmpty
             except (selenium.common.exceptions.NoSuchElementException, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
                 print(f"!!! {str(exc)} !!!")
                 entries_result_by_as[as_number] = None
+                entries_result_by_as.pop(as_number)
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
             for nameserver in entries_result_by_as[as_number].keys():

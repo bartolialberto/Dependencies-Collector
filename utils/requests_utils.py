@@ -11,7 +11,7 @@ from utils import file_utils
 
 def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str], bool]:
     """
-    This method returns the landing page, the redirecction path and the HTTP Strict Transport Security validity from a
+    This method returns the landing page, the redirection path and the HTTP Strict Transport Security validity from a
     domain name. In particular it creates an url from the domain name and then tries a GET HTTP method with it.
 
     :param domain_name: A domain name.
@@ -66,52 +66,56 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     except requests.exceptions.RequestException:
         # There was an ambiguous exception that occurred while handling your request.
         raise
-    bool_list = list()
-    for resp in response.history:
-        redirection_path.append(resp.url)
-        if resp.headers.get('strict-transport-security') is not None:
-            bool_list.append(True)
-        else:
-            bool_list.append(False)
-    for index, flag in enumerate(bool_list):
-        if flag:
-            if index == len(bool_list) - 1:
-                hsts = True
-            else:
-                pass
-        else:
-            hsts = False
-            break
+    if response.headers.get('strict-transport-security') is not None:
+        hsts = True
+    else:
+        hsts = False
     redirection_path.append(response.url)  # final page
     landing_url = response.url
     return landing_url, redirection_path, hsts
 
 
-def download_latest_tsv_database() -> None:
+def download_latest_tsv_database(project_root_directory=Path.cwd()) -> None:
     """
     Download the .tsv database from the site, extract it and finally delete the archive. Everything in the input folder.
+    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+    to default as if the entry point is main.py file (which is the only entry point considered).
 
+    :param project_root_directory: The Path object pointing at the project root directory.
+    :type project_root_directory: Path
     """
     url = 'https://iptoasn.com/data/ip2asn-v4.tsv.gz'
     r = requests.get(url, allow_redirects=True)
-    with open(f"{str(Path.cwd())}{os.sep}input{os.sep}ip2asn-v4.tsv.gz", 'wb') as d:
+    with open(f"{str(project_root_directory)}{os.sep}input{os.sep}ip2asn-v4.tsv.gz", 'wb') as d:
         d.write(r.content)
         d.close()
-        extract_gz_archive()
+        extract_gz_archive(project_root_directory=project_root_directory)
 
 
-def extract_gz_archive() -> None:
+def extract_gz_archive(project_root_directory=Path.cwd()) -> None:
     """
     Extract the first .gz archive found in the input folder.
     Then it deletes the archive.
+    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+    to default as if the entry point is main.py file (which is the only entry point considered).
 
+    :param project_root_directory: The Path object pointing at the project root directory.
+    :type project_root_directory: Path
     """
     try:
-        result = file_utils.search_for_file_type_in_subdirectory("input", ".gz")
+        result = file_utils.search_for_file_type_in_subdirectory("input", ".gz", project_root_directory=project_root_directory)
     except FileWithExtensionNotFoundError:
         raise
     archive = result[0]
-    file = file_utils.set_file_in_folder("input", "ip2asn-v4.tsv")
+    file = file_utils.set_file_in_folder("input", "ip2asn-v4.tsv", project_root_directory=project_root_directory)
     file_content = None
     with gzip.open(f"{str(archive)}", 'rb') as ar:
         file_content = ar.read()        # if content is very large, lots of RAM is occupied

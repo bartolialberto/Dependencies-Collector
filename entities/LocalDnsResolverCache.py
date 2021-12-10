@@ -1,14 +1,17 @@
 import csv
 from pathlib import Path
-from typing import List
+from typing import List, Set, Tuple
+
+from entities.Zone import Zone
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import file_utils, csv_utils
+from utils import file_utils, csv_utils, list_utils
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 
 
+# FIXME: documentazione
 class LocalDnsResolverCache:
     """
     This class represent a simple sort of personalized Cache that keep tracks of all resource records in a list.
@@ -55,6 +58,9 @@ class LocalDnsResolverCache:
         """
         self.separator = separator
 
+    def clear(self):
+        self.cache.clear()
+
     def look_up_first(self, domain_name: str, type_rr: TypesRR) -> RRecord:
         """
         Search for the first occurrence of a resource record of name and type as parameters told.
@@ -68,7 +74,7 @@ class LocalDnsResolverCache:
         :rtype: RRecord
         """
         for rr in self.cache:
-            if rr.name == domain_name and rr.type.to_string() == type_rr.to_string():
+            if rr.name == domain_name and rr.type == type_rr:
                 return rr
         raise NoRecordInCacheError(domain_name, type_rr)
 
@@ -86,12 +92,111 @@ class LocalDnsResolverCache:
         """
         result = []
         for rr in self.cache:
-            if rr.name == domain_name and rr.type.to_string() == type_rr.to_string():
+            if rr.name == domain_name and rr.type == type_rr:
                 result.append(rr)
         if len(result) == 0:
             raise NoRecordInCacheError(domain_name, type_rr)
         else:
             return result
+
+    def look_up_from_list(self, names: List[str], type_rr: TypesRR):
+        for name in names:
+            try:
+                rr = self.look_up_first(name, type_rr)
+                return rr
+            except NoRecordInCacheError:
+                pass
+        raise NoRecordInCacheError(str(names), type_rr)
+
+    def look_up_all_aliases(self, name: str) -> Set[str]:
+        aliases = set()
+        for rr in self.cache:
+            if rr.type == TypesRR.CNAME and rr.name == name:
+                for value in rr.values:
+                    aliases.add(value)
+            elif rr.type == TypesRR.CNAME and name in rr.values:
+                aliases.add(rr.name)
+                for value in rr.values:
+                    aliases.add(value)      # set has no duplicates allowed (silent exception)
+        return aliases
+
+    def look_up_a_query_with_all_aliases(self, nameserver: str):
+        try:
+            rr_a_cache = self.look_up_first(nameserver, TypesRR.A)
+            return rr_a_cache
+        except NoRecordInCacheError:
+            pass
+        for alias in self.look_up_all_aliases(nameserver):
+            try:
+                rr_a_cache = self.look_up_first(alias, TypesRR.A)
+                return rr_a_cache
+            except NoRecordInCacheError:
+                pass
+        raise NoRecordInCacheError(nameserver, TypesRR.A)
+
+    def resolve_path_from_alias(self, alias: str) -> RRecord:
+        aliases = self.look_up_all_aliases(alias)
+        for a in aliases:
+            try:
+                result = self.look_up_first(a, TypesRR.A)
+                return result
+            except NoRecordInCacheError:
+                pass
+        raise NoRecordInCacheError(alias, TypesRR.A)
+
+    def resolve_zone_from_zone_name(self, rr_ns: RRecord) -> Tuple[str, List[RRecord], List[RRecord]]:
+        # c'è il rr nella cache
+        zone_name = rr_ns.name
+        zone_nameservers = list()
+        zone_aliases = list()
+        for nameserver in rr_ns.values:
+            aliases = self.look_up_all_aliases(nameserver)
+            if len(aliases) != 0:
+                zone_aliases.append(RRecord(nameserver, TypesRR.CNAME, list(aliases)))      # creo un rr di tipo CNAME personalizzato: name = nameserver effettivo (che ha il rr di tipo A), e tutti gli alias come values
+            rr_a = None
+            try:
+                rr_a = self.look_up_first(nameserver, TypesRR.A)
+            except NoRecordInCacheError:
+                # try to get through aliases
+                for alias in aliases:
+                    try:
+                        rr_a = self.look_up_first(alias, TypesRR.A)
+                        break
+                    except NoRecordInCacheError:
+                        pass
+            if rr_a is None:
+                raise NoRecordInCacheError(rr_ns.name, rr_ns.type)
+            zone_nameservers.append(rr_a)
+        return zone_name, zone_nameservers, zone_aliases
+
+    def look_up_first_nameserver_from_alias(self, alias: str) -> str:
+        for rr in self.cache:
+            if rr.type is TypesRR.CNAME and alias in rr.values:
+                return rr.name
+
+    def look_up_first_alias(self, alias: str) -> RRecord:
+        for rr in self.cache:
+            if rr.type is TypesRR.CNAME and alias == rr.name:
+                return rr
+            elif rr.type is TypesRR.CNAME and alias in rr.values:
+                return rr
+        raise NoRecordInCacheError(alias, TypesRR.CNAME)
+
+    def look_up_nameserver_from_alias(self, alias: str) -> List[str]:
+        # può un alias essere alias di più di un nameserver???
+        result = []
+        for rr in self.cache:
+            if rr.type is TypesRR.CNAME and alias in rr.values:
+                list_utils.append_with_no_duplicates(result, rr.name)
+        return result
+
+    def look_up_zone_from_nameserver(self, nameserver: str) -> List[str]:
+        # MEMO: un nameserver può essere nameserver of the zone di più zone
+        result = []
+        for rr in self.cache:
+            if rr.type is TypesRR.NS and nameserver in rr.values:
+                list_utils.append_with_no_duplicates(result, rr.name)
+        return result
 
     def load_csv(self, path: str, take_snapshot=True) -> None:
         """

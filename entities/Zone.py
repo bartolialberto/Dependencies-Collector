@@ -4,6 +4,7 @@ from entities.TypesRR import TypesRR
 from utils import list_utils
 
 
+# FIXME: documentazione
 class Zone:
     """
     This class represent a simple zone. Semantically it represents only the data structures, not the fact
@@ -17,7 +18,7 @@ class Zone:
         The name of the zone..
     nameservers : `List[RRecord]`
         A list of all nameservers name of the zone.
-    cnames : `list[str]`
+    aliases : `list[str]`
         The aliases associated with all the nameservers of the zone.
     """
 
@@ -42,7 +43,16 @@ class Zone:
         if not list_utils.are_all_objects_RRecord_and_rr_type(list_cnames, TypesRR.CNAME):
             raise ValueError()
         if list_rr_a_of_nsz is None or len(list_cnames) == 0:
-            self.cnames = list()
+            self.aliases = dict()
         else:
-            self.cnames = list_cnames
+            self.aliases = list_cnames
         self.name = zone_name
+
+    def __str__(self) -> str:
+        return f"{self.name}, {len(self.nameservers)}#nameservers, {len(self.aliases)}#aliases"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Zone):
+            return self.name == other.name
+        else:
+            return False

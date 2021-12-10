@@ -7,8 +7,12 @@ from utils import file_utils
 cwd = None
 if Path.cwd().name == 'LavoroTesi':
     cwd = Path.cwd()
-else:
+elif Path.cwd().parent.name == 'LavoroTesi':
     cwd = Path.cwd().parent
+elif Path.cwd().parent.parent.name == 'LavoroTesi':
+    cwd = Path.cwd().parent.parent
+else:
+    cwd = Path.cwd().parent.parent.parent
 db_file = file_utils.set_file_in_folder('output', 'results.sqlite', cwd)
 db_file.open(mode='a').close()
 db = SqliteDatabase(str(db_file))
@@ -55,7 +59,7 @@ class BaseModel(Model):
 
 
 class NameserverEntity(BaseModel):
-    name = CharField(null=False)
+    name = CharField(null=False, unique=True)
     ip = CharField(null=True)
 
     def __str__(self):
@@ -76,7 +80,7 @@ class DomainNameEntity(BaseModel):
 
 
 class ZoneEntity(BaseModel):
-    name = CharField(null=False)
+    name = CharField(null=False, unique=True)
 
     def __str__(self):
         return f"<{self.name}>"
@@ -110,7 +114,7 @@ class DependsAssociation(BaseModel):
 
 
 class PageEntity(BaseModel):
-    url = CharField(null=False)
+    url = TextField(null=False, unique=True)
     hsts = BooleanField(null=False)
 
     def __str__(self):
@@ -155,7 +159,7 @@ class RedirectionPathAssociation(BaseModel):
 
 
 class ContentDependencyEntity(BaseModel):
-    url = CharField(null=False)
+    url = TextField(null=False, unique=True)
     mime_type = CharField(null=False)
     state = CharField(null=False)
     domain_name = CharField(null=False)
@@ -226,7 +230,7 @@ class PrefixAssociation(BaseModel):
 
 class BelongingNetworkAssociation(BaseModel):
     entry = ForeignKeyField(EntryIpAsDatabaseEntity)
-    network = ForeignKeyField(IpNetworkEntity)
+    network = ForeignKeyField(IpNetworkEntity, null=True)
 
     def __str__(self):
         return f"<{self.entry}, {self.network}>"

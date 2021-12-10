@@ -156,7 +156,7 @@ class ORMInsertionTestCase(unittest.TestCase):
         print(f"test_entry_ip_as_db_insertion ****************************************************************")
         nameserver = 'dns.nic.it.'
         entry = EntryIpAsDatabase(StringEntryIpAsDatabase(['192.167.12.3', '192.167.13.0', '1134', 'IT', 'descrip']))
-        e = helper_entry_ip_as_database.insert_or_get(entry)
+        e = helper_entry_ip_as_database.insert(entry)
         helper_entry_ip_as_database.populate_matches_association(nameserver, e)
 
     def test_insertion_all_entries(self):

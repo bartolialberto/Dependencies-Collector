@@ -1,6 +1,6 @@
-from persistence.BaseModel import EntryIpAsDatabaseEntity, IpRangeEntity, HasAssociation
+from persistence.BaseModel import EntryIpAsDatabaseEntity, HasAssociation, IpRangeEntity
 
 
-def insert_or_get(entry: EntryIpAsDatabaseEntity, ip_range: IpRangeEntity) -> HasAssociation:
-    h, created = HasAssociation.get_or_create(entry=entry.id, range=ip_range)
-    return h
+def insert(eiade: EntryIpAsDatabaseEntity, ire: IpRangeEntity) -> HasAssociation:
+    ha, created = HasAssociation.get_or_create(entry=eiade, range=ire)
+    return ha

@@ -1,5 +1,8 @@
 # LavoroTesi
 ## Python setup
+The python version used to develop this software is 3.8
+The package manager(pip) version used is 21.2.2
+
 The python modules used/imported in this project:
 
 ```

@@ -74,7 +74,7 @@ class ErrorLogger:
         except OSError:
             raise
 
-    def write_to_csv_in_output_folder(self, filename: str, project_root_directory=Path.cwd()) -> None:
+    def write_to_csv_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
         """
         This method export all the error logs to a csv using the separator of the self object in the output folder of
         the project. It needs the Path object of the project root directory (PRD).
@@ -89,7 +89,6 @@ class ErrorLogger:
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
-        :return:
         """
         file = file_utils.set_file_in_folder("output", filename+".csv", project_root_directory)
         file_abs_path = str(file)

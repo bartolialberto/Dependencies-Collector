@@ -11,9 +11,9 @@ class MyTestCase(unittest.TestCase):
         print(f"{ip.compressed} is in {network.compressed}? {result}")
 
     def test_from_address_range(self):
-        ip = ipaddress.IPv4Address('216.239.38.10')
-        start_ip_range = ipaddress.IPv4Address('216.239.37.10')
-        end_ip_range = ipaddress.IPv4Address('216.239.39.10')
+        ip = ipaddress.IPv4Address('150.145.1.4')
+        start_ip_range = ipaddress.IPv4Address('150.145.0.0')
+        end_ip_range = ipaddress.IPv4Address('150.145.255.255')
         result = network_utils.is_in_ip_range(ip, start_ip_range, end_ip_range)
         print(f"{ip.compressed} is in [{start_ip_range.compressed} - {end_ip_range.compressed}]? {result}")
 
