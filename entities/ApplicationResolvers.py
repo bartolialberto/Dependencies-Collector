@@ -15,6 +15,7 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
+from exceptions.TableNotPresentError import TableNotPresentError
 from utils import file_utils, requests_utils, list_utils, domain_name_utils
 
 
@@ -192,7 +193,8 @@ class ApplicationResolvers:
         """
         print("\n\nSTART DNS DEPENDENCIES RESOLVER")
         self.dns_resolver.cache.take_snapshot()
-        dns_results = self.dns_resolver.search_multiple_domains_dependencies(domain_names)
+        results = self.dns_resolver.resolve_multiple_domains_dependencies(domain_names)
+        dns_results = results[0]
         print("END DNS DEPENDENCIES RESOLVER")
         return dns_results
 
@@ -256,8 +258,9 @@ class ApplicationResolvers:
         for domain_name in domain_name_list:
             print(f"\nTrying to connect to domain '{domain_name}' via HTTPS:")
             try:
-                (landing_url, redirection_path, hsts) = requests_utils.resolve_landing_page(domain_name)
+                (landing_url, redirection_path, hsts, ip) = requests_utils.resolve_landing_page(domain_name)
                 print(f"Landing url: {landing_url}")
+                print(f"Ip: {ip.compressed}")
                 print(f"HTTP Strict Transport Security: {hsts}")
                 print(f"Redirection path:")
                 for index, url in enumerate(redirection_path):
@@ -266,10 +269,11 @@ class ApplicationResolvers:
             except requests.exceptions.ConnectionError as exc:  # exception that contains the case in which HTTPS is not supported by the server
                 try:
                     # TODO: caso in cui c'è una ConnectionError ma non è il caso in cui è supportato solo http... Come si fa?
-                    (landing_url, redirection_path, hsts) = requests_utils.resolve_landing_page(domain_name, as_https=False)
+                    (landing_url, redirection_path, hsts, ip) = requests_utils.resolve_landing_page(domain_name, as_https=False)
                     self.error_logger.add_entry(ErrorLog(exc, domain_name, "Connection only works on HTTP."))
                     print(f"It seems that HTTPS is not supported by server. Trying with HTTP:")
                     print(f"Landing url: {landing_url}")
+                    print(f"Ip: {ip.compressed}")
                     print(f"HTTP Strict Transport Security: {hsts}")
                     print(f"Redirection path:")
                     for index, url in enumerate(redirection_path):
@@ -333,11 +337,10 @@ class ApplicationResolvers:
                 entries_result_by_as[as_number] = None
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
-            # FIXME: differenziare meglio, TableNonExistent e TableEmpty
-            except (selenium.common.exceptions.NoSuchElementException, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
+            except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
                 print(f"!!! {str(exc)} !!!")
                 entries_result_by_as[as_number] = None
-                entries_result_by_as.pop(as_number)
+                # entries_result_by_as.pop(as_number)       # tenerlo oppure no?
                 self.error_logger.add_entry(ErrorLog(exc, as_number, str(exc)))
                 continue
             for nameserver in entries_result_by_as[as_number].keys():
@@ -345,10 +348,13 @@ class ApplicationResolvers:
                 entry_ip_as_db = entries_result_by_as[as_number][nameserver][1]
                 belonging_network_ip_as_db = entries_result_by_as[as_number][nameserver][2]
                 try:
-                    row = self.rov_page_scraper.get_network_if_present(
-                        ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
+                    row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
                     entries_result_by_as[as_number][nameserver].append(row)
                     print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
+                except TableNotPresentError as exc:
+                    print(f"!!! {exc.message} !!!")
+                    entries_result_by_as[as_number][nameserver].append(None)
+                    self.error_logger.add_entry(ErrorLog(exc, ip_string, str(exc)))
                 except TableEmptyError as exc:
                     print(f"!!! {exc.message} !!!")
                     entries_result_by_as[as_number][nameserver].append(None)

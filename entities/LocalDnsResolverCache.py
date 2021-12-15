@@ -1,20 +1,17 @@
 import csv
 from pathlib import Path
 from typing import List, Set, Tuple
-
-from entities.Zone import Zone
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import file_utils, csv_utils, list_utils
+from utils import file_utils, csv_utils, list_utils, string_utils, domain_name_utils
 from entities.RRecord import RRecord
 from entities.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 
 
-# FIXME: documentazione
 class LocalDnsResolverCache:
     """
-    This class represent a simple sort of personalized Cache that keep tracks of all resource records in a list.
+    This class represents a simple sort of personalized Cache that keep tracks of all resource records in a list.
 
     ...
 
@@ -23,7 +20,7 @@ class LocalDnsResolverCache:
     cache : `list[RRecord]`
         The list of resource records.
     separator : `str`
-        The character separator between all the attributes of a Resource Record object, used when logs is exported to
+        The character separator between all the attributes of a Resource Record object, used when logs are exported to
         file.
     """
     cache: List[RRecord]
@@ -49,16 +46,20 @@ class LocalDnsResolverCache:
         """
         self.cache.append(entry)
 
-    def set_separator(self, separator: str):
+    def set_separator(self, separator: str) -> None:
         """
-        Set the separator.
+        Sets the separator.
 
         :param separator: The character separator.
         :type separator: str
         """
         self.separator = separator
 
-    def clear(self):
+    def clear(self) -> None:
+        """
+        Cleans everything, deleting all the resource records.
+
+        """
         self.cache.clear()
 
     def look_up_first(self, domain_name: str, type_rr: TypesRR) -> RRecord:
@@ -74,7 +75,7 @@ class LocalDnsResolverCache:
         :rtype: RRecord
         """
         for rr in self.cache:
-            if rr.name == domain_name and rr.type == type_rr:
+            if domain_name_utils.equals(rr.name, domain_name) and rr.type == type_rr:
                 return rr
         raise NoRecordInCacheError(domain_name, type_rr)
 
@@ -92,60 +93,145 @@ class LocalDnsResolverCache:
         """
         result = []
         for rr in self.cache:
-            if rr.name == domain_name and rr.type == type_rr:
+            if domain_name_utils.equals(rr.name, domain_name) and rr.type == type_rr:
                 result.append(rr)
         if len(result) == 0:
             raise NoRecordInCacheError(domain_name, type_rr)
         else:
             return result
 
-    def look_up_from_list(self, names: List[str], type_rr: TypesRR):
+    def look_up_from_list(self, names: List[str], type_rr: TypesRR) -> RRecord:
+        """
+        This method looks up the first resource record found in cache using all the name in the list parameter
+        sequentially. Practically aggregates a simple look_up_first method for the first element in a list.
+
+        :param names: List of domain names.
+        :type names: List[str]
+        :param type_rr:
+        :type type_rr: TypesRR
+        :return: The first resource record found from all the elements in the list sequentially.
+        :rtype: RRecord
+        """
         for name in names:
             try:
-                rr = self.look_up_first(name, type_rr)
-                return rr
+                return self.look_up_first(name, type_rr)
             except NoRecordInCacheError:
                 pass
         raise NoRecordInCacheError(str(names), type_rr)
 
     def look_up_all_aliases(self, name: str) -> Set[str]:
+        """
+        This method, given a domain name, searches all the aliases associated with it in the cache: that means resource
+        records with the domain name parameter as name, or resource records with contains the domain name parameter in
+        the values field.
+
+        :param name: The domain name.
+        :type name: str
+        :return: A set of all the aliases (as string) associated to the domain name parameter.
+        :rtype: Set[str]
+        """
         aliases = set()
         for rr in self.cache:
-            if rr.type == TypesRR.CNAME and rr.name == name:
+            if rr.type == TypesRR.CNAME and domain_name_utils.equals(rr.name, name):
                 for value in rr.values:
                     aliases.add(value)
-            elif rr.type == TypesRR.CNAME and name in rr.values:
+            elif rr.type == TypesRR.CNAME and domain_name_utils.is_contained_in_list(rr.values, name):
                 aliases.add(rr.name)
                 for value in rr.values:
                     aliases.add(value)      # set has no duplicates allowed (silent exception)
         return aliases
 
-    def look_up_a_query_with_all_aliases(self, nameserver: str):
+    def resolve_path_from_alias(self, nameserver: str) -> RRecord:
+        """
+        This method searches for A type's RR in the cache first using (as name field) the nameserver parameter, and then
+        searches all aliases in the cache to search again other A type's RR for each alias as name.
+        This might help in situations where we found a zone dependency through a NS type query that returns nameservers
+        which lead to A type's query with no answer; some nameservers are only alias, so better check them in the cache.
+
+        :param nameserver: A nameserver.
+        :type nameserver: str
+        :raise NoRecordInCacheError: If there's no such A type RR in the cache.
+        :return: The first valid A type RR that leads to an ip address.
+        :rtype: RRecord
+        """
         try:
-            rr_a_cache = self.look_up_first(nameserver, TypesRR.A)
-            return rr_a_cache
+            return self.look_up_first(nameserver, TypesRR.A)
         except NoRecordInCacheError:
             pass
         for alias in self.look_up_all_aliases(nameserver):
             try:
-                rr_a_cache = self.look_up_first(alias, TypesRR.A)
-                return rr_a_cache
+                return self.look_up_first(alias, TypesRR.A)
             except NoRecordInCacheError:
                 pass
         raise NoRecordInCacheError(nameserver, TypesRR.A)
 
-    def resolve_path_from_alias(self, alias: str) -> RRecord:
-        aliases = self.look_up_all_aliases(alias)
-        for a in aliases:
+    def resolve_zones_from_alias(self, nameserver: str) -> List[Tuple[str, List[RRecord], List[RRecord]]]:
+        """
+        This method, given the nameserver parameter, first tries to resolve such nameserver (in the cache); if an A type
+        RR is found from the nameserver or from all the aliases associated to it, then this method searches in the cache
+        if the resolved nameserver is 'nameserver of the zone' of some zones. In the end the zones are 'constructed'
+        searching for all the nameservers of the zone and the aliases.
+
+        :param nameserver: A name.
+        :type nameserver: str
+        :raise NoRecordInCacheError: If it is impossible to resolve an A type RR from the nameserver parameter.
+        If it is impossible to resolve a zone from the resolved nameserver.
+        :return: A list of all the attributes defined to instantiate a Zone object, put together as a tuple.
+        :rtype: List[Tuple[str, List[RRecord], List[RRecord]]]
+        """
+        results = list()
+        try:
+            rr_a = self.resolve_path_from_alias(nameserver)
+        except NoRecordInCacheError:
+            raise
+        try:
+            zone_names = self.resolve_zones_from_nameserver(rr_a.name)
+        except NoRecordInCacheError:
+            raise
+        for zone_name in zone_names:
             try:
-                result = self.look_up_first(a, TypesRR.A)
-                return result
+                result = self.resolve_zone_from_zone_name(zone_name)
+                results.append(result)
             except NoRecordInCacheError:
                 pass
-        raise NoRecordInCacheError(alias, TypesRR.A)
+        return results
 
-    def resolve_zone_from_zone_name(self, rr_ns: RRecord) -> Tuple[str, List[RRecord], List[RRecord]]:
-        # c'è il rr nella cache
+    def resolve_zone_from_zone_name(self, zone_name: str) -> Tuple[str, List[RRecord], List[RRecord]]:
+        """
+        This method searches if the zone_name parameter actually represents a zone in the cache. If it so the zone is
+        'constructed' searching for all the nameservers of the zone and the aliases.
+
+        :param zone_name: A zone name.
+        :type zone_name: str
+        :raise NoRecordInCacheError: If it is impossible to resolve a zone from the name.
+        :return: All the attributes defined to instantiate a Zone object, put together as a tuple.
+        :rtype: Tuple[str, List[RRecord], List[RRecord]]
+        """
+        try:
+            rr_ns = self.look_up_first(zone_name, TypesRR.NS)
+        except NoRecordInCacheError:
+            raise
+        try:
+            return self.resolve_zone_from_ns_rr(rr_ns)
+        except NoRecordInCacheError:
+            raise
+
+    def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Tuple[str, List[RRecord], List[RRecord]]:
+        """
+        This method searches if the RRecord parameter is actually present in the cache. If it so the zone is
+        'constructed' searching for all the nameservers of the zone and the aliases.
+
+        :param rr_ns: A NS type RR.
+        :type rr_ns: RRecord
+        :raise NoRecordInCacheError: If it is impossible to resolve a zone from the NS type RR.
+        If it is impossible to resolve all the nameservers of the zone.
+        :return: All the attributes defined to instantiate a Zone object, put together as a tuple.
+        :rtype: Tuple[str, List[RRecord], List[RRecord]]
+        """
+        try:
+            self.look_up_first(rr_ns.name, TypesRR.NS)
+        except NoRecordInCacheError:
+            raise
         zone_name = rr_ns.name
         zone_nameservers = list()
         zone_aliases = list()
@@ -169,33 +255,42 @@ class LocalDnsResolverCache:
             zone_nameservers.append(rr_a)
         return zone_name, zone_nameservers, zone_aliases
 
-    def look_up_first_nameserver_from_alias(self, alias: str) -> str:
-        for rr in self.cache:
-            if rr.type is TypesRR.CNAME and alias in rr.values:
-                return rr.name
+    def look_up_first_alias(self, name: str) -> RRecord:
+        """
+        This method searches for the first alias associated to name parameter in the cache.
 
-    def look_up_first_alias(self, alias: str) -> RRecord:
+        :param name: A domain name.
+        :type name: str
+        :raise NoRecordInCacheError: If such alias is not present.
+        :return: Such alias.
+        :rtype: RRecord
+        """
         for rr in self.cache:
-            if rr.type is TypesRR.CNAME and alias == rr.name:
+            if rr.type == TypesRR.CNAME and domain_name_utils.equals(name, rr.name):
                 return rr
-            elif rr.type is TypesRR.CNAME and alias in rr.values:
+            elif rr.type == TypesRR.CNAME and domain_name_utils.is_contained_in_list(rr.values, name):
                 return rr
-        raise NoRecordInCacheError(alias, TypesRR.CNAME)
+        raise NoRecordInCacheError(name, TypesRR.CNAME)
 
-    def look_up_nameserver_from_alias(self, alias: str) -> List[str]:
-        # può un alias essere alias di più di un nameserver???
-        result = []
-        for rr in self.cache:
-            if rr.type is TypesRR.CNAME and alias in rr.values:
-                list_utils.append_with_no_duplicates(result, rr.name)
-        return result
+    def resolve_zones_from_nameserver(self, nameserver: str) -> List[str]:
+        """
+        This method checks if the nameserver parameter is 'nameserver of the zone' of some zones in the cache.
+        If it so, a list of zone names is returned.
 
-    def look_up_zone_from_nameserver(self, nameserver: str) -> List[str]:
-        # MEMO: un nameserver può essere nameserver of the zone di più zone
+        :param nameserver: A domain name.
+        :type nameserver: str
+        :return: A list of zone names that has such nameserver (or aliases associated to it) as 'nameserver of the zone'.
+        :rtype: List[str]
+        """
         result = []
+        aliases = self.look_up_all_aliases(nameserver)
         for rr in self.cache:
-            if rr.type is TypesRR.NS and nameserver in rr.values:
+            if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, nameserver):
                 list_utils.append_with_no_duplicates(result, rr.name)
+                continue
+            for alias in aliases:
+                if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, alias):
+                    list_utils.append_with_no_duplicates(result, rr.name)
         return result
 
     def load_csv(self, path: str, take_snapshot=True) -> None:
@@ -235,7 +330,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def load_csv_from_output_folder(self, project_root_directory=Path.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename='cache.csv', project_root_directory=Path.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
         .csv file from the output folder of the project root directory (if set correctly). So just invoking this
@@ -247,6 +342,8 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
+        :param filename: Name of the cache file.
+        :type filename: str
         :param project_root_directory: Path of the project root.
         :type project_root_directory: Path
         :raise FilenameNotFoundError: If file with such filename doesn't exist.
@@ -257,7 +354,7 @@ class LocalDnsResolverCache:
         """
         file = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory("output", "cache.csv", project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory("output", filename, project_root_directory)
             file = result[0]
         except FilenameNotFoundError:
             raise

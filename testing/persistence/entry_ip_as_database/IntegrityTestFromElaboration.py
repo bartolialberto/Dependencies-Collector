@@ -44,7 +44,7 @@ class IntegrityTestFromElaboration(unittest.TestCase):
     @staticmethod
     def dns_resolving(dns_resolver: DnsResolver, domain_names: List[str]) -> dict:
         print("START DNS DEPENDENCIES RESOLVER")
-        dns_results = dns_resolver.search_multiple_domains_dependencies(domain_names)
+        dns_results = dns_resolver.resolve_multiple_domains_dependencies(domain_names)
         print("END DNS DEPENDENCIES RESOLVER")
         return dns_results
 

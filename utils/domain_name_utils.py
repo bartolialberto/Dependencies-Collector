@@ -3,7 +3,7 @@ import re
 from typing import List
 from urllib.parse import urlparse
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from utils import file_utils
+from utils import file_utils, string_utils
 
 
 def grammatically_correct(domain_name: str) -> None:
@@ -53,12 +53,34 @@ def is_grammatically_correct(domain_name: str) -> bool:
         return False
 
 
-# return list with higher domain names first in the list
 def get_subdomains_name_list(domain: str, root_included=False) -> List[str]:
     """
     Method that gives all the subdomain name from a domain name. An example:
         'www.units.it' ---> ['it.', 'units.it.', 'www.units.it.']
-    As you can see the trailing point is added if absent.
+    The trailing point is added if absent.
+    In particular this method handles even email addresses.
+
+
+    :param domain: The domain name.
+    :type domain: str
+    :param root_included: Optional boolean to decide if the root domain has to be returned.
+    :type root_included: bool
+    :return: The list containing all subdomains' domain name.
+    :rtype: list[str]
+    """
+    if '@' in domain:
+        split = domain.split('@')
+        return inner_subdomains_parser(split[-1], root_included=root_included)
+    else:
+        return inner_subdomains_parser(domain, root_included=root_included)
+
+
+def inner_subdomains_parser(domain: str, root_included=False) -> List[str]:
+    """
+    Method that gives all the subdomain name from a domain name. An example:
+        'www.units.it' ---> ['it.', 'units.it.', 'www.units.it.']
+    The trailing point is added if absent.
+    In particular this method does the elaboration handling 'pure' domain names, not email addresses.
 
 
     :param domain: The domain name.
@@ -192,8 +214,8 @@ def take_snapshot(domain_name_list: List[str]) -> None:
 
 def equals(domain_name1: str, domain_name2: str) -> bool:
     """
-    Return if 2 domain names (as string) are equals: this means if one of them (or all of them) has the trailing point
-    this method handle that.
+    Return if 2 domain names (as string) are equals: this means if one of them (or all of them) has the trailing point,
+    this method handle that. Also it ignores case.
 
 
     :param domain_name1: First domain name.
@@ -203,24 +225,58 @@ def equals(domain_name1: str, domain_name2: str) -> bool:
     :returns: True or False
     :rtype: bool
     """
-    tmp1 = eliminate_trailing_point(domain_name1)
-    tmp2 = eliminate_trailing_point(domain_name2)
-    return tmp1 == tmp2
+    return string_utils.equals_ignore_case(eliminate_trailing_point(domain_name1), eliminate_trailing_point(domain_name2))
 
 
-def is_contained_in_list(_list: List[str], domain_name: str) -> bool:
+def contains(string_to_be_checked: str, string_container: str) -> bool:
     """
-    Return if a domain name is contained in a list, taking care about the trailing point when comparing.
+    This method checks if the first string parameter is contained in the second string parameter. The check is done
+    considering the strings' case and the trailing point.
+
+    :param string_to_be_checked: The string to be checked.
+    :type string_to_be_checked: str
+    :param string_container: The string in which the control is done.
+    :type string_container: str
+    :return: True or False.
+    :rtype: bool
+    """
+    return eliminate_trailing_point(string_to_be_checked).casefold() in eliminate_trailing_point(string_container).casefold()
 
 
-    :param _list: A list of domain names.
-    :type _list: List[str]
+def multiple_contains(domain_names: List[str], domain_name_to_be_verified: str) -> bool:
+    """
+    Control if in a domain name there is at least one occurrence of one of the domain names contained in the list
+    parameter. The check is done considering the strings' case and the trailing point.
+
+    :param domain_names: List of all the domain name parameters.
+    :type domain_names: List[str]
+    :param domain_name_to_be_verified: The domain name to be verified.
+    :type domain_name_to_be_verified: str
+    :return: True or False.
+    :rtype: bool
+    """
+    for string in domain_names:
+        if contains(string, domain_name_to_be_verified):
+            return True
+        else:
+            pass
+    return False
+
+
+def is_contained_in_list(domain_names: List[str], domain_name: str) -> bool:
+    """
+    Returns if a domain name is contained exactly in a list of domain names, taking care about the trailing point and the
+    case when comparing.
+
+
+    :param domain_names: A list of domain names.
+    :type domain_names: List[str]
     :param domain_name: A domain name.
     :type domain_name: str
     :returns: True or False
     :rtype: bool
     """
-    for elem in _list:
-        if equals(elem, domain_name):
+    for dn in domain_names:
+        if equals(domain_name, dn):
             return True
     return False

@@ -4,7 +4,6 @@ from entities.TypesRR import TypesRR
 from utils import list_utils
 
 
-# FIXME: documentazione
 class Zone:
     """
     This class represent a simple zone. Semantically it represents only the data structures, not the fact
@@ -22,28 +21,29 @@ class Zone:
         The aliases associated with all the nameservers of the zone.
     """
 
-    def __init__(self, zone_name: str, list_rr_a_of_nsz: List[RRecord], list_cnames: List[str]):
+    def __init__(self, zone_name: str, nameservers_of_zone: List[RRecord], list_cnames: List[RRecord]):
         """
         Instantiate a Zone object initializing all the attributes defined above.
 
         :param zone_name: The zone name.
         :type zone_name: str
-        :param list_rr_a_of_nsz: The list of all nameservers name of the zone, as RRecord of type A (so there's the
+        :param nameservers_of_zone: The list of all nameservers name of the zone, as RRecord of type A (so there's the
         mapping between domain name and ip address.
-        :type list_rr_a_of_nsz: List[RRecord]
-        :param list_cnames: The list of aliases associated with all the nameservers of the zone.
-        :type list_cnames: List[str]
+        :type nameservers_of_zone: List[RRecord]
+        :param list_cnames: The list of all aliases associated with the nameservers of the zone, as RRecord of type
+        CNAME (so there's the mapping between nameserver and alias).
+        :type list_cnames: List[RRecord]
         """
-        if not list_utils.are_all_objects_RRecord_and_rr_type(list_rr_a_of_nsz, TypesRR.A):
+        if not list_utils.are_all_objects_RRecord_and_rr_type(nameservers_of_zone, TypesRR.A):
             raise ValueError()
-        if list_rr_a_of_nsz is None or len(list_rr_a_of_nsz) == 0:
+        if nameservers_of_zone is None or len(nameservers_of_zone) == 0:
             self.nameservers = list()
         else:
-            self.nameservers = list_rr_a_of_nsz
+            self.nameservers = nameservers_of_zone
         if not list_utils.are_all_objects_RRecord_and_rr_type(list_cnames, TypesRR.CNAME):
             raise ValueError()
-        if list_rr_a_of_nsz is None or len(list_cnames) == 0:
-            self.aliases = dict()
+        if nameservers_of_zone is None or len(list_cnames) == 0:
+            self.aliases = list()
         else:
             self.aliases = list_cnames
         self.name = zone_name

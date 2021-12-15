@@ -12,7 +12,7 @@ class EntryIpAsDatabaseTestCase(unittest.TestCase):
 
     def test_from_ip_addresses(self):
         # PARAMETERS
-        params = ['192.5.6.30']
+        params = ['150.145.1.4']
         # Actual test
         ip_params = list()
         for param in params:
@@ -31,7 +31,7 @@ class EntryIpAsDatabaseTestCase(unittest.TestCase):
                     print(f"Belonging network: {belonging_network.compressed}\n")
                 except ValueError as f:
                     print(f"!!! {str(f)} !!!")
-            except ValueError as e:
+            except (ValueError, AutonomousSystemNotFoundError) as e:
                 print(f"!!! {str(e)} !!!")
 
     def test_from_as_number(self):

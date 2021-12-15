@@ -3,7 +3,7 @@
 The python version used to develop this software is 3.8
 The package manager(pip) version used is 21.2.2
 
-The python modules used/imported in this project:
+The python modules imported in this project:
 
 ```
 dns
@@ -39,7 +39,7 @@ pip install selenium selenium-wire dnspython==2.1.0 peewee
 ## Configuration
 The application uses 2 vital folders: the 'input' folder used to contain all the necessary files to function
 (described later), and the 'output' folder that contains the results of an execution gone well.
-Both folders are created in the project root directory: LavoroTesi.
+Both folders are created in the project root directory (PRD): LavoroTesi.
 
 To configure the application you have to:
 1) Use Windows as OS
@@ -51,6 +51,34 @@ Also, the application needs the .tsv database taken from https://iptoasn.com/ (i
 it is controlled by the application itself, and if it is absent (or updated less than an hour ago) it will be
 downloaded, extracted and replaced automatically.
 Obviously you can copy such database in the folder manually.
+
+## Configuration: input folder
+The input folder is a directory contained in the project root directory (PRD) named 'input'.
+This folder's purpose is to contain all the necessary "tools" to make the application work.
+The expected tools' list is:
+
+1) the geckodriver executable file (not the archive); you can name this file whatever you want as long it is a
+.exe file
+2) the network number database (.tsv file); you can name this file whatever you want as long it is a .tsv file
+3) OPTIONAL: a .txt file containing all the domain names you want to use as input, one per line;
+you can name this file whatever you want as long it is a .txt file
+4) just for application' safety it is present a .gitkeep file. Do not modify/delete this file.
+
+![alt text](res/input.jpg)
+
+## Configuration: output folder
+The output folder is a directory contained in the project root directory (PRD) named 'output'.
+This folder's purpose is to contain all the results (as files) from the execution of the application.
+The expected result files are:
+
+1) a .csv file named 'cache.csv' containing the entire cache from the DNS resolver
+2) a .csv file named 'error_logs.csv' containing all the registered errors encountered during the entire elaboration of
+the application
+3) a .sqlite file named 'results.sqlite' containing all the application data registered during its
+elaboration using the E-R schema presented further in this Readme.md file
+4) just for application' safety it is present a .gitkeep file. Do not modify/delete this file.
+
+![alt text](res/output.jpg)
 
 ## How to run
 The application starts executing the main.py file.

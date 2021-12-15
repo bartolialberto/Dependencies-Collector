@@ -1,9 +1,9 @@
-class TableEmptyError(Exception):
+class TableNotPresentError(Exception):
     message: str
     for_as_number: str or int
 
     def __init__(self, param: int):
-        temp = f"Found empty table in ROV page for AS number '{str(param)}'."
+        temp = f"No table found in ROV page for AS number '{str(param)}'."
         self.for_as_number = param
         self.message = temp
         BaseException.__init__(self, temp)

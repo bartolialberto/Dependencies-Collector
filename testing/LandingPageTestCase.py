@@ -1,5 +1,5 @@
 import unittest
-from utils import requests_utils, domain_name_utils
+from utils import requests_utils
 
 
 class LandingPageTestCase(unittest.TestCase):
@@ -14,8 +14,9 @@ class LandingPageTestCase(unittest.TestCase):
         for domain_name in self.domain_name_list:
             print(f"Trying to connect to domain '{domain_name}' via https:")
             try:
-                landing_url, redirection_path, hsts = requests_utils.resolve_landing_page(domain_name)
+                landing_url, redirection_path, hsts, ip = requests_utils.resolve_landing_page(domain_name)
                 print(f"--> Landing url: {landing_url}")
+                print(f"--> Ip: {ip.compressed}")
                 print(f"--> HTTP Strict Transport Security: {hsts}")
                 print(f"--> Redirection path:")
                 for index, url in enumerate(redirection_path):

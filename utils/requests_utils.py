@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Tuple, List
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import domain_name_utils
@@ -9,10 +10,11 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str], bool]:
+def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str], bool, ipaddress.IPv4Address]:
     """
-    This method returns the landing page, the redirection path and the HTTP Strict Transport Security validity from a
-    domain name. In particular it creates an url from the domain name and then tries a GET HTTP method with it.
+    This method returns the landing page, the redirection path, the Strict Transport Security validity from and the ip
+    address of a domain name. In particular it creates an url from the domain name and then tries a GET HTTP method
+    with it.
 
     :param domain_name: A domain name.
     :type domain_name: str
@@ -29,7 +31,7 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     ReadTimeout errors.
     :raise requests.exceptions.RequestException: There was an ambiguous exception that occurred while handling your
     :return: A tuple containing the landing url, all the url redirection and the HSTS validity.
-    :rtype: Tuple[str, List[str], bool]
+    :rtype: Tuple[str, List[str], bool, ipaddress.IPv4Address]
     """
     redirection_path = list()
     try:
@@ -40,7 +42,13 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     try:
         url = domain_name_utils.deduct_http_url(domain_name, as_https)
         print(f"URL deducted: {domain_name} ---> {url}")
-        response = requests.get(url, headers={'Connection': 'close'})       # FIXME: giusto chiudere subito?
+        response = requests.get(url, headers={'Connection': 'close'}, stream=True)
+        # tmp = response.raw._connection.sock.getsockname()
+        # tmp = response.raw._connection.sock.getpeername()
+        tmp = response.raw._fp.fp.raw._sock.getpeername()
+        ip_string = response.raw._fp.fp.raw._sock.getpeername()[0]
+        port_string = response.raw._fp.fp.raw._sock.getpeername()[1]
+        ip = ipaddress.IPv4Address(ip_string)
     except requests.exceptions.ConnectTimeout:
         # The request timed out while trying to connect to the remote server.
         # Requests that produced this error are safe to retry.
@@ -72,7 +80,7 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
         hsts = False
     redirection_path.append(response.url)  # final page
     landing_url = response.url
-    return landing_url, redirection_path, hsts
+    return landing_url, redirection_path, hsts, ip
 
 
 def download_latest_tsv_database(project_root_directory=Path.cwd()) -> None:

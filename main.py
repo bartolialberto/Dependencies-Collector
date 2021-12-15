@@ -1,7 +1,6 @@
 import sys
 from typing import List
 from entities.ApplicationResolvers import ApplicationResolvers
-from persistence import helper_domain_name, helper_landing_page, helper_content_dependency, helper_matches
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
@@ -20,6 +19,8 @@ def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[s
     Every domain name is checked if matches the correct rules of defining a domain name. Then, at the end, duplicates
     are removed.
 
+    :param default_domain_names: The default domain names to use when no one is set by the user.
+    :type default_domain_names: List[str]
     :return: A list of 'grammatically' correct domain names.
     :rtype: List[str]
     """
@@ -32,7 +33,7 @@ def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[s
         except FileWithExtensionNotFoundError:
             print(f"> No .txt file found in input folder found.")
             print(f"> Starting application with default domain names as sample:")
-            #default_domain_names = list(default_domain_names)
+            # default_domain_names = list(default_domain_names)
             # default_domain_names.append('google.it')       # darklyrics.com works only on HTTP
             # default_domain_names.append('youtube.it')
             # default_domain_names.append('unipd.it')
@@ -73,9 +74,14 @@ def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[s
     return domain_name_list
 
 
-def get_flag(default_persist_errors=False) -> bool:
+def get_flags(default_persist_errors=False) -> bool:
     """
-    Star
+    Start of the application: getting the intention of persist errors in the database.
+
+    :param default_persist_errors: The default value of the flag.
+    :type default_persist_errors: bool
+    :return: A boolean to set the flag.
+    :rtype: bool
     """
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
@@ -91,7 +97,7 @@ if __name__ == "__main__":
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
         new_domain_names = get_domain_names()
-        persist_errors = get_flag()
+        persist_errors = get_flags()
         # entities
         resolvers = ApplicationResolvers()
         # auxiliary elaborations
@@ -103,10 +109,10 @@ if __name__ == "__main__":
         results = resolvers.do_rov_page_scraping()
         # insertion in the database
         print("Insertion into database... ", end='')
-        helper_domain_name.multiple_inserts(resolvers.dns_results)
-        helper_landing_page.multiple_inserts(resolvers.landing_page_results)
-        helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)  # FIXME: controllare sul database gli inserimenti
-        helper_matches.insert_all_entries_associated(results)       # FIXME: controllare sul database gli inserimenti
+        # helper_domain_name.multiple_inserts(resolvers.dns_results)
+        # helper_landing_page.multiple_inserts(resolvers.landing_page_results)
+        # helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)
+        # helper_matches.insert_all_entries_associated(results)
         print("DONE.")
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()

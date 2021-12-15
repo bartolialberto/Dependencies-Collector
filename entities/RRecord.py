@@ -10,18 +10,15 @@ class RRecord:
 
     ...
 
-    Instance Attributes
-    -------------------
+    Attributes
+    ----------
     name : `str`
         The name field of the resource record.
     type : `TypesRR`
         The type field of the resource record.
-    values : `list[str]`
+    values : `List[str]`
         The values field of the resource record.
     """
-    name: str
-    type: TypesRR
-    values: List[str]
 
     def __init__(self, name: str, type_rr: TypesRR, values: str or List[str]):
         """
@@ -53,6 +50,12 @@ class RRecord:
             return False
 
     def get_first_value(self) -> str:
+        """
+        Gets the first value in the values field.
+
+        :return: The first value.
+        :rtype: str
+        """
         return self.values[0]
 
     @staticmethod
@@ -87,6 +90,23 @@ class RRecord:
         for val in split_values:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)
+
+    @staticmethod
+    def parse_mailserver_from_mx_value(value: str) -> str:
+        """
+        A static method that takes one value from the values field retrieved from a MX type query (as a string) and,
+        after separating the priority from the mailserver, it returns the mailserver.
+
+        :param value: The value string.
+        :type value: str
+        :returns: The parsed mailserver.
+        :rtype: str
+        """
+        split = value.split(' ')
+        result = split[-1]
+        if '127.0.0.1' in result:
+            return 'localhost'
+        return result
 
     def __str__(self):
         return f"{self.name}\t{self.type.to_string()}\t{str(self.values)}"

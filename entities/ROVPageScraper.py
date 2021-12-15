@@ -7,6 +7,7 @@ from entities.ROVStates import ROVStates
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
+from exceptions.TableNotPresentError import TableNotPresentError
 
 
 class RowPrefixesTable:
@@ -149,7 +150,8 @@ class ROVPageScraper:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.WebDriverException:
             raise
-        self.prefixes_table.clear()
+        # self.prefixes_table.clear()
+        self.prefixes_table = None
         self.current_as_number = -1
 
     def load_as_page(self, as_number: int) -> None:
@@ -161,11 +163,11 @@ class ROVPageScraper:
         :type as_number: int
         :raise ValueError: If the autonomous system number is < 0.
         :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
-        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
+        :raise TableNotPresentError: If there's a problem while parsing the html page.
         elements to reach the pfx_table_div (id html element) table.
         :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
         RowPrefixesTable.
-        :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise TableEmptyError: If there's a problem while parsing the html page.
         :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
         RowPrefixesTable.
         """
@@ -176,11 +178,11 @@ class ROVPageScraper:
                 self.load_page(ROVPageScraper.base_url(as_number))
             except selenium.common.exceptions.WebDriverException:
                 raise
-            self.prefixes_table.clear()
+            # self.prefixes_table.clear()
             self.current_as_number = as_number
             try:
                 self.scrape_prefixes_table_from_page()
-            except selenium.common.exceptions.NoSuchElementException:
+            except TableNotPresentError:
                 raise
             except ValueError:
                 raise
@@ -195,11 +197,11 @@ class ROVPageScraper:
         constructed (normally) in the ROV page. Obviously it needs a previous load of a valid autonomous system page.
         See method: load_as_page().
 
-        :raise selenium.common.exceptions.NoSuchElementException: If there's a problem while parsing all the html
-        elements to reach the pfx_table_div (id html element) table.
+        :raise TableNotPresentError: If the pfx_table_div (id html element) or the table (html element) or the tbody
+        (html element) are not found.
         :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
         RowPrefixesTable.
-        :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise TableEmptyError: If the aren't rows in the table.
         :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
         RowPrefixesTable.
         :return: A list of RowPrefixesTable objects to represent the pfx_table_div (id html element) table.
@@ -208,33 +210,38 @@ class ROVPageScraper:
         try:
             div = self.headless_browser.driver.find_element(By.ID, 'pfx_table_div')
         except selenium.common.exceptions.NoSuchElementException:
-            raise
+            self.prefixes_table = None
+            raise TableNotPresentError(self.current_as_number)
         try:
             table = div.find_element(By.TAG_NAME, 'table')
         except selenium.common.exceptions.NoSuchElementException:
-            raise
+            self.prefixes_table = None
+            raise TableNotPresentError(self.current_as_number)
         try:
             tbody = table.find_element(By.TAG_NAME, "tbody")
         except selenium.common.exceptions.NoSuchElementException:
-            raise
+            self.prefixes_table = None
+            raise TableNotPresentError(self.current_as_number)
         try:
             trs = tbody.find_elements(By.TAG_NAME, "tr")
         except selenium.common.exceptions.NoSuchElementException:
-            raise TableEmptyError
-        prefixes_table = list()
+            self.prefixes_table = list()
+            raise TableEmptyError(self.current_as_number)
+        self.prefixes_table = list()
         for tr in trs:
             try:
                 tds = tr.find_elements(By.TAG_NAME, 'td')
             except selenium.common.exceptions.NoSuchElementException:
-                raise
+                self.prefixes_table = list()
+                raise TableEmptyError(self.current_as_number)
             try:
                 # tds[0].text is the index number
                 tmp = RowPrefixesTable(tds[1].text, tds[2].text, tds[3].text, tds[4].text, tds[5].text, tds[6].text, tds[7].text)
-                prefixes_table.append(tmp)
+                self.prefixes_table.append(tmp)
             except (ValueError, NotROVStateTypeError):
+                self.prefixes_table = None
                 raise
-        self.prefixes_table = prefixes_table
-        return prefixes_table
+        return self.prefixes_table
 
     def get_network_if_present(self, ip: ipaddress.IPv4Address) -> RowPrefixesTable:
         """
@@ -246,10 +253,13 @@ class ROVPageScraper:
         :param ip: An ip v4 address.
         :type ip: ipaddress.IPv4Address
         :raise TableEmptyError: If the pfx_table_div (id html element) table is empty.
+        :raise TableNotPresentError: If the table (html element) is not present.
         :raise NetworkNotFoundError: If a network that contains the ip parameter is not found in the table.
         :return: The matched row (from the prefix) in the table.
         :rtype: RowPrefixesTable
         """
+        if self.prefixes_table is None:
+            raise TableNotPresentError(self.current_as_number)
         if len(self.prefixes_table) == 0:
             raise TableEmptyError(self.current_as_number)
         for row in self.prefixes_table:
