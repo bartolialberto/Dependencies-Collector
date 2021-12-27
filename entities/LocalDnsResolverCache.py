@@ -81,7 +81,7 @@ class LocalDnsResolverCache:
 
     def look_up(self, domain_name: str, type_rr: TypesRR) -> List[RRecord]:
         """
-        Search for all occurrences of resource records of name and type as parameters told.
+        Search for all occurrences of resource records of name and type as parameters say.
 
         :param domain_name: The domain name.
         :type domain_name: str

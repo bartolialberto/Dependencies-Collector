@@ -6,7 +6,7 @@ class NoRecordInCacheError(Exception):
     for_type: TypesRR
 
     def __init__(self, domain_name: str, _type: TypesRR):
-        temp = f"No record found in cache for name:'{domain_name}' and type: '{_type.name}'"
+        temp = f"No record found in cache for name:'{domain_name}' and type: '{_type.url}'"
         self.message = temp
         self.for_domain_name = domain_name
         self.for_type = _type

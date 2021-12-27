@@ -3,6 +3,7 @@ import dns.resolver
 from dns.name import Name
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
+from entities.TLDPageScraper import TLDPageScraper
 from entities.TypesRR import TypesRR
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
@@ -29,13 +30,14 @@ class DnsResolver:
     cache : LocalDnsResolverCache
         The cache used to handle requests.
     """
-    def __init__(self):
+    def __init__(self, tld_list: List[str]):
         """
         Instantiate this DnsResolver object.
 
         """
         self.resolver = dns.resolver.Resolver()
         self.cache = LocalDnsResolverCache()
+        self.tld_list = tld_list
 
     def do_query(self, name: str, type_rr: TypesRR) -> Tuple[RRecord, RRecord]:
         """
@@ -103,24 +105,53 @@ class DnsResolver:
         """
         results = dict()
         error_logs = list()
+        zone_links = dict()
         for domain in domain_list:
             try:
-                dns_result, logs = self.resolve_domain_dependencies(domain)
+                dns_result, temp_zone_links, logs = self.resolve_domain_dependencies(domain, zone_dependencies=zone_links)
                 results[domain] = dns_result
+
+                # merge zone dependencies
+                zone_links.update(temp_zone_links)
+
+                # merge error logs
                 for log in logs:
                     # list_utils.append_with_no_duplicates(error_logs, log)
                     error_logs.append(log)
+
             except InvalidDomainNameError:
                 pass
         return results, error_logs
 
-    def resolve_domain_dependencies(self, domain: str) -> Tuple[List[Zone], List[ErrorLog]]:
+    def resolve_mailservers(self, mail_domain: str) -> List[str]:
+        # TODO: docs
+        try:
+            domain_name_utils.grammatically_correct(mail_domain)
+        except InvalidDomainNameError:
+            try:
+                email_address_utils.grammatically_correct(mail_domain)
+            except InvalidDomainNameError:
+                raise
+        result = list()
+        try:
+            mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
+            for value in mx_values.values:
+                result.append(value)
+            return result
+        except NoAnswerError:
+            raise
+        except (DomainNonExistentError, UnknownReasonError) as e:
+            raise
+
+    def resolve_domain_dependencies(self, domain: str, zone_dependencies=None) -> Tuple[List[Zone], Dict[str, List[Zone]], List[ErrorLog]]:
         """
         This method resolves the zone dependencies of a domain name.
         It returns a list containing the zones and a list of error logs encountered during the elaboration.
 
         :param domain: A domain name.
         :type domain: str
+        :param is_mail_domain: Flag that says if the domain has to be considered as mail domain.
+        :type is_mail_domain: bool
         :raise :
         :return: The list of zone dependencies and the list of error logs, put together in a tuple.
         :rtype: Tuple[List[Zone], List[ErrorLog]]
@@ -128,7 +159,16 @@ class DnsResolver:
         try:
             domain_name_utils.grammatically_correct(domain)
         except InvalidDomainNameError:
-            email_address_utils.grammatically_correct(domain)
+            try:
+                email_address_utils.grammatically_correct(domain)
+            except InvalidDomainNameError:
+                raise
+
+        #
+        zone_links = dict()     # to keep track of dependencies between zones
+        if zone_dependencies is None:
+            zone_dependencies = dict()
+
         error_logs = list()
         start_cache_length = len(self.cache.cache)
         subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
@@ -139,9 +179,13 @@ class DnsResolver:
         print(f"Looking at zone dependencies for '{domain}'..")
         for current_domain in subdomains:
             # reset all variables for new iteration
+
             current_zone_nameservers = list()
             current_zone_cnames = list()
             current_zone_name = '_'
+            rr_zone_values = None
+            rr_zone_aliases = None
+            rr_ns = None
 
             # is domain a nameserver with aliases?
             try:
@@ -176,55 +220,28 @@ class DnsResolver:
                 except (DomainNonExistentError, UnknownReasonError) as e:
                     error_logs.append(ErrorLog(e, current_domain, str(e)))
 
-            # is a mail domain?
-            try:
-                rr_mx = self.cache.look_up_first(current_domain, TypesRR.MX)
-                for value in rr_mx.values:
-                    mailserver = RRecord.parse_mailserver_from_mx_value(value)
-                    self._split_domain_name_and_add_to_list(subdomains, mailserver, False)
-                # niente continue perché current_domain può essere sia nome di zona che mailserver
-            except NoRecordInCacheError:
-                try:
-                    rr_mail_values, rr_mail_aliases = self.do_query(current_domain, TypesRR.MX)
-                    self.cache.add_entry(rr_mail_values)
-                    # no alias in query MX
-
-                    # query A per ogni value in values..
-                    for value in rr_mail_values.values:
-                        mailserver = RRecord.parse_mailserver_from_mx_value(value)
-                        try:
-                            self.cache.look_up_first(mailserver, TypesRR.A)
-                            self._split_domain_name_and_add_to_list(subdomains, mailserver, False)
-                        except NoRecordInCacheError:
-                            try:
-                                rr_mailserver_values, rr_mailserver_aliases = self.do_query(mailserver, TypesRR.A)
-                                # ma MX può avere aliases?
-                                try:
-                                    self.cache.look_up_from_list(rr_mailserver_aliases.values, TypesRR.A)
-                                    # already resolved. Nothing to do
-                                except NoRecordInCacheError:
-                                    self.cache.add_entry(rr_mailserver_values)
-
-                                if len(rr_mailserver_aliases.values) != 0:
-                                    self.cache.add_entry(rr_mailserver_aliases)
-                                self._split_domain_name_and_add_to_list(subdomains, mailserver, False)
-                            except NoAnswerError as e:
-                                self._split_domain_name_and_add_to_list(subdomains, mailserver, False)
-                                error_logs.append(ErrorLog(e, current_domain, str(e)))
-                            except (DomainNonExistentError, UnknownReasonError) as e:
-                                self._split_domain_name_and_add_to_list(subdomains, mailserver, False)
-                                error_logs.append(ErrorLog(e, current_domain, str(e)))
-                except NoAnswerError as e:
-                    pass
-                except (DomainNonExistentError, UnknownReasonError) as e:
-                    error_logs.append(ErrorLog(e, current_domain, str(e)))
-
             # is domain a zone name?
             try:
                 rr_ns = self.cache.look_up_first(current_domain, TypesRR.NS)
                 current_zone_name, current_zone_nameservers, current_zone_cnames = self.cache.resolve_zone_from_ns_rr(rr_ns)  # raise NoRecordInCacheError too
+
+                #
+                try:
+                    zone_dependencies[current_domain]
+                except KeyError:
+                    zone_dependencies[current_domain] = list()
+                finally:
+                    try:
+                        zone_links[current_domain]
+                    except KeyError:
+                        zone_links[current_domain] = list()
+
                 for rr in current_zone_nameservers:
                     self._split_domain_name_and_add_to_list(subdomains, rr.name, False)
+
+                    #
+                    self._split_domain_name_and_add_to_list(zone_links[current_domain], rr.name, False)
+
                 zone = Zone(current_zone_name, current_zone_nameservers, current_zone_cnames)
                 if zone not in zone_list:
                     print(f"Depends on zone: {current_zone_name}\t\t\t[NON-AUTHORITATIVE]")
@@ -241,6 +258,18 @@ class DnsResolver:
                     continue
                 current_zone_name = rr_zone_values.name
                 self.cache.add_entry(rr_zone_values)
+
+                #
+                try:
+                    zone_dependencies[current_domain]
+                except KeyError:
+                    zone_dependencies[current_domain] = list()
+                finally:
+                    try:
+                        zone_links[current_domain]
+                    except KeyError:
+                        zone_links[current_domain] = list()
+
                 # no rr_aliases poiché una query NS non può avere alias
                 for nameserver in rr_zone_values.values:
                     # per ogni nameserver devo considerare che potrebbero esserci già dei RR di tipo A ed il nameserver
@@ -264,10 +293,35 @@ class DnsResolver:
                         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as exc:
                             error_logs.append(ErrorLog(exc, current_domain, str(exc)))
                     self._split_domain_name_and_add_to_list(subdomains, nameserver, False)
+
+                    #
+                    self._split_domain_name_and_add_to_list(zone_links[current_domain], nameserver, False)
+
                 print(f"Depends on zone: {current_zone_name}")
                 zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames))
         print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
-        return zone_list, error_logs
+
+        #
+        # eliminare chiavi che hanno liste vuote
+        for zone_name in zone_links.keys():
+            if len(zone_dependencies[zone_name]) != 0:
+                zone_dependencies[zone_name].remove(zone_name)
+                continue
+            to_be_removed = set()
+            for relationship in zone_links[zone_name]:
+                if not domain_name_utils.equals(relationship, zone_name):
+                    try:
+                        self.cache.look_up_first(relationship, TypesRR.NS)
+                    except NoRecordInCacheError:
+                        to_be_removed.add(relationship)     # cannot remove directly 'cause we are still iterating
+            for relationship in to_be_removed:
+                zone_links[zone_name].remove(relationship)
+            for zone_dependency in zone_links[zone_name]:
+                tmp = self.cache.resolve_zone_from_zone_name(zone_dependency)
+                zone_dependencies[zone_name].append(Zone(tmp[0], tmp[1], tmp[2]))
+            # TODO: togliere i Top-Level Domain
+
+        return zone_list, zone_dependencies, error_logs
 
     def export_cache(self) -> None:
         """
@@ -295,3 +349,10 @@ class DnsResolver:
         for sub_domain in split:
             if sub_domain not in _list:
                 _list.append(sub_domain)
+
+    @classmethod
+    def _split_domain_name_and_add_to_dict(cls, _dict: Dict[str, List[str]], key: str, domain_name: str, root_included: bool) -> None:
+        split = domain_name_utils.get_subdomains_name_list(domain_name, root_included=root_included)
+        for sub_domain in split:
+            if sub_domain not in _dict[key]:
+                _dict[key].append(sub_domain)

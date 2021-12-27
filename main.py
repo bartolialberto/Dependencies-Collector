@@ -1,3 +1,4 @@
+import ipaddress
 import sys
 from typing import List
 from entities.ApplicationResolvers import ApplicationResolvers
@@ -9,7 +10,7 @@ from utils import network_utils, list_utils, file_utils
 from utils import domain_name_utils
 
 
-def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[str]:
+def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
     """
     Start of the application: getting the domain names, and returning them as a list of string.
     They can be set from command line and from a .txt file put in the input folder in which each domain name is written
@@ -19,8 +20,8 @@ def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[s
     Every domain name is checked if matches the correct rules of defining a domain name. Then, at the end, duplicates
     are removed.
 
-    :param default_domain_names: The default domain names to use when no one is set by the user.
-    :type default_domain_names: List[str]
+    :param default_websites: The default domain names to use when no one is set by the user.
+    :type default_websites: List[str]
     :return: A list of 'grammatically' correct domain names.
     :rtype: List[str]
     """
@@ -38,9 +39,74 @@ def get_domain_names(default_domain_names=['google.it', 'youtube.it']) -> List[s
             # default_domain_names.append('youtube.it')
             # default_domain_names.append('unipd.it')
             # default_domain_names.append('ocsp.digicert.com')
-            for index, domain_name in enumerate(default_domain_names):
-                print(f"> [{index + 1}/{len(default_domain_names)}]: {domain_name}")
-            return default_domain_names
+            for index, domain_name in enumerate(default_websites):
+                print(f"> [{index + 1}/{len(default_websites)}]: {domain_name}")
+            return default_websites
+        file = result[0]
+        abs_filepath = str(file)
+        with open(abs_filepath, 'r') as f:  # 'w' or 'x'
+            print(f"> Found file: {abs_filepath}")
+            lines = f.readlines()
+            for line in lines:
+                candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
+                if domain_name_utils.is_grammatically_correct(candidate):
+                    domain_name_list.append(candidate)
+                else:
+                    pass
+            f.close()
+            if len(domain_name_list) == 0:
+                print(f"> The .txt file in input folder doesn't contain any valid domain name.")
+                exit(0)
+    else:
+        print('> Argument List:', str(sys.argv))
+        for arg in sys.argv[1:]:
+            if domain_name_utils.is_grammatically_correct(arg):
+                pass
+            else:
+                print(f"!!! {arg} is not a well-formatted domain name. !!!")
+        if len(domain_name_list) == 0:
+            print(f"!!! Command line arguments are not well-formatted domain names. !!!")
+            exit(1)
+        else:
+            print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
+            for index, domain_name in enumerate(domain_name_list):
+                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
+    list_utils.remove_duplicates(domain_name_list)
+    return domain_name_list
+
+
+def get_mail_domains(default_websites=['google.it', 'youtube.it']) -> List[str]:
+    """
+    Start of the application: getting the domain names, and returning them as a list of string.
+    They can be set from command line and from a .txt file put in the input folder in which each domain name is written
+    per line. The application will control first the command line and then the file. If no domain name is set neither in
+    the 2 ways, the application will start with 2 default domain names to show its behaviour.
+    Such domain names are: google.it, youtube.it.
+    Every domain name is checked if matches the correct rules of defining a domain name. Then, at the end, duplicates
+    are removed.
+
+    :param default_websites: The default domain names to use when no one is set by the user.
+    :type default_websites: List[str]
+    :return: A list of 'grammatically' correct domain names.
+    :rtype: List[str]
+    """
+    domain_name_list = list()
+    if len(sys.argv) == 1:
+        print(f"> No domain names found in command line.")
+        result = None
+        try:
+            result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
+        except FileWithExtensionNotFoundError:
+            print(f"> No .txt file found in input folder found.")
+            print(f"> Starting application with default domain names as sample:")
+            # default_domain_names = list(default_domain_names)
+            # default_domain_names.append('google.it')       # darklyrics.com works only on HTTP
+            # default_domain_names.append('youtube.it')
+            # default_domain_names.append('unipd.it')
+            # default_domain_names.append('ocsp.digicert.com')
+            for index, domain_name in enumerate(default_websites):
+                print(f"> [{index + 1}/{len(default_websites)}]: {domain_name}")
+            return default_websites
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
@@ -96,7 +162,7 @@ if __name__ == "__main__":
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
-        new_domain_names = get_domain_names()
+        new_domain_names = get_websites()
         persist_errors = get_flags()
         # entities
         resolvers = ApplicationResolvers()

@@ -14,18 +14,19 @@ class DnsResolvingTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        # PARAMETERS
+        # cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
+        # cls.domain_names = ['unipd.it', 'units.it', 'dei.unipd.it', 'ocsp.digicert.com', 'lorenzo.fabbio@unipd.it', 'studente110847@dei.unipd.it']
+        # cls.domain_names = ['unipd.it', 'dei.unipd.it']
+        cls.domain_names = ['ocsp.digicert.com']
+        # cls.domain_names = ['modor.verisign.net']
+        # elaboration
         cls.PRD = DnsResolvingTestCase.get_project_root_folder()
         cls.dns_resolver = DnsResolver()
         try:
             cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=cls.PRD)
         except FilenameNotFoundError:
             pass
-        # cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
-        # cls.domain_names = ['unipd.it', 'units.it', 'dei.unipd.it', 'ocsp.digicert.com', 'lorenzo.fabbio@unipd.it', 'studente110847@dei.unipd.it']
-        cls.domain_names = ['unipd.it', 'dei.unipd.it']
-        # cls.domain_names = ['ocsp.digicert.com']
-        # cls.domain_names = ['modor.verisign.net']
-        # elaboration
         cls.dns_resolver.cache.cache.clear()
         cls.results, cls.error_logs = DnsResolvingTestCase.dns_resolving(cls.dns_resolver, cls.domain_names)
 

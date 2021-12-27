@@ -71,7 +71,8 @@ The output folder is a directory contained in the project root directory (PRD) n
 This folder's purpose is to contain all the results (as files) from the execution of the application.
 The expected result files are:
 
-1) a .csv file named 'cache.csv' containing the entire cache from the DNS resolver
+1) a .csv file named 'cache.csv' containing the entire cache from the DNS resolver. This file automatically is loaded
+when starting the DNS cache here in the output folder; if there isn't then cache starts empty.
 2) a .csv file named 'error_logs.csv' containing all the registered errors encountered during the entire elaboration of
 the application
 3) a .sqlite file named 'results.sqlite' containing all the application data registered during its

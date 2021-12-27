@@ -1,7 +1,8 @@
 import ipaddress
 from typing import Tuple, List
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from utils import domain_name_utils
+from exceptions.InvalidUrlError import InvalidUrlError
+from utils import domain_name_utils, url_utils
 import os
 from pathlib import Path
 import requests
@@ -10,14 +11,15 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str], bool, ipaddress.IPv4Address]:
+# TODO: modify doc
+def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bool, ipaddress.IPv4Address]:
     """
     This method returns the landing page, the redirection path, the Strict Transport Security validity from and the ip
     address of a domain name. In particular it creates an url from the domain name and then tries a GET HTTP method
     with it.
 
-    :param domain_name: A domain name.
-    :type domain_name: str
+    :param string: A domain name.
+    :type string: str
     :param as_https: A boolean setting if the url constructed from the domain name parameter uses HTTPS or HTTP.
     :type as_https: bool
     :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.
@@ -34,14 +36,20 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     :rtype: Tuple[str, List[str], bool, ipaddress.IPv4Address]
     """
     redirection_path = list()
-    try:
-        domain_name_utils.grammatically_correct(domain_name)
-    except InvalidDomainNameError:
-        raise
+    url = ''
     hsts = False
+
     try:
-        url = domain_name_utils.deduct_http_url(domain_name, as_https)
-        print(f"URL deducted: {domain_name} ---> {url}")
+        domain_name_utils.grammatically_correct(string)
+        url = domain_name_utils.deduct_http_url(string, as_https=as_https)
+    except InvalidDomainNameError:
+        try:
+            url_utils.grammatically_correct(string)
+            url = url_utils.deduct_http_url(string, as_https=as_https)
+        except InvalidUrlError:
+            raise
+
+    try:
         response = requests.get(url, headers={'Connection': 'close'}, stream=True)
         # tmp = response.raw._connection.sock.getsockname()
         # tmp = response.raw._connection.sock.getpeername()
@@ -62,6 +70,8 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     except requests.exceptions.URLRequired:
         # A valid URL is required to make a request.
         raise
+    except requests.exceptions.InvalidURL:
+        raise
     except requests.exceptions.TooManyRedirects:
         # Too many redirects.
         raise
@@ -79,8 +89,8 @@ def resolve_landing_page(domain_name: str, as_https=True) -> Tuple[str, List[str
     else:
         hsts = False
     redirection_path.append(response.url)  # final page
-    landing_url = response.url
-    return landing_url, redirection_path, hsts, ip
+    landing_http_url = response.url
+    return landing_http_url, redirection_path, hsts, ip
 
 
 def download_latest_tsv_database(project_root_directory=Path.cwd()) -> None:

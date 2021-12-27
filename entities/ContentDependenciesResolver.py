@@ -165,6 +165,18 @@ class ContentDependenciesResolver:
 
         return content_dependencies
 
+    def test(self, url: str):
+        try:
+            self.headless_browser.driver.get(url)
+            # self.headless_browser.driver.switch_to.
+        except selenium.common.exceptions.WebDriverException:
+            raise
+        scripts = WebDriverWait(self.headless_browser.driver, 10).until(
+            lambda driver: driver.find_elements(By.TAG_NAME, 'script')
+        )
+        return scripts
+
+
     def close(self):
         """
         This method closes the headless browser process.

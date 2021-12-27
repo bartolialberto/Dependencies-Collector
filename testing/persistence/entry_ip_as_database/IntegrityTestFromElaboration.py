@@ -71,7 +71,7 @@ class IntegrityTestFromElaboration(unittest.TestCase):
         for index_domain, domain in enumerate(dns_results.keys()):
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results[domain]):
-                print(f"--> Handling zone[{index_zone}] '{zone.name}'")
+                print(f"--> Handling zone[{index_zone}] '{zone.url}'")
                 for index_rr, rr in enumerate(zone.nameservers):
                     try:
                         ip = ipaddress.IPv4Address(rr.get_first_value())
@@ -79,15 +79,15 @@ class IntegrityTestFromElaboration(unittest.TestCase):
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(
-                                f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            ip_as_db_entries_result[rr.name] = (rr.get_first_value(), entry, belonging_network_ip_as_db)
+                                f"----> for nameserver[{index_rr}] '{rr.url}' ({rr.get_first_value()}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
+                            ip_as_db_entries_result[rr.url] = (rr.get_first_value(), entry, belonging_network_ip_as_db)
                         except ValueError as exc:
                             print(
-                                f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) found AS record: [{entry}]")
-                            ip_as_db_entries_result[rr.name] = (rr.get_first_value(), entry, None)
+                                f"----> for nameserver[{index_rr}] '{rr.url}' ({rr.get_first_value()}) found AS record: [{entry}]")
+                            ip_as_db_entries_result[rr.url] = (rr.get_first_value(), entry, None)
                     except AutonomousSystemNotFoundError as exc:
-                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({rr.get_first_value()}) no AS found.")
-                        ip_as_db_entries_result[rr.name] = (ip, None, None)  # TODO: tenerne traccia in qualche modo
+                        print(f"----> for nameserver[{index_rr}] '{rr.url}' ({rr.get_first_value()}) no AS found.")
+                        ip_as_db_entries_result[rr.url] = (ip, None, None)  # TODO: tenerne traccia in qualche modo
         print("END IP-AS RESOLVER")
         return ip_as_db_entries_result
 

@@ -1,17 +1,21 @@
+import os
 import unittest
 from pathlib import Path
 from typing import List
 from entities.DnsResolver import DnsResolver
+from entities.TLDPageScraper import TLDPageScraper
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_domain_name
 
 
-class IntegrityTestFromElaboration(unittest.TestCase):
+class DnsResolvingIntegrityTestCase(unittest.TestCase):
     """
     Test class that takes a list of domain names and then executes the DNS resolving.
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
+    domain_name_list = None
+
     @staticmethod
     def get_project_root_folder() -> Path:
         current = Path.cwd()
@@ -25,32 +29,33 @@ class IntegrityTestFromElaboration(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name_list = ['unipd.it', 'google.it', 'youtube.it']
-        cls.use_cache = False
-
-    @staticmethod
-    def set_up_resolver(use_cache: bool, project_root_directory: Path):
+        use_cache = False
+        # ELABORATION
+        PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()       # Project Root Folder
+        tld_scraper = TLDPageScraper()
         dns_resolver = DnsResolver()
         if use_cache:
             try:
-                dns_resolver.cache.load_csv_from_output_folder(project_root_directory=project_root_directory)
+                dns_resolver.cache.load_csv_from_output_folder(project_root_directory=PRD)
             except (ValueError, FilenameNotFoundError, OSError) as exc:
                 print(f"!!! {str(exc)} !!!")
                 exit(1)
-        return dns_resolver
-
-    @staticmethod
-    def dns_resolving(dns_resolver: DnsResolver, domain_names: List[str]):
         print("START DNS DEPENDENCIES RESOLVER")
-        dns_results = dns_resolver.resolve_multiple_domains_dependencies(domain_names)
+        cls.dns_results = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_name_list)
         print("END DNS DEPENDENCIES RESOLVER")
-        return dns_results
+        print("INSERTION INTO DATABASE... ", end='')
 
-    def setUp(self) -> None:
-        self.PRD = IntegrityTestFromElaboration.get_project_root_folder()
-        self.dns_resolver = IntegrityTestFromElaboration.set_up_resolver(self.use_cache, self.PRD)
-        self.results = IntegrityTestFromElaboration.dns_resolving(self.dns_resolver, self.domain_name_list)
-        helper_domain_name.multiple_inserts(self.results)
+        print("DONE")
+        try:
+            file = Path(f"{str(PRD)}{os.sep}output{os.sep}cache_dns_from_test.csv")
+            dns_resolver.cache.write_to_csv(file)
+        except FilenameNotFoundError:
+            pass
 
+    def test_a(self):
+        pass
+
+    '''
     def test_integrity(self):
         print("\nSTART INTEGRITY CHECK")
         for i, domain_name in enumerate(self.results.keys()):
@@ -74,6 +79,7 @@ class IntegrityTestFromElaboration(unittest.TestCase):
             self.assertEqual(0, len(list_zones))
             print("")
         print("END INTEGRITY CHECK")
+    '''
 
 
 if __name__ == '__main__':
