@@ -5,7 +5,7 @@ from typing import List
 from entities.DnsResolver import DnsResolver
 from entities.TLDPageScraper import TLDPageScraper
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from persistence import helper_domain_name
+from persistence import helper_domain_name, helper_application_results, helper_nameserver, helper_zone, helper_alias
 
 
 class DnsResolvingIntegrityTestCase(unittest.TestCase):
@@ -14,6 +14,9 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
+    domain_names = None
+    results = None
+    PRD = None
     domain_name_list = None
 
     @staticmethod
@@ -28,32 +31,71 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name_list = ['unipd.it', 'google.it', 'youtube.it']
-        use_cache = False
+        # cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
+        # cls.domain_names = ['unipd.it', 'units.it', 'dei.unipd.it', 'ocsp.digicert.com', 'lorenzo.fabbio@unipd.it', 'studente110847@dei.unipd.it']
+        cls.domain_names = ['unipd.it', 'dei.unipd.it']
+        # cls.domain_names = ['ocsp.digicert.com']
+        # cls.domain_names = ['modor.verisign.net']
         # ELABORATION
-        PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()       # Project Root Folder
-        tld_scraper = TLDPageScraper()
-        dns_resolver = DnsResolver()
-        if use_cache:
-            try:
-                dns_resolver.cache.load_csv_from_output_folder(project_root_directory=PRD)
-            except (ValueError, FilenameNotFoundError, OSError) as exc:
-                print(f"!!! {str(exc)} !!!")
-                exit(1)
-        print("START DNS DEPENDENCIES RESOLVER")
-        cls.dns_results = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_name_list)
-        print("END DNS DEPENDENCIES RESOLVER")
-        print("INSERTION INTO DATABASE... ", end='')
+        cls.PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
+        tlds = TLDPageScraper.import_txt_from_input_folder(cls.PRD)
+        dns_resolver = DnsResolver(tlds)
 
-        print("DONE")
+        dns_resolver.cache.clear()
+
+        """
         try:
-            file = Path(f"{str(PRD)}{os.sep}output{os.sep}cache_dns_from_test.csv")
-            dns_resolver.cache.write_to_csv(file)
+            cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=cls.PRD)
         except FilenameNotFoundError:
             pass
+        """
+        print("START DNS DEPENDENCIES RESOLVER")
+        cls.dns_results, cls.zone_dependencies, cls.nameservers, cls.error_logs = cls.results = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
+        print("END DNS DEPENDENCIES RESOLVER")
+        print("START CACHE DNS DEPENDENCIES RESOLVER")
+        cls.dns_new_results, cls.zone_new_dependencies, cls.new_nameservers, cls.error_new_logs = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
+        print("END CACHE DNS DEPENDENCIES RESOLVER")
+        print("INSERTION INTO DATABASE... ", end='')
+        helper_application_results.insert_dns_result(cls.results)
+        print("DONE")
 
-    def test_a(self):
-        pass
+    def test_1_domain_names_integrity(self):
+        print("\nSTART DOMAIN NAMES INTEGRITY CHECK")
+        db_domain_names = list()
+        for domain_name in self.domain_names:
+            dne = helper_domain_name.get(domain_name)
+            db_domain_names.append(dne.name)
+        self.assertListEqual(self.domain_names, db_domain_names)
+        print("END DOMAIN NAMES INTEGRITY CHECK")
+
+    def test_2_nameservers_integrity(self):
+        print("\nSTART NAMESERVERS INTEGRITY CHECK")
+        for domain_name in self.dns_results.keys():
+            for zone in self.dns_results[domain_name]:
+                # check presence in the db
+                for nameserver in zone.nameservers:
+                    nse, dne = helper_nameserver.get(nameserver.name)
+
+                # check they are the same
+                nameservers_result_set = set(map(lambda rr: rr.name, zone.nameservers))
+                tmp = helper_nameserver.get_from_zone_name(zone.name)
+                nameservers_db_set = set(map(lambda x: x.name.name, tmp))
+                self.assertSetEqual(nameservers_result_set, nameservers_db_set)
+        print("END NAMESERVERS INTEGRITY CHECK")
+
+    def test_3_aliases_integrity(self):
+        print("\nSTART ALIASES INTEGRITY CHECK")
+        for domain_name in self.dns_results.keys():
+            for zone in self.dns_results[domain_name]:
+                for alias in zone.aliases:
+                    tmp = helper_alias.get_all_aliases_from_name(alias.name)
+                    dne_set = set(map(lambda rr: rr.name, tmp))
+
+                    if alias.get_first_value() in dne_set:
+                        pass
+                    else:
+                        raise ValueError
+        print("END ALIASES INTEGRITY CHECK")
 
     '''
     def test_integrity(self):

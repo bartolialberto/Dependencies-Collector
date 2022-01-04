@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import selenium
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from utils import file_utils
 
 
 class TLDPageScraper:
@@ -51,6 +54,29 @@ class TLDPageScraper:
             raise
         except OSError:
             raise
+
+    @staticmethod
+    def import_txt_from_input_folder(project_root_folder=Path.cwd()):
+        try:
+            result = file_utils.search_for_filename_in_subdirectory('input', 'tlds.txt', project_root_folder)
+        except FileNotFoundError:
+            raise
+        file = result[0]
+        tlds = list()
+        try:
+            f = open(str(file), "r")
+            for line in f:
+                tlds.append(line)
+            f.close()
+        except ValueError:
+            raise
+        except PermissionError:
+            raise
+        except FileNotFoundError:
+            raise
+        except OSError:
+            raise
+        return tlds
 
     def export_txt(self, filepath):
         try:

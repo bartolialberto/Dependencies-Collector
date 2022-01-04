@@ -13,7 +13,7 @@ def insert(string: str) -> DomainNameEntity:
     return dne
 
 
-def get(domain_name: str) -> DomainNameEntity:
+def get(domain_name: str) -> DomainNameEntity:      # nse12.o365filtering.com
     try:
         return DomainNameEntity.get_by_id(domain_name)
     except DoesNotExist:
