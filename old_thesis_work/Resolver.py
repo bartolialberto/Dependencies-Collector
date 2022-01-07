@@ -1,7 +1,7 @@
 # coding=utf-8
 import dns.resolver
-from Zones import RRecord, findRRecord
 import re
+from old_thesis_work.Zones import findRRecord, RRecord
 
 
 class Resolver:

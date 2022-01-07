@@ -215,7 +215,7 @@ def take_snapshot(domain_name_list: List[str]) -> None:
 def equals(domain_name1: str, domain_name2: str) -> bool:
     """
     Return if 2 domain names (as string) are equals: this means if one of them (or all of them) has the trailing point,
-    this method handle that. Also it ignores case.
+    this method handles that. Also it ignores case.
 
 
     :param domain_name1: First domain name.
