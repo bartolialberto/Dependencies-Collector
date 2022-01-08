@@ -9,6 +9,13 @@ from entities.error_log.ErrorLogger import ErrorLogger
 from old_thesis_work.Resolver import Resolver
 
 
+# DOMAIN NAME LIST EXAMPLES
+# ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+# ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
+# ['unipd.it', 'dei.unipd.it', 'www.units.it', 'units.it', 'dia.units.it']
+# ['google.it']
+# ['ocsp.digicert.com']
+# ['modor.verisign.net']
 class DnsResolvingTestCase(unittest.TestCase):
     """
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
@@ -35,6 +42,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     match in the key set, then the values that overflows with respect to the other result will be printed
 
     """
+    consider_tld = None
     PRD = None
     domain_names = None
     dns_resolver = None
@@ -48,41 +56,26 @@ class DnsResolvingTestCase(unittest.TestCase):
             else:
                 current = current.parent
 
-    # DOMAIN NAME LIST EXAMPLES
-    # ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-    # ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
-    # ['unipd.it', 'dei.unipd.it', 'www.units.it', 'units.it', 'dia.units.it']
-    # ['google.it']
-    # ['ocsp.digicert.com']
-    # ['modor.verisign.net']
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
+        cls.consider_tld = False
         # ELABORATION
         cls.PRD = DnsResolvingTestCase.get_project_root_folder()
         tlds = TLDPageScraper.import_txt_from_input_folder(cls.PRD)
         cls.dns_resolver = DnsResolver(tlds)
         cls.dns_resolver.cache.clear()
         print("START DNS DEPENDENCIES RESOLVER")
-        cls.dns_results, cls.zone_dependencies, cls.nameservers, cls.error_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True)
+        cls.dns_results, cls.zone_dependencies, cls.nameservers, cls.error_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True, consider_tld=cls.consider_tld)
         print("END DNS DEPENDENCIES RESOLVER")
         print("START CACHE DNS DEPENDENCIES RESOLVER")
-        cls.dns_new_results, cls.zone_new_dependencies, cls.new_nameservers, cls.error_new_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
+        cls.dns_new_results, cls.zone_new_dependencies, cls.new_nameservers, cls.error_new_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=False, consider_tld=cls.consider_tld)
         print("END CACHE DNS DEPENDENCIES RESOLVER")
 
-    def test_1_results(self):
-        self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)
-        print(f"\n**** cache written in 'output' folder: file is named 'cache_from_dns_test.csv'")
-        logger = ErrorLogger()
-        for log in self.error_logs:
-            logger.add_entry(log)
-        logger.write_to_csv_in_output_folder(filename=self.error_logs_filename, project_root_directory=self.PRD)
-        print(f"\n**** error_logs written in 'output' folder: file is named 'error_logs_from_test.csv'\n")
-
-    def test_2_results_equality_from_cache(self):
+    def test_1_results_equality_from_cache(self):
         print(f"\nSTART EQUALITY FROM CACHE TEST")
         self.assertEqual(self.dns_results.keys(), self.dns_new_results.keys())
         are_count_keys_same = (len(self.dns_results.keys()) == len(self.dns_new_results.keys()))
@@ -115,7 +108,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.assertSetEqual(set(self.dns_results), set(self.dns_new_results))
         print(f"END EQUALITY FROM CACHE TEST")
 
-    def test_3_are_there_duplicates_in_results(self):
+    def test_2_are_there_duplicates_in_results(self):
         print(f"\nSTART DUPLICATES IN RESULTS TEST")
         duplicates = list()
         for i, rr in enumerate(self.dns_results):
@@ -130,7 +123,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.assertEqual(0, len(duplicates))
         print(f"END DUPLICATES IN RESULTS TEST")
 
-    def test_4_are_there_duplicates_in_cache(self):
+    def test_3_are_there_duplicates_in_cache(self):
         print(f"\nSTART DUPLICATES IN CACHE RESULTS TEST")
         duplicates = list()
         for i, rr in enumerate(self.dns_resolver.cache.cache):
@@ -145,7 +138,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.assertEqual(0, len(duplicates))
         print(f"END DUPLICATES IN CACHE RESULTS TEST")
 
-    def test_5_zone_zone_dependencies_integrity(self):
+    def test_4_zone_zone_dependencies_integrity(self):
         print(f"\nSTART CHECK BETWEEN ZONE RESULTS TEST")
         print(f"zone dependencies dict keys size = {len(self.zone_dependencies.keys())}")
         print(f"zone dependencies from cache dict keys size = {len(self.zone_new_dependencies.keys())}")
@@ -156,7 +149,6 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"len(results) = {len(self.zone_dependencies[zone_name])}\t", end='')
                 print(f"len(cache_results) = {len(self.zone_new_dependencies[zone_name])}\t", end='')
                 print(f"same? {(len(self.zone_dependencies[zone_name]) == len(self.zone_new_dependencies[zone_name]))}")
-                # print(f"[{i + 1}/{len(self.zone_dependencies.keys())}] = {zone_name}, len(results) = {len(self.zone_dependencies[zone_name])}, len(cache_results) = {len(self.zone_new_dependencies[zone_name])}, same? {}")
                 set_new = set(self.zone_dependencies[zone_name])
                 set_old = set(self.zone_new_dependencies[zone_name])
                 set_minor = None
@@ -200,7 +192,8 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.assertEqual(self.zone_dependencies.keys(), self.zone_new_dependencies.keys())
         print(f"END CHECK BETWEEN ZONE RESULTS TEST")
 
-    def test_6_nameservers_zone_dependencies_integrity(self):
+    # FIXME: bug
+    def test_5_nameservers_zone_dependencies_integrity(self):
         print(f"\nSTART CHECK BETWEEN NAMESERVER RESULTS TEST")
         print(f"nameservers dict keys size = {len(self.nameservers.keys())}")
         print(f"nameservers from cache dict keys size = {len(self.new_nameservers.keys())}")
@@ -211,7 +204,6 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"len(results) = {len(self.nameservers[nameserver])}\t", end='')
                 print(f"len(cache_results) = {len(self.new_nameservers[nameserver])}\t", end='')
                 print(f"same? {(len(self.nameservers[nameserver]) == len(self.new_nameservers[nameserver]))}")
-                # print(f"[{i+1}/{len(self.nameservers.keys())}] = {nameserver}, len(results) = {len(self.nameservers[nameserver])}, len(cache_results) = {len(self.new_nameservers[nameserver])}")
                 set_new = set(self.nameservers[nameserver])
                 set_old = set(self.new_nameservers[nameserver])
                 set_minor = None
@@ -254,6 +246,15 @@ class DnsResolvingTestCase(unittest.TestCase):
                     print(f"[{i+1}] = {elem}")
         self.assertEqual(self.nameservers.keys(), self.new_nameservers.keys())
         print(f"END CHECK BETWEEN NAMESERVER RESULTS TEST")
+
+    def test_6_export_results(self):
+        self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)
+        print(f"\n**** cache written in 'output' folder: file is named 'cache_from_dns_test.csv'")
+        logger = ErrorLogger()
+        for log in self.error_logs:
+            logger.add_entry(log)
+        logger.write_to_csv_in_output_folder(filename=self.error_logs_filename, project_root_directory=self.PRD)
+        print(f"\n**** error_logs written in 'output' folder: file is named 'error_logs_from_test.csv'\n")
 
     """
     def test_7_check_with_old_resolver(self):

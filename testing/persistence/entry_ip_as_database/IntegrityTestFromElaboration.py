@@ -72,7 +72,7 @@ class IntegrityTestFromElaboration(unittest.TestCase):
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results[domain]):
                 print(f"--> Handling zone[{index_zone}] '{zone.url}'")
-                for index_rr, rr in enumerate(zone.nameservers):
+                for index_rr, rr in enumerate(zone.zone_dependencies_per_nameserver):
                     try:
                         ip = ipaddress.IPv4Address(rr.get_first_value())
                         entry = ip_as_database.resolve_range(ip)

@@ -31,7 +31,7 @@ class DnsResolver:
     cache : LocalDnsResolverCache
         The cache used to handle requests.
     """
-    def __init__(self, tld_list: List[str]):
+    def __init__(self, tld_list: List[str] or None):
         """
         Instantiate this DnsResolver object.
 
@@ -64,22 +64,10 @@ class DnsResolver:
             final_name = None
             for cname in answer.chaining_result.cnames:
                 for key in cname.items.keys():
-                    # rr_aliases.append(str(key.target))
                     name = str(cname.name)
                     alias_value = str(key.target)
                     rr_aliases.append(RRecord(name, TypesRR.CNAME, alias_value))
                     final_name = alias_value
-                # check (useless) that type is CNAME
-                '''
-                try:
-                    t = TypesRR.parse_from_string(dns.rdatatype.to_text(cname.rdtype))
-                except NotResourceRecordTypeError:
-                    raise
-                if debug == TypesRR.CNAME:
-                    print(f"DEBUG-IMPORTANTE: debug is CNAME! from={name} cnames={rr_aliases}")
-                else:
-                    print(f"DEBUG-IMPORTANTE: debug is NOT CNAME...")
-                '''
             if final_name is None:
                 final_name = name
             rr_values = list()
@@ -89,7 +77,6 @@ class DnsResolver:
                 else:
                     rr_values.append(ad.to_text())
             response_rrecord = RRecord(final_name, type_rr, rr_values)
-            # response_rrecord = RRecord(answer.canonical_name.to_text(), type_rr, rr_values)
             return response_rrecord, rr_aliases
         except dns.resolver.NXDOMAIN:  # name is a domain that does not exist
             raise DomainNonExistentError(name)
@@ -100,7 +87,7 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False) -> Tuple[Dict[str, List[Zone]], Dict[str, List[Zone]], Dict[str, List[str]], List[ErrorLog]]:
+    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> Tuple[Dict[str, List[Zone]], Dict[str, List[Zone]], Dict[str, List[str]], List[ErrorLog]]:
         """
         This method resolves the zone dependencies of a list of domain names.
 
@@ -120,7 +107,7 @@ class DnsResolver:
                 if reset_cache_per_elaboration:
                     self.cache.clear()
 
-                dns_result, temp_zone_links, temp_nameservers, temp_logs = self.resolve_domain_dependencies(domain)
+                dns_result, temp_zone_links, temp_nameservers, temp_logs = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
 
                 # insert domain dns dependencies
                 results[domain] = dns_result
@@ -161,7 +148,7 @@ class DnsResolver:
             result.append(value)
         return result
 
-    def resolve_domain_dependencies(self, domain: str):
+    def resolve_domain_dependencies(self, domain: str, consider_tld=True):
         """
         This method resolves the zone dependencies of a domain name.
         It returns a list containing the zones and a list of error logs encountered during the elaboration.
@@ -183,17 +170,17 @@ class DnsResolver:
                 raise
 
         #
-        zone_links = dict()     # to keep track of dependencies between zones
-        nameservers = dict()
+        zone_dependencies_per_zone = dict()
+        zone_dependencies_per_nameserver = dict()
         error_logs = list()
         start_cache_length = len(self.cache.cache)
-        subdomains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
-        if len(subdomains) == 0:
+        elaboration_domains = domain_name_utils.get_subdomains_name_list(domain, root_included=True)
+        if len(elaboration_domains) == 0:
             raise InvalidDomainNameError(domain)  # giusto???
         zone_list = list()  # si va a popolare con ogni iterazione
         print(f"Cache has {start_cache_length} entries.")
         print(f"Looking at zone dependencies for '{domain}'..")
-        for current_domain in subdomains:
+        for current_domain in elaboration_domains:
             # reset all variables for new iteration
             current_zone_nameservers = list()
             current_zone_cnames = list()
@@ -210,7 +197,7 @@ class DnsResolver:
                 rr_aliases = self.cache.lookup(current_domain, TypesRR.CNAME)
                 aliases = set(map(lambda x: x.get_first_value(), rr_aliases))
                 for alias in aliases:
-                    self._split_domain_name_and_add_to_list(subdomains, alias, root_included=False)
+                    self._split_domain_name_and_add_to_list(elaboration_domains, alias, root_included=False)
                 zone_names = self.cache.resolve_zones_from_nameserver(current_domain)
                 for zone_name in zone_names:
                     tmp = list(map(lambda z: z.name, zone_list))
@@ -220,14 +207,14 @@ class DnsResolver:
                         zone_list.append(zone)
                         print(f"Depends on zone: {zone.name}\t\t\t[NON-AUTHORITATIVE]")
                         for nm in zone.nameservers:
-                            self._split_domain_name_and_add_to_list(subdomains, nm.name, False)
+                            self._split_domain_name_and_add_to_list(elaboration_domains, nm.name, False)
             except (NoRecordInCacheError, NoAvailablePathError):
                 try:
                     rr_cname_answer, rr_cname_aliases = self.do_query(current_domain, TypesRR.CNAME)
                     self.cache.add_entry(rr_cname_answer)
                     for rr in rr_cname_aliases:
                         self.cache.add_entry(rr)
-                    self._split_domain_name_and_add_to_list(subdomains, rr_cname_answer.get_first_value(), root_included=False)
+                    self._split_domain_name_and_add_to_list(elaboration_domains, rr_cname_answer.get_first_value(), root_included=False)
                     # resolving alias
                     n = rr_cname_answer.get_first_value()
                     try:
@@ -240,7 +227,7 @@ class DnsResolver:
                     except (DomainNonExistentError, UnknownReasonError) as e:
                         error_logs.append(ErrorLog(e, current_domain, str(e)))
                 except NoAnswerError:
-                    pass        # fare query A????
+                    pass
                 except (DomainNonExistentError, UnknownReasonError) as e:
                     error_logs.append(ErrorLog(e, current_domain, str(e)))
 
@@ -250,18 +237,18 @@ class DnsResolver:
                 current_zone_name, current_zone_nameservers, current_zone_cnames = self.cache.resolve_zone_from_ns_rr(rr_ns)  # raise NoRecordInCacheError too
 
                 #
-                self._init_dict_key_with_an_empty_set(zone_links, current_domain)
+                self._init_dict_key_with_an_empty_set(zone_dependencies_per_zone, current_domain)
 
                 for rr in current_zone_nameservers:
-                    self._split_domain_name_and_add_to_list(subdomains, rr.name, False)
+                    self._split_domain_name_and_add_to_list(elaboration_domains, rr.name, False)
 
                     #
                     try:
                         zone_name_of_nameserver = self.resolve_zone_of_nameserver(rr.name)
-                        zone_links[current_domain].add(zone_name_of_nameserver)
+                        zone_dependencies_per_zone[current_domain].add(zone_name_of_nameserver)
                     except ValueError:
                         pass
-                    self._init_dict_key_with_an_empty_set_and_then_add(nameservers, rr.name, current_zone_name)
+                    self._init_dict_key_with_an_empty_set_and_then_add(zone_dependencies_per_nameserver, rr.name, current_zone_name)
 
                 zone = Zone(current_zone_name, current_zone_nameservers, current_zone_cnames)
                 if zone not in zone_list:
@@ -281,7 +268,7 @@ class DnsResolver:
                 self.cache.add_entry(rr_ns_answer)
 
                 #
-                self._init_dict_key_with_an_empty_set(zone_links, current_domain)
+                self._init_dict_key_with_an_empty_set(zone_dependencies_per_zone, current_domain)
 
                 # no rr_aliases poiché una query NS non può avere alias
                 for nameserver in rr_ns_answer.values:
@@ -306,21 +293,23 @@ class DnsResolver:
                             list_utils.append_with_no_duplicates(current_zone_nameservers, rr_a_answer)  # ma se il RR ha solo il campo values diverso?
                         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as exc:
                             error_logs.append(ErrorLog(exc, current_domain, str(exc)))
-                    self._split_domain_name_and_add_to_list(subdomains, nameserver, False)
+                    self._split_domain_name_and_add_to_list(elaboration_domains, nameserver, False)
 
                     #
                     try:
                         zone_name_of_nameserver = self.resolve_zone_of_nameserver(nameserver)
-                        zone_links[current_domain].add(zone_name_of_nameserver)
+                        zone_dependencies_per_zone[current_domain].add(zone_name_of_nameserver)
                     except ValueError:
                         pass
-                    self._init_dict_key_with_an_empty_set_and_then_add(nameservers, nameserver, current_zone_name)
+                    self._init_dict_key_with_an_empty_set_and_then_add(zone_dependencies_per_nameserver, nameserver, current_zone_name)
 
                 print(f"Depends on zone: {current_zone_name}")
                 zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames))
         print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
-        # TODO: togliere i Top-Level Domain
-        return zone_list, zone_links, nameservers, error_logs
+
+        if not consider_tld:
+            zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver)
+        return zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs
 
     def resolve_zone_of_nameserver(self, nameserver: str):
         subdomains = domain_name_utils.get_subdomains_name_list(nameserver, False)
@@ -331,7 +320,6 @@ class DnsResolver:
             except NoRecordInCacheError:
                 try:
                     rr_values, rr_aliases = self.do_query(domain, TypesRR.NS)
-                    # self.cache.add_entry(rr_values)
                     return domain
                 except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                     pass
@@ -386,3 +374,26 @@ class DnsResolver:
             _dict[_key] = set()
         finally:
             _dict[_key].add(elem_to_add)
+
+    @classmethod
+    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, str], zone_dependencies_per_nameserver: Dict[str, str]) -> Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]:
+        filtered_zone_list = list(filter(lambda z: z.name not in tld_list, zone_list))
+
+        filtered_zone_dependencies_per_zone = dict()
+        for zone_name in zone_dependencies_per_zone.keys():
+            if zone_name not in tld_list:
+                filtered_zone_dependencies_per_zone[zone_name] = list()
+        for zone_name, list_zone_names in filtered_zone_dependencies_per_zone.items():
+            for zn in zone_dependencies_per_zone[zone_name]:
+                if zn not in tld_list:
+                    filtered_zone_dependencies_per_zone[zone_name].append(zn)
+
+        filtered_zone_dependencies_per_nameserver = dict()
+        for nameserver in zone_dependencies_per_nameserver.keys():
+            if nameserver not in tld_list:
+                filtered_zone_dependencies_per_nameserver[nameserver] = list()
+        for nameserver, list_zone_names in filtered_zone_dependencies_per_nameserver.items():
+            for zn in zone_dependencies_per_nameserver[nameserver]:
+                if zn not in tld_list:
+                    filtered_zone_dependencies_per_nameserver[nameserver].append(zn)
+        return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver

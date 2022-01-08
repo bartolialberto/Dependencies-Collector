@@ -1,5 +1,8 @@
 import unittest
+from datetime import datetime
 from pathlib import Path
+import dns
+from dns.name import Name
 from entities.DnsResolver import DnsResolver
 from entities.TypesRR import TypesRR
 from exceptions.DomainNonExistentError import DomainNonExistentError
@@ -35,7 +38,34 @@ class DnsQueryTestCase(unittest.TestCase):
             print(f"NO CACHE FILE FOUND")
         print(f"PARAMETER: {cls.domain_name}")
 
-    def test_1_do_query_and_debug_prints(self):
+    def test_1_do_raw_query_and_prints_raw_infos(self):
+        print(f"\nSTART RAW QUERY TEST")
+        try:
+            answer = self.dns_resolver.resolver.resolve(self.domain_name, self.type.to_string())
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.resolver.YXDOMAIN, Exception) as e:  # name is a domain that does not exist
+            print(f"!!! {str(e)} !!!")
+            exit(1)
+        print(f"answer.canonical_name = {answer.canonical_name}")
+        print(f"answer.qname = {answer.qname}")
+        print(f"answer.nameserver = {answer.nameserver}")
+        print(f"answer.expiration = {answer.expiration} ==> [UTC]: {datetime.utcfromtimestamp(answer.expiration)}")
+        if len(answer.chaining_result.cnames) != 0:
+            print(f"answer.chaining_result.canonical_name = {answer.chaining_result.canonical_name}")
+        for i, cname in enumerate(answer.chaining_result.cnames):
+            print(f"\ncname[{i+1}/{len(answer.chaining_result.cnames)}]")
+            print(f"--> cname.name = {cname.name}")
+            print(f"--> cname.ttl = {cname.ttl}")
+            for j, key in enumerate(cname.items.keys()):
+                print(f"----> cname.item[{j+1}/{len(cname.items.keys())}] = {key}")
+        print()
+        for i, val in enumerate(answer):
+            if isinstance(val, Name):
+                print(f"value[{i+1}/{len(answer)}] = {str(val)}")
+            else:
+                print(f"value[{i+1}/{len(answer)}] = {val.to_text()}")
+        print(f"END RAW QUERY TEST")
+
+    def test_2_do_query_and_debug_prints_from_application_resolver(self):
         print(f"\nSTART QUERY TEST")
         try:
             rr_answer, rr_aliases = self.dns_resolver.do_query(self.domain_name, self.type)

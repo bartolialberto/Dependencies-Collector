@@ -164,7 +164,7 @@ class LocalDnsResolverCache:
         except NoAvailablePathError:
             raise
 
-    def lookup_forward_path(self, name: str, result=None) -> List[str]:
+    def lookup_forward_path(self, name: str, result=None, as_strings=True) -> List[str]:
         if result is None:
             result = list()
         else:
@@ -239,7 +239,6 @@ class LocalDnsResolverCache:
             raise
         for alias in aliases:
             try:
-                # return self.look_up_first(alias, TypesRR.A)
                 return self.resolve_path_also_from_alias(alias)
             except NoRecordInCacheError:
                 pass
@@ -316,6 +315,8 @@ class LocalDnsResolverCache:
         zone_nameservers = list()
         zone_aliases = list()
         for nameserver in rr_ns.values:
+            forward_aliases = self.lookup_forward_path(nameserver)
+            forward_aliases.remove()
             aliases = self.lookup_all_aliases(nameserver)
             if len(aliases) != 0:
                 zone_aliases.append(RRecord(nameserver, TypesRR.CNAME, list(aliases)))      # creo un rr di tipo CNAME personalizzato: name = nameserver effettivo (che ha il rr di tipo A), e tutti gli alias come values
@@ -369,18 +370,11 @@ class LocalDnsResolverCache:
         for rr in self.cache:
             if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, nameserver):
                 list_utils.append_with_no_duplicates(result, rr.name)
-                break
             else:
                 for alias in aliases:
                     if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, alias):
                         list_utils.append_with_no_duplicates(result, rr.name)
                         break
-
-            """
-            for alias in aliases:
-                if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, alias):
-                    list_utils.append_with_no_duplicates(result, rr.name)
-            """
         return result
 
     def load_csv(self, path: str, take_snapshot=True) -> None:

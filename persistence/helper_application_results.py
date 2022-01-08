@@ -5,6 +5,7 @@ from peewee import DoesNotExist
 from entities.LandingResolver import WebSiteLandingResult
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
+from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from persistence import helper_website, helper_website_lands, helper_webserver, helper_zone, helper_nameserver, \
     helper_zone_links, helper_name_dependencies, helper_domain_name
 from utils import url_utils
@@ -48,7 +49,10 @@ def insert_dns_result(result: tuple, persist_errors=True):
     nse_dict = dict()
 
     for domain_name in zone_dependencies_per_domain_name.keys():
-        dne = helper_domain_name.insert(domain_name)
+        try:
+            dne = helper_domain_name.insert(domain_name)
+        except InvalidDomainNameError:
+            raise
         for zone in zone_dependencies_per_domain_name[domain_name]:
             ze = helper_zone.insert_zone_object(zone)
             helper_name_dependencies.insert(dne, ze)

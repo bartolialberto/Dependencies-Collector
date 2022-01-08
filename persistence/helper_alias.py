@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Set
 from peewee import DoesNotExist
-from persistence.BaseModel import DomainNameEntity, AliasAssociation
+from persistence import helper_ip_address, helper_domain_name
+from persistence.BaseModel import DomainNameEntity, AliasAssociation, IpAddressEntity
 from utils import list_utils
 
 
@@ -9,21 +10,41 @@ def insert(dne: DomainNameEntity, adne: DomainNameEntity) -> AliasAssociation:
     return aa
 
 
-# TODO: da testare
-def get_all_aliases_from_name(domain_name: str) -> List[DomainNameEntity]:
+def get_alias_from_entity(dne: DomainNameEntity) -> DomainNameEntity:
+    query = AliasAssociation.select() \
+        .join(DomainNameEntity, on=(AliasAssociation.name == dne))
+    for row in query:
+        return row.alias
+    raise DoesNotExist
+
+
+def get_alias_from_name(domain_name: str) -> DomainNameEntity:
     try:
-        dne = DomainNameEntity.get(DomainNameEntity.name == domain_name)
+        dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
         raise
-    result = list()
-    query = AliasAssociation.select()\
-        .join_from(AliasAssociation, DomainNameEntity, on=(AliasAssociation.name == DomainNameEntity.name))\
-        .where(AliasAssociation.name == dne)
+    query = AliasAssociation.select() \
+        .join(DomainNameEntity, on=(AliasAssociation.name == dne))
     for row in query:
-        result.append(row.alias)
-    query = AliasAssociation.select()\
-        .join_from(AliasAssociation, DomainNameEntity, on=(AliasAssociation.alias == DomainNameEntity.name))\
-        .where(AliasAssociation.alias == dne)
+        return row.alias
+    raise DoesNotExist
+
+
+def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
+    result = set()
+    query = AliasAssociation.select() \
+        .join(DomainNameEntity, on=(AliasAssociation.name == dne))
     for row in query:
-        list_utils.append_with_no_duplicates(result, row.name)
+        result.add(row.alias)
     return result
+
+
+def get_all_aliases_from_name(domain_name: str) -> Set[DomainNameEntity]:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    try:
+        return get_all_aliases_from_entity(dne)
+    except DoesNotExist:
+        raise

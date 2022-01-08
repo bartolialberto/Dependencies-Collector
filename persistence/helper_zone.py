@@ -1,8 +1,9 @@
+from typing import Set
 from peewee import DoesNotExist
 from entities.Zone import Zone
 from persistence import helper_nameserver, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
     helper_domain_name
-from persistence.BaseModel import ZoneEntity
+from persistence.BaseModel import ZoneEntity, NameDependenciesAssociation
 
 
 def insert(name: str) -> ZoneEntity:
@@ -34,9 +35,51 @@ def insert_zone_object(zone: Zone):
     return ze
 
 
+def get_zone_object(zone_name: str) -> Zone:
+    try:
+        ze = get(zone_name)
+    except DoesNotExist:
+        raise
+    try:
+        nss = helper_nameserver.get_from_zone_name(zone_name)
+    except DoesNotExist:
+        raise
+    result_zone_name = zone_name
+    result_nameservers = list()
+    result_aliases = list()
+    for ns in nss:
+        try:
+            aliases = helper_alias.get_all_aliases_from_name(ns.name)
+        except DoesNotExist:
+            pass
+    Zone()
+
+
 def get(zone_name: str) -> ZoneEntity:
     try:
         ze = ZoneEntity.get_by_id(zone_name)
     except DoesNotExist:
         raise
     return ze
+
+
+def get_all() -> Set[ZoneEntity]:
+    result = set()
+    query = ZoneEntity.select()
+    for row in query:
+        result.add(row)
+    return result
+
+
+def get_zone_dependencies_of(domain_name: str) -> Set[ZoneEntity]:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    result = set()
+    query = NameDependenciesAssociation.select()\
+        .join_from(NameDependenciesAssociation, ZoneEntity)\
+        .where(NameDependenciesAssociation.domain_name == dne)
+    for row in query:
+        result.add(row.zone)
+    return result
