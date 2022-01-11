@@ -49,6 +49,16 @@ class ErrorLogger:
         """
         self._logs.append(entry)
 
+    def add_entries(self, entries: List[ErrorLog]) -> None:
+        """
+        This method adds multiple logs.
+
+        :param entries: The new entries.
+        :type entries: List[ErrorLog]
+        """
+        for log in entries:
+            self._logs.append(log)
+
     def write_to_csv(self, filepath: str) -> None:
         """
         This method export all the error logs to a csv using the separator of the self object.

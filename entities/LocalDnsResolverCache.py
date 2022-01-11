@@ -2,6 +2,9 @@ import copy
 import csv
 from pathlib import Path
 from typing import List, Set, Tuple
+
+from peewee import DoesNotExist
+
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
@@ -164,7 +167,7 @@ class LocalDnsResolverCache:
         except NoAvailablePathError:
             raise
 
-    def lookup_forward_path(self, name: str, result=None, as_strings=True) -> List[str]:
+    def lookup_forward_path(self, name: str, result=None) -> List[str]:
         if result is None:
             result = list()
         else:
@@ -215,6 +218,7 @@ class LocalDnsResolverCache:
             for forward_elem in forward_list:
                 result.append(forward_elem)
             return result
+
 
     def resolve_path_also_from_alias(self, nameserver: str) -> RRecord:
         """
@@ -315,8 +319,31 @@ class LocalDnsResolverCache:
         zone_nameservers = list()
         zone_aliases = list()
         for nameserver in rr_ns.values:
-            forward_aliases = self.lookup_forward_path(nameserver)
-            forward_aliases.remove()
+            try:
+                forward_aliases = self.lookup_forward_path(nameserver)
+            except DoesNotExist:
+                raise
+            # construct RR CNAME chain
+            if len(forward_aliases) > 1:
+                name = nameserver
+                for alias in forward_aliases[:-1]:
+                    zone_aliases.append(RRecord(name, TypesRR.CNAME, alias))
+                    name = alias
+                try:
+                    rr_a = self.lookup_first(name, TypesRR.A)
+                except NoRecordInCacheError:
+                    raise
+                zone_nameservers.append(rr_a)
+            else:
+                try:
+                    rr_a = self.lookup_first(nameserver, TypesRR.A)
+                except NoRecordInCacheError:
+                    raise
+                zone_nameservers.append(rr_a)
+
+
+
+            """
             aliases = self.lookup_all_aliases(nameserver)
             if len(aliases) != 0:
                 zone_aliases.append(RRecord(nameserver, TypesRR.CNAME, list(aliases)))      # creo un rr di tipo CNAME personalizzato: name = nameserver effettivo (che ha il rr di tipo A), e tutti gli alias come values
@@ -334,6 +361,7 @@ class LocalDnsResolverCache:
             if rr_a is None:
                 raise NoRecordInCacheError(rr_ns.name, rr_ns.type)
             zone_nameservers.append(rr_a)
+            """
         return zone_name, zone_nameservers, zone_aliases
 
     def lookup_first_alias(self, name: str) -> RRecord:

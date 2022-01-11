@@ -1,9 +1,9 @@
 from typing import Set
 from peewee import DoesNotExist
 from entities.Zone import Zone
-from persistence import helper_nameserver, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
+from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
     helper_domain_name
-from persistence.BaseModel import ZoneEntity, NameDependenciesAssociation
+from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation
 
 
 def insert(name: str) -> ZoneEntity:
@@ -19,7 +19,7 @@ def insert_zone_object(zone: Zone):
         return ze       # scorciatoia?
 
     for rr_nameserver in zone.nameservers:
-        nse, nsdne = helper_nameserver.insert(rr_nameserver.name)
+        nse, nsdne = helper_name_server.insert(rr_nameserver.name)
         helper_zone_composed.insert(ze, nse)
         iae = helper_ip_address.insert(rr_nameserver.get_first_value())
         helper_access.insert(nsdne, iae)
@@ -27,7 +27,7 @@ def insert_zone_object(zone: Zone):
     for rr_alias in zone.aliases:
         # get???
         # ne = helper_domain_name.insert(rr_alias.name)
-        dne, ne = helper_nameserver.insert(rr_alias.name)
+        dne, ne = helper_name_server.insert(rr_alias.name)
         for alias in rr_alias.values:
             ane = helper_domain_name.insert(alias)
             helper_alias.insert(ne, ane)
@@ -41,7 +41,7 @@ def get_zone_object(zone_name: str) -> Zone:
     except DoesNotExist:
         raise
     try:
-        nss = helper_nameserver.get_from_zone_name(zone_name)
+        nss = helper_name_server.get_from_zone_name(zone_name)
     except DoesNotExist:
         raise
     result_zone_name = zone_name
@@ -77,9 +77,9 @@ def get_zone_dependencies_of(domain_name: str) -> Set[ZoneEntity]:
     except DoesNotExist:
         raise
     result = set()
-    query = NameDependenciesAssociation.select()\
-        .join_from(NameDependenciesAssociation, ZoneEntity)\
-        .where(NameDependenciesAssociation.domain_name == dne)
+    query = DomainNameDependenciesAssociation.select()\
+        .join_from(DomainNameDependenciesAssociation, ZoneEntity)\
+        .where(DomainNameDependenciesAssociation.domain_name == dne)
     for row in query:
         result.add(row.zone)
     return result

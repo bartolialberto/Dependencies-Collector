@@ -1,12 +1,18 @@
 import unittest
 from pathlib import Path
+
+import selenium
 from peewee import DoesNotExist
 from entities.DnsResolver import DnsResolver
+from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.TLDPageScraper import TLDPageScraper
+from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from persistence import helper_domain_name, helper_application_results, helper_nameserver, helper_zone, helper_alias, \
+from exceptions.NoAliasFoundError import NoAliasFoundError
+from persistence import helper_domain_name, helper_application_results, helper_name_server, helper_zone, helper_alias, \
     helper_zone_links
+from utils import domain_name_utils
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -16,21 +22,18 @@ from persistence import helper_domain_name, helper_application_results, helper_n
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
-from utils import domain_name_utils
-
-
 class DnsResolvingIntegrityTestCase(unittest.TestCase):
     """
     Test class that takes a list of domain names and then executes the DNS resolving.
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
+    consider_tld = None
     import_cache_from_output_folder = None
     dns_resolver = None
     clear_cache_at_start = None
     domain_names = None
     results = None
-    PRD = None
     domain_name_list = None
 
     @staticmethod
@@ -45,14 +48,13 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = ['unipd.it', 'dei.unipd.it', 'www.units.it', 'units.it', 'dia.units.it']
+        cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = False
         # ELABORATION
-        cls.PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
-        tlds = TLDPageScraper.import_txt_from_input_folder(cls.PRD)
-        cls.dns_resolver = DnsResolver(tlds)
+        PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
+        tlds = TLDPageScraper.import_txt_from_input_folder(PRD)
         if cls.clear_cache_at_start:
             cls.dns_resolver.cache.clear()
         if cls.import_cache_from_output_folder:
@@ -61,6 +63,21 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
             except FilenameNotFoundError as e:
                 print(f"!!! {str(e)} !!!")
                 exit(1)
+        if cls.consider_tld:
+            try:
+                headless_browser = FirefoxHeadlessWebDriver(PRD)
+            except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+                print(f"!!! {str(e)} !!!")
+                exit(1)
+            tld_scraper = TLDPageScraper(headless_browser)
+            try:
+                tlds = tld_scraper.scrape_tld()
+            except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
+                print(f"!!! {str(e)} !!!")
+                exit(1)
+        else:
+             tlds = None
+        cls.dns_resolver = DnsResolver(tlds)
         print("START DNS DEPENDENCIES RESOLVER")
         cls.dns_results, cls.zone_dependencies_per_zone, cls.zone_dependencies_per_nameserver, cls.error_logs = cls.results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
         print("END DNS DEPENDENCIES RESOLVER")
@@ -104,13 +121,13 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 # check presence in the db
                 for nameserver in zone.nameservers:
                     try:
-                        nse, dne = helper_nameserver.get(nameserver.name)
+                        nse, dne = helper_name_server.get(nameserver.name)
                     except DoesNotExist as e:
                         print(f"!!! {str(e)} !!!")
 
                 # check they are the same
                 nameservers_result_set = set(map(lambda rr: rr.name, zone.nameservers))
-                tmp = helper_nameserver.get_from_zone_name(zone.name)
+                tmp = helper_name_server.get_from_zone_name(zone.name)
                 nameservers_db_set = set(map(lambda x: x.name.name, tmp))
                 self.assertSetEqual(nameservers_result_set, nameservers_db_set)
                 count_assertions = count_assertions + 1
@@ -146,7 +163,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 for alias in zone.aliases:
                     try:
                         dnes = helper_alias.get_all_aliases_from_name(alias.name)
-                    except DoesNotExist as e:
+                    except (DoesNotExist, NoAliasFoundError) as e:
                         print(f"!!! {str(e)} !!!")
                         continue
                     dnes_names = set(map(lambda dne: dne.name, dnes))
@@ -189,7 +206,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 print(f"!!! {str(e)} !!!")
                 continue
             are_same_len = len(self.dns_results[domain_name]) == len(zones_set_db)
-            print(f"Results length comparison: from elaboration={len(self.dns_results[domain_name])}, from db={len(zones_set_db)}, are equal? {are_same_len}")
             if not are_same_len:
                 print(f"Tot zone dependencies for '{domain_name}':")
                 print(f"--> number of zone dependencies found from elaboration: {len(self.dns_results[domain_name])}")
@@ -203,6 +219,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print(f"Reached this print means everything went well ({count_assertions} assertions)")
         print("------- [5] END DNS RESULTS INTEGRITY CHECK -------")
 
+    # FIXME
     def test_6_zone_dependencies_per_nameserver_integrity_check(self):
         """
         Checks data integrity between zone dependencies of nameservers retrieved from elaboration, and DB relations
@@ -218,7 +235,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 print(f"!!! {str(e)} !!!")
                 continue
             are_same_len = len(self.zone_dependencies_per_nameserver[nameserver]) == len(zones_set_db)
-            print(f"Results length comparison: from elaboration={len(self.zone_dependencies_per_nameserver[nameserver])}, from db={len(zones_set_db)}, are equal? {are_same_len}")
             if not are_same_len:
                 print(f"Tot zone dependencies for '{nameserver}':")
                 print(f"--> number of zone dependencies found from elaboration: {len(self.zone_dependencies_per_nameserver[nameserver])}")
@@ -247,7 +263,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 print(f"!!! {str(e)} !!!")
                 continue
             are_same_len = len(self.zone_dependencies_per_zone[zone]) == len(ze_set_db)
-            print(f"Results length comparison: from elaboration={len(self.zone_dependencies_per_zone[zone])}, from db={len(ze_set_db)}, are equal? {are_same_len}")
             if not are_same_len:
                 print(f"Tot zone dependencies for '{zone}':")
                 print(f"--> number of zone dependencies found from elaboration: {len(self.zone_dependencies_per_zone[zone])}")

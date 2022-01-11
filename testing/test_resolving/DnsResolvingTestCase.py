@@ -76,7 +76,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         print("END CACHE DNS DEPENDENCIES RESOLVER")
 
     def test_1_results_equality_from_cache(self):
-        print(f"\nSTART EQUALITY FROM CACHE TEST")
+        print(f"\n------- [1] START EQUALITY FROM CACHE TEST -------")
         self.assertEqual(self.dns_results.keys(), self.dns_new_results.keys())
         are_count_keys_same = (len(self.dns_results.keys()) == len(self.dns_new_results.keys()))
         are_count_values_same = (len(self.dns_results.values()) == len(self.dns_new_results.values()))
@@ -106,10 +106,10 @@ class DnsResolvingTestCase(unittest.TestCase):
         else:
             print(f"Dictionaries keys size are different, cannot print...")
         self.assertSetEqual(set(self.dns_results), set(self.dns_new_results))
-        print(f"END EQUALITY FROM CACHE TEST")
+        print(f"------- [1] END EQUALITY FROM CACHE TEST -------")
 
     def test_2_are_there_duplicates_in_results(self):
-        print(f"\nSTART DUPLICATES IN RESULTS TEST")
+        print(f"\n------- [2] START DUPLICATES IN RESULTS TEST -------")
         duplicates = list()
         for i, rr in enumerate(self.dns_results):
             for j, comp in enumerate(self.dns_results):
@@ -121,10 +121,10 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"duplicates[{i+1}] = {str(elem)}")
         print(f"number of duplicates = {len(duplicates)}")
         self.assertEqual(0, len(duplicates))
-        print(f"END DUPLICATES IN RESULTS TEST")
+        print(f"------- [2] END DUPLICATES IN RESULTS TEST -------")
 
     def test_3_are_there_duplicates_in_cache(self):
-        print(f"\nSTART DUPLICATES IN CACHE RESULTS TEST")
+        print(f"\n------- [3] START DUPLICATES IN CACHE RESULTS TEST -------")
         duplicates = list()
         for i, rr in enumerate(self.dns_resolver.cache.cache):
             for j, comp in enumerate(self.dns_resolver.cache.cache):
@@ -136,10 +136,10 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"duplicates[{i+1}] = {str(elem)}")
         print(f"number of duplicates = {len(duplicates)}")
         self.assertEqual(0, len(duplicates))
-        print(f"END DUPLICATES IN CACHE RESULTS TEST")
+        print(f"------- [3] END DUPLICATES IN CACHE RESULTS TEST -------")
 
     def test_4_zone_zone_dependencies_integrity(self):
-        print(f"\nSTART CHECK BETWEEN ZONE RESULTS TEST")
+        print(f"\n------- [4] START CHECK BETWEEN ZONE RESULTS TEST -------")
         print(f"zone dependencies dict keys size = {len(self.zone_dependencies.keys())}")
         print(f"zone dependencies from cache dict keys size = {len(self.zone_new_dependencies.keys())}")
         are_keys_same = (len(self.zone_dependencies.keys()) == len(self.zone_new_dependencies.keys()))
@@ -190,11 +190,11 @@ class DnsResolvingTestCase(unittest.TestCase):
                 for i, elem in enumerate(result):
                     print(f"[{i+1}] = {elem}")
         self.assertEqual(self.zone_dependencies.keys(), self.zone_new_dependencies.keys())
-        print(f"END CHECK BETWEEN ZONE RESULTS TEST")
+        print(f"------- [4] END CHECK BETWEEN ZONE RESULTS TEST -------")
 
     # FIXME: bug
     def test_5_nameservers_zone_dependencies_integrity(self):
-        print(f"\nSTART CHECK BETWEEN NAMESERVER RESULTS TEST")
+        print(f"\n------- [5] START CHECK BETWEEN NAMESERVER RESULTS TEST -------")
         print(f"nameservers dict keys size = {len(self.nameservers.keys())}")
         print(f"nameservers from cache dict keys size = {len(self.new_nameservers.keys())}")
         are_keys_same = (len(self.nameservers.keys()) == len(self.new_nameservers.keys()))
@@ -245,7 +245,7 @@ class DnsResolvingTestCase(unittest.TestCase):
                 for i, elem in enumerate(result):
                     print(f"[{i+1}] = {elem}")
         self.assertEqual(self.nameservers.keys(), self.new_nameservers.keys())
-        print(f"END CHECK BETWEEN NAMESERVER RESULTS TEST")
+        print(f"------- [5] END CHECK BETWEEN NAMESERVER RESULTS TEST -------")
 
     def test_6_export_results(self):
         self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)

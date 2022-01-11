@@ -1,7 +1,7 @@
 import unittest
 from peewee import DoesNotExist
 from entities.LandingResolver import LandingResolver
-from persistence import helper_webserver, helper_website, helper_application_results
+from persistence import helper_web_server, helper_web_site, helper_application_results
 
 
 class WebServerQueryTestCase(unittest.TestCase):
@@ -15,20 +15,20 @@ class WebServerQueryTestCase(unittest.TestCase):
         # ELABORATION
         resolver = LandingResolver()
         try:
-            https_result, http_result = resolver.resolve_landing_page(cls.website)
+            https_result, http_result = resolver.resolve_web_site(cls.website)
         except Exception as e:
             print(f"ERROR: {str(e)}")
             exit(0)
         results = dict()
         results[cls.website] = (https_result, http_result)
-        helper_application_results.insert_landing_page_result(results)
+        helper_application_results.insert_landing_websites_results(results)
         #
-        cls.wse = helper_website.get(cls.website)
+        cls.wse = helper_web_site.get(cls.website)
 
     def test_1_getting_all_webserver(self):
         print(f"WebServer found for website '{self.website}'")
         try:
-            wses = helper_webserver.get_from_string_website(self.website)
+            wses = helper_web_server.get_from_string_website(self.website)
         except DoesNotExist:
             print(f"NO WEBSERVER FOR WEBSITE: {self.website} ...")
             exit(0)

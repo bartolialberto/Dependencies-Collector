@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import selenium
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
@@ -58,6 +58,15 @@ class ContentDependencyEntry:
             return False
 
 
+class MainPageScript:
+    def __init__(self, src: str, integrity: str or None):
+        self.src = src
+        self.integrity = integrity
+
+    def __str__(self):
+        return f"MainPageScript: src={self.src}, integrity={self.integrity}"
+
+
 class ContentDependenciesResolver:
     """
     This class concern is to search for content dependencies to render/view/elaborate a certain url. Requires a valid
@@ -82,7 +91,7 @@ class ContentDependenciesResolver:
         """
         self.headless_browser = headless_browser
 
-    def search_script_application_dependencies(self, url: str, values_list: List[str]) -> List[ContentDependencyEntry]:
+    def search_script_application_dependencies(self, url: str, values_list: List[str]) -> Tuple[List[ContentDependencyEntry], List[MainPageScript]]:
         """
         The method is the actual research of content dependencies from an url/domain name. It searches for dependencies
         of content-type that contains (as a string) one of the value string of the list parameter.
@@ -118,6 +127,74 @@ class ContentDependenciesResolver:
                 pass    # there is no response
 
         # TODO: trovare degli esempi per verificare tutto il funzionamento correttamente (siti con iframe che contengono script)
+        main_page_scripts = list()
+        awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
+          lambda driver: driver.find_elements(By.TAG_NAME, 'script')
+        )
+        for awaiter_script in awaiter_scripts:
+            src = awaiter_script.get_attribute('src')
+            integrity = awaiter_script.get_attribute('integrity')
+            if integrity == '':
+                integrity = None
+            if src is None:
+                pass    # inline script
+            elif src == '':
+                pass    # script in iframe
+            else:
+                main_page_scripts.append(MainPageScript(src, integrity))
+
+
+
+
+
+        """
+        all_elem = WebDriverWait(self.headless_browser.driver, 10).until(
+          lambda driver: driver.find_elements(By.XPATH, '//*[not(self::iframe)]')
+        )
+        for i, elem in enumerate(all_elem):
+            print(f"elem[{i+1}/{len(all_elem)}]: {elem.tag_name}, src={elem.get_attribute('src')}")
+        """
+
+
+        """
+        main_page_scripts = list()
+        for i, iframe in enumerate(iframes):
+            print(f"iframe[{i + 1}/{len(iframes)}]: src={iframe.get_attribute('src')}")
+            iframe_scripts = iframe.find_elements(By.TAG_NAME, 'script')
+            for iframe_script in iframe_scripts:
+                main_page_scripts.append(iframe_script)
+        for i, script in enumerate(main_page_scripts):
+            print(f"iframe_script[{i + 1}/{len(main_page_scripts)}]: src={script.get_attribute('src')}")
+        """
+
+        """
+        scripts = WebDriverWait(self.headless_browser.driver, 10).until(
+            # lambda driver: driver.find_elements(By.XPATH, '//iframe/script')
+            # lambda driver: driver.find_elements(By.XPATH, '//script[ancestor::*[not(self::iframe)]]')
+            # lambda driver: driver.find_elements(By.XPATH, '//script[ancestor::*[iframe]]')
+            lambda driver: driver.find_elements(By.XPATH, 'iframe[descendant::script]')
+            # lambda driver: driver.find_elements(By.XPATH, '//iframe')
+            # lambda driver: driver.find_elements(By.XPATH, '//script')
+            #
+            #
+            # lambda driver: driver.find_elements(By.TAG_NAME, 'script')
+            # lambda driver: driver.find_elements(By.TAG_NAME, 'iframe')
+        )
+        for i, script in enumerate(scripts):
+            is_integrity = False
+            integrity = script.get_attribute('integrity')
+            if integrity is None or integrity == '':
+                is_integrity = False
+            else:
+                is_integrity = True
+            src = script.get_attribute('src')
+            mime_type = script.get_attribute('type')
+            print(f"script[{i+1}/{len(scripts)}] = (integrity={integrity}, src={src}, type={mime_type})")
+        """
+
+
+
+        """
         scripts = self.headless_browser.driver.find_elements(By.TAG_NAME, 'script')
         for i, script in enumerate(scripts):
             is_integrity = False
@@ -162,8 +239,9 @@ class ContentDependenciesResolver:
             #lambda driver: driver.find_elements(By.XPATH, '/iframe/script')
             #ec.visibility_of_element_located((By.XPATH, '/iframe/script'))
         #)
+        """
 
-        return content_dependencies
+        return content_dependencies, main_page_scripts
 
     def test(self, url: str):
         try:
@@ -175,7 +253,6 @@ class ContentDependenciesResolver:
             lambda driver: driver.find_elements(By.TAG_NAME, 'script')
         )
         return scripts
-
 
     def close(self):
         """

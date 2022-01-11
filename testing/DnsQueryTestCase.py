@@ -12,6 +12,7 @@ from exceptions.UnknownReasonError import UnknownReasonError
 
 
 class DnsQueryTestCase(unittest.TestCase):
+    import_cache_from_output_folder = None
     domain_name = None
     dns_resolver = None
 
@@ -27,24 +28,27 @@ class DnsQueryTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name = 'units09.cineca.it.'
-        cls.type = TypesRR.A
+        cls.domain_name = 'c.ns.c10r.facebook.com.'
+        cls.domain_name = 'mail.dei.unipd.it'
+        cls.type = TypesRR.MX
+        cls.import_cache_from_output_folder = True
         # ELABORATION
         PRD = DnsQueryTestCase.get_project_root_folder()
-        cls.dns_resolver = DnsResolver([])
-        try:
-            cls.dns_resolver.cache.load_csv_from_output_folder(PRD)
-        except FilenameNotFoundError:
-            print(f"NO CACHE FILE FOUND")
+        cls.dns_resolver = DnsResolver(None)
+        if cls.import_cache_from_output_folder:
+            try:
+                cls.dns_resolver.cache.load_csv_from_output_folder(PRD)
+            except FilenameNotFoundError:
+                print(f"NO CACHE FILE FOUND")
         print(f"PARAMETER: {cls.domain_name}")
 
     def test_1_do_raw_query_and_prints_raw_infos(self):
-        print(f"\nSTART RAW QUERY TEST")
+        print(f"\n------- [1] START RAW QUERY TEST -------")
         try:
             answer = self.dns_resolver.resolver.resolve(self.domain_name, self.type.to_string())
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.resolver.YXDOMAIN, Exception) as e:  # name is a domain that does not exist
             print(f"!!! {str(e)} !!!")
-            exit(1)
+            return
         print(f"answer.canonical_name = {answer.canonical_name}")
         print(f"answer.qname = {answer.qname}")
         print(f"answer.nameserver = {answer.nameserver}")
@@ -63,17 +67,17 @@ class DnsQueryTestCase(unittest.TestCase):
                 print(f"value[{i+1}/{len(answer)}] = {str(val)}")
             else:
                 print(f"value[{i+1}/{len(answer)}] = {val.to_text()}")
-        print(f"END RAW QUERY TEST")
+        print(f"------- [1] END RAW QUERY TEST -------")
 
     def test_2_do_query_and_debug_prints_from_application_resolver(self):
-        print(f"\nSTART QUERY TEST")
+        print(f"\n------- [2] START QUERY TEST -------")
         try:
             rr_answer, rr_aliases = self.dns_resolver.do_query(self.domain_name, self.type)
         except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
             print(f"ERROR: {str(e)}")
-            exit(1)
+            return
         print(f"Answer values:")
-        print(f"(name={rr_answer.name}, values=[", end='')
+        print(f"rr = (name={rr_answer.name}, type={rr_answer.type}, values=[", end='')
         for i, value in enumerate(rr_answer.values):
             if i == len(rr_answer.values) - 1:
                 print(f"{value}])")
@@ -81,13 +85,13 @@ class DnsQueryTestCase(unittest.TestCase):
                 print(f"{value},", end='')
         print(f"\nAliases:")
         for i, rr_alias in enumerate(rr_aliases):
-            print(f"[{i+1}]: (name={rr_alias.name}, values=[", end='')
+            print(f"rr[{i+1}]: (name={rr_alias.name}, type={rr_alias.type}, values=[", end='')
             for j, value in enumerate(rr_alias.values):
                 if j == len(rr_alias.values) - 1:
                     print(f"{value}])")
                 else:
                     print(f"{value},", end='')
-        print(f"END QUERY TEST")
+        print(f"------- [2] END QUERY TEST -------")
 
 
 if __name__ == '__main__':

@@ -1,16 +1,17 @@
 import ipaddress
 import sys
-from typing import List
+from typing import List, Tuple
 from entities.ApplicationResolvers import ApplicationResolvers
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from persistence import helper_application_results
 from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils
 from utils import domain_name_utils
 
 
-def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
     """
     Start of the application: getting the domain names, and returning them as a list of string.
     They can be set from command line and from a .txt file put in the input folder in which each domain name is written
@@ -25,7 +26,7 @@ def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
     :return: A list of 'grammatically' correct domain names.
     :rtype: List[str]
     """
-    domain_name_list = list()
+    websites = list()
     if len(sys.argv) == 1:
         print(f"> No domain names found in command line.")
         result = None
@@ -33,15 +34,11 @@ def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
             result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
         except FileWithExtensionNotFoundError:
             print(f"> No .txt file found in input folder found.")
-            print(f"> Starting application with default domain names as sample:")
-            # default_domain_names = list(default_domain_names)
-            # default_domain_names.append('google.it')       # darklyrics.com works only on HTTP
-            # default_domain_names.append('youtube.it')
-            # default_domain_names.append('unipd.it')
-            # default_domain_names.append('ocsp.digicert.com')
-            for index, domain_name in enumerate(default_websites):
-                print(f"> [{index + 1}/{len(default_websites)}]: {domain_name}")
-            return default_websites
+            print(f"> Starting application with default websites as sample:")
+            websites = list(default_websites)
+            for index, website in enumerate(websites):
+                print(f"> [{index + 1}/{len(websites)}]: {website}")
+            return websites
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
@@ -50,12 +47,12 @@ def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
             for line in lines:
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
                 if domain_name_utils.is_grammatically_correct(candidate):
-                    domain_name_list.append(candidate)
+                    websites.append(candidate)
                 else:
                     pass
             f.close()
-            if len(domain_name_list) == 0:
-                print(f"> The .txt file in input folder doesn't contain any valid domain name.")
+            if len(websites) == 0:
+                print(f"> The .txt file in input folder doesn't contain any valid website.")
                 exit(0)
     else:
         print('> Argument List:', str(sys.argv))
@@ -64,18 +61,18 @@ def get_websites(default_websites=['google.it', 'youtube.it']) -> List[str]:
                 pass
             else:
                 print(f"!!! {arg} is not a well-formatted domain name. !!!")
-        if len(domain_name_list) == 0:
-            print(f"!!! Command line arguments are not well-formatted domain names. !!!")
+        if len(websites) == 0:
+            print(f"!!! Command line arguments are not well-formatted websites. !!!")
             exit(1)
         else:
-            print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-            for index, domain_name in enumerate(domain_name_list):
-                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-    list_utils.remove_duplicates(domain_name_list)
-    return domain_name_list
+            print(f"> Parsed {len(websites)} well-formatted domain names:")
+            for index, website in enumerate(websites):
+                print(f"> [{index + 1}/{len(websites)}]: {website}")
+    list_utils.remove_duplicates(websites)
+    return websites
 
 
-def get_mail_domains(default_websites=['google.it', 'youtube.it']) -> List[str]:
+def get_input_mail_domains(default_mail_domains=('mail.google.it', 'mail.dei.unipd.it')) -> List[str]:
     """
     Start of the application: getting the domain names, and returning them as a list of string.
     They can be set from command line and from a .txt file put in the input folder in which each domain name is written
@@ -90,23 +87,19 @@ def get_mail_domains(default_websites=['google.it', 'youtube.it']) -> List[str]:
     :return: A list of 'grammatically' correct domain names.
     :rtype: List[str]
     """
-    domain_name_list = list()
+    mail_domains = list()
     if len(sys.argv) == 1:
-        print(f"> No domain names found in command line.")
+        print(f"> No mail domains found in command line.")
         result = None
         try:
             result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
         except FileWithExtensionNotFoundError:
             print(f"> No .txt file found in input folder found.")
-            print(f"> Starting application with default domain names as sample:")
-            # default_domain_names = list(default_domain_names)
-            # default_domain_names.append('google.it')       # darklyrics.com works only on HTTP
-            # default_domain_names.append('youtube.it')
-            # default_domain_names.append('unipd.it')
-            # default_domain_names.append('ocsp.digicert.com')
-            for index, domain_name in enumerate(default_websites):
-                print(f"> [{index + 1}/{len(default_websites)}]: {domain_name}")
-            return default_websites
+            print(f"> Starting application with default mail domains as sample:")
+            mail_domains = list(default_mail_domains)
+            for index, mail_domain in enumerate(mail_domains):
+                print(f"> [{index + 1}/{len(mail_domains)}]: {mail_domain}")
+            return mail_domains
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
@@ -115,12 +108,12 @@ def get_mail_domains(default_websites=['google.it', 'youtube.it']) -> List[str]:
             for line in lines:
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
                 if domain_name_utils.is_grammatically_correct(candidate):
-                    domain_name_list.append(candidate)
+                    mail_domains.append(candidate)
                 else:
                     pass
             f.close()
-            if len(domain_name_list) == 0:
-                print(f"> The .txt file in input folder doesn't contain any valid domain name.")
+            if len(mail_domains) == 0:
+                print(f"> The .txt file in input folder doesn't contain any valid mail domain.")
                 exit(0)
     else:
         print('> Argument List:', str(sys.argv))
@@ -129,18 +122,18 @@ def get_mail_domains(default_websites=['google.it', 'youtube.it']) -> List[str]:
                 pass
             else:
                 print(f"!!! {arg} is not a well-formatted domain name. !!!")
-        if len(domain_name_list) == 0:
+        if len(mail_domains) == 0:
             print(f"!!! Command line arguments are not well-formatted domain names. !!!")
             exit(1)
         else:
-            print(f"> Parsed {len(domain_name_list)} well-formatted domain names:")
-            for index, domain_name in enumerate(domain_name_list):
-                print(f"> [{index + 1}/{len(domain_name_list)}]: {domain_name}")
-    list_utils.remove_duplicates(domain_name_list)
-    return domain_name_list
+            print(f"> Parsed {len(mail_domains)} well-formatted mail domains:")
+            for index, mail_domain in enumerate(mail_domains):
+                print(f"> [{index + 1}/{len(mail_domains)}]: {mail_domain}")
+    list_utils.remove_duplicates(mail_domains)
+    return mail_domains
 
 
-def get_flags(default_persist_errors=False) -> bool:
+def get_input_application_flags(default_persist_errors=True, default_consider_tld=False) -> Tuple[bool, bool]:
     """
     Start of the application: getting the intention of persist errors in the database.
 
@@ -153,28 +146,38 @@ def get_flags(default_persist_errors=False) -> bool:
     for arg in sys.argv[1:]:
         if arg == 'qualcosa_da_definire':
             default_persist_errors = True
-    return default_persist_errors
+        if arg == 'qualcosa_da_definire':
+            default_consider_tld = True
+    return default_persist_errors, default_consider_tld
 
 
 if __name__ == "__main__":
     print("********** START APPLICATION **********")
+    headless_browser_is_instantiated = False
     try:
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
-        new_domain_names = get_websites()
-        persist_errors = get_flags()
+        input_websites = get_input_websites()
+        input_mail_domains = get_input_mail_domains()
+        persist_errors, consider_tld = get_input_application_flags()
         # entities
-        resolvers = ApplicationResolvers()
+        resolvers = ApplicationResolvers(consider_tld)
+        headless_browser_is_instantiated = True
         # auxiliary elaborations
-        domain_name_utils.take_snapshot(new_domain_names)   # for future error reproducibility
+        domain_name_utils.take_snapshot(input_websites)   # for future error reproducibility
         resolvers.dns_resolver.cache.take_snapshot()        # for future error reproducibility
         # actual elaboration of all resolvers
-        resolvers.do_recursive_cycle_execution(new_domain_names)
-        # rov scraping is done outside the recursive cycle
-        results = resolvers.do_rov_page_scraping()
+        preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
+        midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
+        resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
         print("Insertion into database... ", end='')
+        helper_application_results.insert_landing_websites_results(resolvers.landing_web_sites_results)
+        helper_application_results.insert_mail_servers_resolving(resolvers.mail_servers_results)
+        helper_application_results.insert_dns_result(resolvers.total_dns_results,
+                                                     resolvers.total_zone_dependencies_per_zone,
+                                                     resolvers.total_zone_dependencies_per_name_server)
         # helper_domain_name.multiple_inserts(resolvers.dns_results)
         # helper_landing_page.multiple_inserts(resolvers.landing_page_results)
         # helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)
@@ -183,12 +186,13 @@ if __name__ == "__main__":
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
-        # closing
-        resolvers.headless_browser.close()
-        db.close()
     except Exception as e:
-        # if happens, kill firefox process in background
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
         print(f"!!! {str(e)} !!!")
+    finally:
+        # closing
+        if headless_browser_is_instantiated:
+            resolvers.headless_browser.close()
+        db.close()
     print("********** APPLICATION END **********")

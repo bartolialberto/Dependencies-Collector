@@ -87,8 +87,8 @@ class IntegrityTestFromElaboration(unittest.TestCase):
         for domain_name in landing_page_results.keys():
             print(f"Searching content dependencies for: {landing_page_results[domain_name][0]}")
             try:
-                content_dependencies = content_resolver.search_script_application_dependencies(
-                    landing_page_results[domain_name][0], ['javascript', 'application/'])
+                result = content_resolver.search_script_application_dependencies(landing_page_results[domain_name][0], ['javascript', 'application/'])
+                content_dependencies = result[0]
                 for index, dep in enumerate(content_dependencies):
                     print(f"--> [{index + 1}]: {str(dep)}")
                 content_dependencies_result[landing_page_results[domain_name][0]] = content_dependencies

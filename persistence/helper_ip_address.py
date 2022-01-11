@@ -31,7 +31,7 @@ def get_first_of(dne: DomainNameEntity) -> IpAddressEntity:
     except DoesNotExist:
         raise
     try:
-        print(f"DEBUG: aa.ip_address = {aa.ip_address}")
+        # print(f"DEBUG: aa.ip_address = {aa.ip_address}")
         iae = get(aa.ip_address)
     except DoesNotExist:
         raise

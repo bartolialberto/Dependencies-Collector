@@ -1,5 +1,5 @@
 from pathlib import Path
-from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField, TextField
+from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField
 from peewee import SqliteDatabase
 from utils import file_utils
 
@@ -33,12 +33,12 @@ def handle_tables_creation():       # execute at the end of the file
             WebServerDomainNameAssociation,
             WebSiteLandsAssociation,
             ZoneEntity,
-            NameserverEntity,
+            NameServerEntity,
             ZoneComposedAssociation,
             ZoneLinksAssociation,
-            NameDependenciesAssociation,
+            DomainNameDependenciesAssociation,
             MailDomainEntity,
-            MailserverEntity,
+            MailServerEntity,
             MailDomainComposedAssociation,
             ScriptEntity,
             ScriptWithdrawAssociation,
@@ -99,6 +99,16 @@ class AliasAssociation(BaseModel):
         db_table = 'alias'
 
 
+class IpAddressEntity(BaseModel):
+    exploded_notation = CharField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.exploded_notation}>"
+
+    class Meta:
+        db_table = 'ip_address'
+
+
 class WebSiteEntity(BaseModel):
     url = ForeignKeyField(UrlEntity)
 
@@ -106,7 +116,7 @@ class WebSiteEntity(BaseModel):
         return f"<{self.url}>"
 
     class Meta:
-        db_table = 'website'
+        db_table = 'web_site'
 
 
 class WebServerEntity(BaseModel):
@@ -116,32 +126,33 @@ class WebServerEntity(BaseModel):
         return f"<{self.url}>"
 
     class Meta:
-        db_table = 'webserver'
+        db_table = 'web_server'
 
 
 class WebServerDomainNameAssociation(BaseModel):
-    webserver = ForeignKeyField(WebServerEntity)
+    web_server = ForeignKeyField(WebServerEntity)
     domain_name = ForeignKeyField(DomainNameEntity)
 
     def __str__(self):
-        return f"<{self.webserver}, {self.domain_name}>"
+        return f"<{self.web_server}, {self.domain_name}>"
 
     class Meta:
-        primary_key = CompositeKey('webserver', 'domain_name')
-        db_table = 'webserver_domain_name'
+        primary_key = CompositeKey('web_server', 'domain_name')
+        db_table = 'web_server_domain_name'
 
 
 class WebSiteLandsAssociation(BaseModel):
-    website = ForeignKeyField(WebSiteEntity)
-    webserver = ForeignKeyField(WebServerEntity, null=True)
+    web_site = ForeignKeyField(WebSiteEntity)
+    web_server = ForeignKeyField(WebServerEntity, null=True)
+    ip_address = ForeignKeyField(IpAddressEntity, null=True)
     https = BooleanField(null=False)
 
     def __str__(self):
-        return f"<{self.website}, {self.webserver}, {self.https}>"
+        return f"<{self.web_site}, {self.web_server}, {self.ip_address}, {self.https}>"
 
     class Meta:
-        db_table = 'website_lands'
-        primary_key = CompositeKey('website', 'webserver', 'https')
+        db_table = 'web_site_lands'
+        primary_key = CompositeKey('web_site', 'web_server', 'https', 'ip_address')
 
 
 class ZoneEntity(BaseModel):
@@ -154,26 +165,26 @@ class ZoneEntity(BaseModel):
         db_table = 'zone'
 
 
-class NameserverEntity(BaseModel):
+class NameServerEntity(BaseModel):
     name = ForeignKeyField(DomainNameEntity)
 
     def __str__(self):
         return f"<{self.name}>"
 
     class Meta:
-        db_table = 'nameserver'
+        db_table = 'name_server'
 
 
 class ZoneComposedAssociation(BaseModel):
     zone = ForeignKeyField(ZoneEntity)
-    nameserver = ForeignKeyField(NameserverEntity)
+    name_server = ForeignKeyField(NameServerEntity)
 
     def __str__(self):
-        return f"<{self.name}>"
+        return f"<{self.zone}, {self.name_server}>"
 
     class Meta:
         db_table = 'zone_composed'
-        primary_key = CompositeKey('zone', 'nameserver')
+        primary_key = CompositeKey('zone', 'name_server')
 
 
 class ZoneLinksAssociation(BaseModel):
@@ -188,7 +199,7 @@ class ZoneLinksAssociation(BaseModel):
         primary_key = CompositeKey('zone', 'dependency')
 
 
-class NameDependenciesAssociation(BaseModel):
+class DomainNameDependenciesAssociation(BaseModel):
     domain_name = ForeignKeyField(DomainNameEntity)
     zone = ForeignKeyField(ZoneEntity)
 
@@ -196,7 +207,7 @@ class NameDependenciesAssociation(BaseModel):
         return f"<{self.domain_name}, {self.zone}>"
 
     class Meta:
-        db_table = 'name_dependencies'
+        db_table = 'domain_name_dependencies'
         primary_key = CompositeKey('domain_name', 'zone')
 
 
@@ -210,34 +221,33 @@ class MailDomainEntity(BaseModel):
         db_table = 'mail_domain'
 
 
-class MailserverEntity(BaseModel):
+class MailServerEntity(BaseModel):
     name = ForeignKeyField(DomainNameEntity)
 
     def __str__(self):
         return f"<{self.name}>"
 
     class Meta:
-        db_table = 'mailserver'
+        db_table = 'mail_server'
 
 
 class MailDomainComposedAssociation(BaseModel):
     mail_domain = ForeignKeyField(MailDomainEntity)
-    mailserver = ForeignKeyField(MailserverEntity)
+    mail_server = ForeignKeyField(MailServerEntity)
 
     def __str__(self):
         return f"<{self.mail_domain}, {self.mail_domain}>"
 
     class Meta:
         db_table = 'mail_domain_composed'
-        primary_key = CompositeKey('mail_domain', 'mailserver')
+        primary_key = CompositeKey('mail_domain', 'mail_server')
 
 
 class ScriptEntity(BaseModel):
     src = CharField(primary_key=True)
-    mime_type = CharField(null=False)
 
     def __str__(self):
-        return f"<{self.src}, {self.mime_type}>"
+        return f"<{self.src}>"
 
     class Meta:
         db_table = 'script'
@@ -245,15 +255,16 @@ class ScriptEntity(BaseModel):
 
 class ScriptWithdrawAssociation(BaseModel):
     script = ForeignKeyField(ScriptEntity)
-    website = ForeignKeyField(WebSiteEntity)
+    web_site = ForeignKeyField(WebSiteEntity)
     integrity = CharField(null=True)
+    https = BooleanField(null=False)
 
     def __str__(self):
-        return f"<{self.script}, {self.website}, {self.integrity}>"
+        return f"<{self.script}, {self.web_site}, {self.integrity}>"
 
     class Meta:
         db_table = 'script_withdraw'
-        primary_key = CompositeKey('script', 'website')
+        primary_key = CompositeKey('script', 'web_site', 'https')
 
 
 class ScriptSiteEntity(BaseModel):
@@ -291,13 +302,15 @@ class ScriptServerEntity(BaseModel):
 class ScriptSiteLandsAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
     script_server = ForeignKeyField(ScriptServerEntity)
+    ip_address = ForeignKeyField(IpAddressEntity, null=True)
+    https = BooleanField(null=False)
 
     def __str__(self):
-        return f"<{self.script_site}, {self.script_server}>"
+        return f"<{self.script_site}, {self.script_server}, {self.ip_address}, {self.https}>"
 
     class Meta:
-        db_table = 'scriptsite_lands'
-        primary_key = CompositeKey('script_site', 'script_server')
+        db_table = 'script_site_lands'
+        primary_key = CompositeKey('script_site', 'script_server', 'https', 'ip_address')
 
 
 class ScriptServerDomainNameAssociation(BaseModel):
@@ -309,17 +322,7 @@ class ScriptServerDomainNameAssociation(BaseModel):
 
     class Meta:
         primary_key = CompositeKey('script_server', 'domain_name')
-        db_table = 'website_domain_name'
-
-
-class IpAddressEntity(BaseModel):
-    exploded_notation = CharField(primary_key=True)
-
-    def __str__(self):
-        return f"<{self.exploded_notation}>"
-
-    class Meta:
-        db_table = 'ip_address'
+        db_table = 'web_site_domain_name'
 
 
 class AccessAssociation(BaseModel):

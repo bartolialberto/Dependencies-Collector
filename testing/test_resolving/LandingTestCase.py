@@ -10,7 +10,8 @@ class LandingTestCase(unittest.TestCase):
             'auth.digidentity.eu',
             'clave-dninbrt.seg-social.gob.es',
             'youtube.it',
-            'darklyrics.com'
+            'darklyrics.com',
+            'esse3.units.it/auth/studente/AreaRegistrato.do'
         ]
         self.scriptsite_list = [
             'gmail.com'
@@ -19,7 +20,7 @@ class LandingTestCase(unittest.TestCase):
     def test_domain_name_landing_page(self):
         for domain_name in self.website_list:
             print(f"Trying to resolve landing page of '{domain_name}':")
-            results = self.resolver.resolve_landing_page(domain_name)
+            results = self.resolver.resolve_web_site(domain_name)
 
             # HTTPS
             print(f"**** via HTTPS *****")

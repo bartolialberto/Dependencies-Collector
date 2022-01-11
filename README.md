@@ -110,7 +110,7 @@ Results of each entity are saved in the sqlite database put in the 'output' fold
 The ER schema of such database is shown at the end of this readme file.
 
 The application can be seen as a block diagram:
-![alt text](res/schema_blocchi_tesi.drawio.png)
+![alt text](res/schema_flusso.jpg)
 
 The expected prints during its execution of each component are:
 
@@ -249,6 +249,6 @@ END ROV PAGE SCRAPING
 ```
 
 The database result ER schema is:
-![alt text](res/SchemaEReffettivo.drawio.png)
+![alt text](res/schema_er.jpg)
 
 Every entity has an implicit numerical primary key.  

@@ -1,7 +1,7 @@
 import unittest
 from peewee import DoesNotExist
 from entities.LandingResolver import LandingResolver
-from persistence import helper_application_results, helper_website_lands, helper_webserver
+from persistence import helper_application_results, helper_web_site_lands, helper_web_server
 from utils import url_utils
 
 
@@ -16,7 +16,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         persist_errors = True
-        website_list = [
+        website_list = {
             'google.de',
             'youtube.de',
             'facebook.it',
@@ -26,23 +26,20 @@ class LandingIntegrityTestCase(unittest.TestCase):
             'clave-dninbrt.seg-social.gob.es',
             'youtube.it',
             'darklyrics.com'
-        ]
+        }
         # ELABORATION
         print(f"START LANDING")
         resolver = LandingResolver()
-        try:
-            cls.results = resolver.resolve_landing_pages(website_list)
-        except Exception:
-            raise
+        cls.results, error_logs = resolver.resolve_web_sites(website_list)
         print(f"END LANDING")
         print(f"\nSTART DB INSERTION INTO DATABASE... ", end='')
-        helper_application_results.insert_landing_page_result(cls.results, persist_errors=persist_errors)
+        helper_application_results.insert_landing_websites_results(cls.results, persist_errors=persist_errors)
         print(f"DONE")
 
     def test_1_website_has_only_two_website_lands_association_at_most(self):
         print("\nSTART AT MOST 2 WEB_SITE_LANDS_ASSOCIATIONS PER WEBSITE CHECK")
         for i, website in enumerate(self.results.keys()):
-            result = helper_website_lands.get_all_from_string_website(website)
+            result = helper_web_site_lands.get_all_from_string_website(website)
             print(f"--> for '{website}' there are {len(result)} website_lands rows")
             for i, wla in enumerate(result):
                 print(f"----> [{i+1}] https={wla.https}")
@@ -73,11 +70,11 @@ class LandingIntegrityTestCase(unittest.TestCase):
 
             print(f"Result for '{website}' through database:")
             try:
-                wse_https = helper_webserver.get_first_from_string_website_and_https_flag(website, True)
+                wse_https = helper_web_server.get_first_from_string_website_and_https_flag(website, True)
             except DoesNotExist:
                 wse_https = None
             try:
-                wse_http = helper_webserver.get_first_from_string_website_and_https_flag(website, False)
+                wse_http = helper_web_server.get_first_from_string_website_and_https_flag(website, False)
             except DoesNotExist:
                 wse_http = None
             if wse_https is None:

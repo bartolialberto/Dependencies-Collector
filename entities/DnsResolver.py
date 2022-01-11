@@ -87,7 +87,7 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> Tuple[Dict[str, List[Zone]], Dict[str, List[Zone]], Dict[str, List[str]], List[ErrorLog]]:
+    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> Tuple[Dict[str, List[Zone]], Dict[str, List[str]], Dict[str, List[str]], List[ErrorLog]]:
         """
         This method resolves the zone dependencies of a list of domain names.
 
@@ -98,37 +98,46 @@ class DnsResolver:
         and the value is the list of zone; as second element of the tuple there's the list of error logs.
         :rtype: Tuple[Dict[str: List[Zone]], List[ErrorLog]]
         """
-        results = dict()
+        dns_results = dict()
         error_logs = list()
-        zone_links = dict()
-        nameservers = dict()
+        zone_dependencies_per_zone = dict()
+        zone_dependencies_per_nameserver = dict()
         for domain in domain_list:
             try:
                 if reset_cache_per_elaboration:
                     self.cache.clear()
 
-                dns_result, temp_zone_links, temp_nameservers, temp_logs = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
+                temp_dns_result, temp_zone_dep_per_zone, temp_zone_dep_per_nameserver, temp_error_logs = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
 
                 # insert domain dns dependencies
-                results[domain] = dns_result
+                dns_results[domain] = temp_dns_result
 
                 # merge zone dependencies
-                zone_links.update(temp_zone_links)
+                zone_dependencies_per_zone.update(temp_zone_dep_per_zone)
 
                 # merge nameservers
-                nameservers.update(temp_nameservers)
+                zone_dependencies_per_nameserver.update(temp_zone_dep_per_nameserver)
 
                 # merge error logs
-                for log in temp_logs:
-                    # list_utils.append_with_no_duplicates(error_logs, log)
+                for log in temp_error_logs:
                     error_logs.append(log)
 
-            except InvalidDomainNameError:
-                pass
+            except InvalidDomainNameError as e:
+                error_logs.append(ErrorLog(e, domain, str(e)))
 
-        return results, zone_links, nameservers, error_logs
+        return dns_results, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs
 
-    def resolve_mailservers(self, mail_domain: str) -> List[str]:
+    def resolve_multiple_mail_domains(self, mail_domains: List[str]) -> Tuple[Dict[str, List[str]], List[ErrorLog]]:
+        results = dict()
+        error_logs = list()
+        for mail_domain in mail_domains:
+            try:
+                results[mail_domain] = self.resolve_mail_domain(mail_domain)
+            except (InvalidDomainNameError, NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
+                error_logs.append(ErrorLog(e, mail_domain, str(e)))
+        return results, error_logs
+
+    def resolve_mail_domain(self, mail_domain: str) -> List[str]:
         # TODO: docs
         try:
             domain_name_utils.grammatically_correct(mail_domain)
@@ -142,7 +151,7 @@ class DnsResolver:
             mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
         except NoAnswerError:
             raise
-        except (DomainNonExistentError, UnknownReasonError) as e:
+        except (DomainNonExistentError, UnknownReasonError):
             raise
         for value in mx_values.values:
             result.append(value)

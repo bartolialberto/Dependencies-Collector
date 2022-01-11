@@ -1,15 +1,18 @@
 from ipaddress import IPv4Address
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Set
 import requests
-from utils import domain_name_utils, requests_utils
+
+from entities.error_log.ErrorLog import ErrorLog
+from utils import requests_utils, url_utils
 
 
-class WebSiteLandingResult:
+class SiteLandingResult:
     def __init__(self, url: str, redirection_path: List[str], hsts: bool, ip: IPv4Address):
         self.url = url
         self.redirection_path = redirection_path
         self.hsts = hsts
         self.ip = ip
+        self.server = url_utils.deduct_second_component(url)
 
 
 class LandingResolver:
@@ -33,71 +36,122 @@ class LandingResolver:
     def __init__(self):
         pass
 
-    def resolve_landing_pages(self, websites: List[str]) -> Dict[str, Tuple[WebSiteLandingResult, WebSiteLandingResult]]:
+    def resolve_web_sites(self, web_sites: Set[str]) -> Tuple[Dict[str, Tuple[SiteLandingResult, SiteLandingResult]], List[ErrorLog]]:
         result = dict()
-        for website in websites:
-            try:
-                print(f"Trying to resolve landing page of '{website}':")
-                result[website] = self.resolve_landing_page(website)
+        error_logs = list()
+        for web_site in web_sites:
+            print(f"Trying to resolve landing page of web site {web_site}:")
+            https_result, http_result, temp_error_logs = self.resolve_web_site(web_site)
+            result[web_site] = (https_result, http_result)
 
-                # HTTPS
-                print(f"***** via HTTPS *****")
-                if result[website][0] is not None:
-                    https_result = result[website][0]
-                    print(f"HTTPS Landing url: {https_result.url}")
-                    print(f"HTTPS IP: {https_result.ip.compressed}")
-                    print(f"Strict Transport Security: {https_result.hsts}")
-                    print(f"HTTPS Redirection path:")
-                    for index, url in enumerate(https_result.redirection_path):
-                        print(f"----> [{index + 1}/{len(https_result.redirection_path)}]: {url}")
-                else:
-                    print(f"Impossible to land somewhere via HTTPS...")
+            for log in temp_error_logs:
+                error_logs.append(log)
 
-                # HTTP
-                print(f"***** via HTTP *****")
-                if result[website][1] is not None:
-                    http_result = result[website][1]
-                    print(f"HTTP Landing url: {http_result.url}")
-                    print(f"HTTP IP: {http_result.ip.compressed}")
-                    print(f"Strict Transport Security: {http_result.hsts}")
-                    print(f"HTTP Redirection path:")
-                    for index, url in enumerate(http_result.redirection_path):
-                        print(f"----> [{index + 1}/{len(http_result.redirection_path)}]: {url}")
-                else:
-                    print(f"Impossible to land somewhere via HTTP...")
+            # HTTPS
+            print(f"***** via HTTPS *****")
+            if result[web_site][0] is not None:
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS WebServer: {https_result.server}")
+                print(f"HTTPS IP: {https_result.ip.compressed}")
+                print(f"Strict Transport Security: {https_result.hsts}")
+                print(f"HTTPS Redirection path:")
+                for index, url in enumerate(https_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(https_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTPS...")
 
-                print()
-            except Exception:
-                raise
-        return result
+            # HTTP
+            print(f"***** via HTTP *****")
+            if result[web_site][1] is not None:
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP WebServer: {http_result.server}")
+                print(f"HTTP IP: {http_result.ip.compressed}")
+                print(f"Strict Transport Security: {http_result.hsts}")
+                print(f"HTTP Redirection path:")
+                for index, url in enumerate(http_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(http_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTP...")
+            print()
+        return result, error_logs
 
-    def resolve_landing_page(self, website: str) -> Tuple[WebSiteLandingResult, WebSiteLandingResult]:
+    def resolve_web_site(self, web_site: str) -> Tuple[SiteLandingResult, SiteLandingResult, List[ErrorLog]]:
+        error_logs = list()
         try:
-            temp = requests_utils.resolve_landing_page(website, as_https=True)
-            https_result = WebSiteLandingResult(temp[0], temp[1], temp[2], IPv4Address(temp[3]))
+            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(web_site, as_https=True)
+            https_result = SiteLandingResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
         except requests.exceptions.ConnectionError as e:
             # probably the server doesn't support HTTPS
             https_result = None
-        except Exception:
-            raise
-        try:
-            temp = requests_utils.resolve_landing_page(website, as_https=False)
-            http_result = WebSiteLandingResult(temp[0], temp[1], temp[2], IPv4Address(temp[3]))
-        except Exception:
-            raise
-        return https_result, http_result
-
-    def resolve_script_site(self, script_url: str):
-        script_site = domain_name_utils.deduct_domain_name(script_url)
-        try:
-            https_result = requests_utils.resolve_landing_page(script_site)
-        except requests.exceptions.ConnectionError as e:
-            # probably the server doesn't support HTTPS
+            error_logs.append(ErrorLog(e, web_site, str(e)))
+        except Exception as exc:
             https_result = None
-        except Exception:
-            https_result = None
+            error_logs.append(ErrorLog(exc, web_site, str(exc)))
         try:
-            http_result = requests_utils.resolve_landing_page(script_site, as_https=False)
-        except Exception:
+            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(web_site, as_https=False)
+            http_result = SiteLandingResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
+        except Exception as exc:
             http_result = None
+            error_logs.append(ErrorLog(exc, web_site, str(exc)))
+        return https_result, http_result, error_logs
+
+    def resolve_script_sites(self, script_sites: Set[str]) -> Tuple[Dict[str, Tuple[SiteLandingResult, SiteLandingResult]], List[ErrorLog]]:
+        result = dict()
+        error_logs = list()
+        for script_site in script_sites:
+            print(f"Trying to resolve landing page of script site {script_site}:")
+            https_result, http_result, temp_error_logs = self.resolve_script_site(script_site)
+            result[script_site] = (https_result, http_result)
+
+            for log in temp_error_logs:
+                error_logs.append(log)
+
+            # HTTPS
+            print(f"***** via HTTPS *****")
+            if result[script_site][0] is not None:
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS ScriptServer: {https_result.server}")
+                print(f"HTTPS IP: {https_result.ip.compressed}")
+                print(f"Strict Transport Security: {https_result.hsts}")
+                print(f"HTTPS Redirection path:")
+                for index, url in enumerate(https_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(https_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTPS...")
+
+            # HTTP
+            print(f"***** via HTTP *****")
+            if result[script_site][1] is not None:
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP ScriptServer: {http_result.server}")
+                print(f"HTTP IP: {http_result.ip.compressed}")
+                print(f"Strict Transport Security: {http_result.hsts}")
+                print(f"HTTP Redirection path:")
+                for index, url in enumerate(http_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(http_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTP...")
+            print()
+        return result, error_logs
+
+    def resolve_script_site(self, script_site: str) -> Tuple[SiteLandingResult, SiteLandingResult, List[ErrorLog]]:
+        error_logs = list()
+        try:
+            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(script_site, as_https=True)
+            https_result = SiteLandingResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
+        except requests.exceptions.ConnectionError as e:
+            # probably the server doesn't support HTTPS
+            https_result = None
+            error_logs.append(ErrorLog(e, script_site, str(e)))
+        except Exception as exc:
+            https_result = None
+            error_logs.append(ErrorLog(exc, script_site, str(exc)))
+        try:
+            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(script_site,
+                                                                                                 as_https=True)
+            http_result = SiteLandingResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
+        except Exception as exc:
+            http_result = None
+            error_logs.append(ErrorLog(exc, script_site, str(exc)))
+        return https_result, http_result, error_logs
 

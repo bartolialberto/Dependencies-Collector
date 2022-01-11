@@ -3,9 +3,10 @@ import re
 from typing import List
 from urllib.parse import urlparse
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from utils import file_utils, string_utils
+from utils import file_utils, string_utils, url_utils
 
 
+# TODO: method doesn't work for 'c.ns.c10r.facebook.com.' ==> MUST BE MODIFIED OR DELETED
 def grammatically_correct(domain_name: str) -> None:
     """
     Method that validate a string representating a domain name, using these rules:
@@ -190,7 +191,12 @@ def deduct_domain_name(url: str) -> str:
     :return: The deducted domain name.
     :rtype: str
     """
-    return urlparse(url).netloc
+    parser = urlparse(url)
+    domain_name = parser.netloc
+    if domain_name == '':
+        parser = urlparse(url_utils.deduct_http_url(url))
+        domain_name = parser.netloc
+    return domain_name
 
 
 def take_snapshot(domain_name_list: List[str]) -> None:
@@ -203,8 +209,6 @@ def take_snapshot(domain_name_list: List[str]) -> None:
     :type domain_name_list: List[str]
     """
     file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_domain_names.csv")
-    if not file.exists():
-        pass
     with file.open('w', encoding='utf-8', newline='') as f:
         write = csv.writer(f)
         for domain_name in domain_name_list:

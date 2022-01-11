@@ -30,7 +30,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name = 'dns.cnr.it'
+        cls.domain_name = 'dns.unipd.it.'
         cls.nameserver = 'nameserver.cnr.it.'
         # ELABORATION
         PRD = LocalDnsResolverCacheTestCase.get_project_root_folder()
@@ -39,44 +39,44 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         print(f"STARTING CACHE WITH {len(cls.cache.cache)} RECORDS, PARAMETER: {cls.domain_name}")
 
     def test_1_forward_path_of_name(self):
-        print(f"\nSTART FORWARD PATH RESOLVING from domain name = {self.domain_name}")
+        print(f"\n------- [1] START FORWARD PATH RESOLVING from domain name = {self.domain_name} -------")
         try:
             result = self.cache.lookup_forward_path(self.domain_name)
             for i, name in enumerate(result):
                 print(f"[{i+1}] = {name}")
         except NoRecordInCacheError:
             print(f"No path for '{self.domain_name}'")
-        print(f"END BACKWARD PATH RESOLVING")
+        print(f"------- END BACKWARD PATH RESOLVING -------")
 
     def test_2_backward_path_of_name(self):
-        print(f"\nSTART BACKWARD PATH RESOLVING from domain name = {self.domain_name}")
+        print(f"\n------- [2] START BACKWARD PATH RESOLVING from domain name = {self.domain_name} -------")
         try:
             result = self.cache.lookup_backward_path(self.domain_name)
             for i, name in enumerate(result):
                 print(f"[{i+1}] = {name}")
         except NoRecordInCacheError:
             print(f"No path for '{self.domain_name}'")
-        print(f"END BACKWARD PATH RESOLVING")
+        print(f"------- [2] END BACKWARD PATH RESOLVING -------")
 
     def test_3_resolving_path(self):
-        print(f"\nSTART PATH RESOLVING from domain name = {self.domain_name}")
+        print(f"\n------- [3] START PATH RESOLVING from domain name = {self.domain_name} -------")
         try:
             result = self.cache.resolve_path_aliases(self.domain_name)
             for i, name in enumerate(result):
                 print(f"[{i+1}] = {name}")
         except NoAvailablePathError:
             print(f"No path for '{self.domain_name}'")
-        print(f"END PATH RESOLVING")
+        print(f"------- [3] END PATH RESOLVING -------")
 
     def test_4_resolving_zones_from_nameserver(self):
-        print(f"\nSTART ZONE RESOLVING from nameserver = {self.nameserver}")
+        print(f"\n------- [4] START ZONE RESOLVING from nameserver = {self.nameserver} -------")
         try:
             zone_names = self.cache.resolve_zones_from_nameserver(self.nameserver)
             for i, zone_name in enumerate(zone_names):
                 print(f"[{i+1}] = {zone_name}")
         except NoRecordInCacheError:
             print(f"No zone found from nameserver '{self.nameserver}'")
-        print(f"END ZONE RESOLVING")
+        print(f"------- [5] END ZONE RESOLVING -------")
 
 
 if __name__ == '__main__':
