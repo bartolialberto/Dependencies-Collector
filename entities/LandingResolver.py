@@ -40,7 +40,7 @@ class LandingResolver:
         result = dict()
         error_logs = list()
         for web_site in web_sites:
-            print(f"Trying to resolve landing page of web site {web_site}:")
+            print(f"Trying to resolve landing page of web site: {web_site}")
             https_result, http_result, temp_error_logs = self.resolve_web_site(web_site)
             result[web_site] = (https_result, http_result)
 
@@ -99,7 +99,7 @@ class LandingResolver:
         result = dict()
         error_logs = list()
         for script_site in script_sites:
-            print(f"Trying to resolve landing page of script site {script_site}:")
+            print(f"Trying to resolve landing page of script site: {script_site}")
             https_result, http_result, temp_error_logs = self.resolve_script_site(script_site)
             result[script_site] = (https_result, http_result)
 

@@ -5,6 +5,7 @@ from typing import List, Set, Tuple
 
 from peewee import DoesNotExist
 
+from entities.Zone import Zone
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
@@ -219,6 +220,35 @@ class LocalDnsResolverCache:
                 result.append(forward_elem)
             return result
 
+    def resolve_path(self, domain_name: str, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
+        try:
+            inner_result = self.__inner_resolve_path(domain_name, result=None)
+        except NoAvailablePathError:
+            raise
+        aliases = list()
+        for rr in inner_result[0:-1]:
+            if as_string:
+                aliases.append(rr.get_first_value())
+            else:
+                aliases.append(rr)
+        return inner_result[-1], aliases
+
+    def __inner_resolve_path(self, domain_name: str, result=None) -> List[RRecord]:
+        if result is None:
+            result = list()
+        else:
+            pass
+        try:
+            rr_a = self.lookup_first(domain_name, TypesRR.A)
+            result.append(rr_a)
+            return result
+        except NoRecordInCacheError:
+            try:
+                rr_cname = self.lookup_first(domain_name, TypesRR.CNAME)
+                result.append(rr_cname)
+                return self.__inner_resolve_path(rr_cname.get_first_value(), result=result)
+            except NoRecordInCacheError:
+                raise NoAvailablePathError(domain_name)
 
     def resolve_path_also_from_alias(self, nameserver: str) -> RRecord:
         """
@@ -279,7 +309,7 @@ class LocalDnsResolverCache:
                 pass
         return results
 
-    def resolve_zone_from_zone_name(self, zone_name: str) -> Tuple[str, List[RRecord], List[RRecord]]:
+    def resolve_zone_from_zone_name(self, zone_name: str) -> Zone:
         """
         This method searches if the zone_name parameter actually represents a zone in the cache. If it so the zone is
         'constructed' searching for all the nameservers of the zone and the aliases.
@@ -299,7 +329,7 @@ class LocalDnsResolverCache:
         except NoRecordInCacheError:
             raise
 
-    def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Tuple[str, List[RRecord], List[RRecord]]:
+    def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Zone:
         """
         This method searches if the RRecord parameter is actually present in the cache. If it so the zone is
         'constructed' searching for all the nameservers of the zone and the aliases.
@@ -310,6 +340,22 @@ class LocalDnsResolverCache:
         If it is impossible to resolve all the nameservers of the zone.
         :return: All the attributes defined to instantiate a Zone object, put together as a tuple.
         :rtype: Tuple[str, List[RRecord], List[RRecord]]
+        """
+        result_zone_name = rr_ns.name
+        result_zone_nameservers = list()
+        result_zone_cnames = list()
+        result_zone_addresses = list()
+        for nameserver in rr_ns.values:
+            result_zone_nameservers.append(nameserver)
+            rr_a, rr_cnames = self.resolve_path(nameserver, as_string=False)
+            for rr in rr_cnames:
+                result_zone_cnames.append(rr)
+            result_zone_addresses.append(rr_a)
+        return Zone(result_zone_name, result_zone_nameservers, result_zone_cnames, result_zone_addresses)
+
+
+
+
         """
         try:
             self.lookup_first(rr_ns.name, TypesRR.NS)
@@ -340,29 +386,8 @@ class LocalDnsResolverCache:
                 except NoRecordInCacheError:
                     raise
                 zone_nameservers.append(rr_a)
-
-
-
-            """
-            aliases = self.lookup_all_aliases(nameserver)
-            if len(aliases) != 0:
-                zone_aliases.append(RRecord(nameserver, TypesRR.CNAME, list(aliases)))      # creo un rr di tipo CNAME personalizzato: name = nameserver effettivo (che ha il rr di tipo A), e tutti gli alias come values
-            rr_a = None
-            try:
-                rr_a = self.lookup_first(nameserver, TypesRR.A)
-            except NoRecordInCacheError:
-                # try to get through aliases
-                for alias in aliases:
-                    try:
-                        rr_a = self.lookup_first(alias, TypesRR.A)
-                        break
-                    except NoRecordInCacheError:
-                        pass
-            if rr_a is None:
-                raise NoRecordInCacheError(rr_ns.name, rr_ns.type)
-            zone_nameservers.append(rr_a)
-            """
         return zone_name, zone_nameservers, zone_aliases
+        """
 
     def lookup_first_alias(self, name: str) -> RRecord:
         """

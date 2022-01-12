@@ -8,7 +8,8 @@ from entities.Zone import Zone
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from persistence import helper_web_site, helper_web_site_lands, helper_web_server, helper_zone, helper_name_server, \
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
-    helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw
+    helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
+    helper_script_hosted_on
 from utils import url_utils
 
 
@@ -46,7 +47,6 @@ def insert_landing_websites_results(result: Dict[str, Tuple[SiteLandingResult, S
 
 def insert_dns_result(dns_results: Dict[str, List[Zone]], zone_dependencies_per_zone: Dict[str, List[str]], zone_names_per_nameserver: Dict[str, List[str]], persist_errors=True):
     ze_dict = dict()
-    nse_dict = dict()
 
     for domain_name in dns_results.keys():
         try:
@@ -78,7 +78,7 @@ def insert_dns_result(dns_results: Dict[str, List[Zone]], zone_dependencies_per_
         for zone_name in zone_names_per_nameserver[name_server]:
             try:
                 ze = ze_dict[zone_name]
-            except DoesNotExist:
+            except KeyError:
                 raise
             helper_domain_name_dependencies.insert(dne, ze)
 
@@ -91,22 +91,40 @@ def insert_mail_servers_resolving(results: Dict[str, List[str]]) -> None:
             helper_mail_domain_composed.insert(mde, mse)
 
 
-def insert_script_dependencies_resolving(results: Dict[str, Tuple[Set[MainPageScript] or None, Set[MainPageScript] or None]], result2: Tuple[Dict[MainPageScript, Set[str]], Set[str]]) -> None:
-    for web_site in results.keys():
-        wse = helper_web_site.get(web_site)
-
-        https_scripts = results[web_site][0]
-        http_scripts = results[web_site][1]
+def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str, Tuple[Set[MainPageScript] or None, Set[MainPageScript] or None]], script_script_site_dependencies: Dict[MainPageScript, Set[str]], persist_errors=True) -> None:
+    for web_site in web_site_script_dependencies.keys():
+        try:
+            wse = helper_web_site.get(web_site)
+        except DoesNotExist:
+            pass        # TODO
+        https_scripts = web_site_script_dependencies[web_site][0]
+        http_scripts = web_site_script_dependencies[web_site][1]
 
         if https_scripts is not None:
             for script in https_scripts:
                 se = helper_script.insert(script.src)
                 helper_script_withdraw.insert(wse, se, True, script.integrity)
+                for script_site in script_script_site_dependencies[script]:
+                    sse = helper_script_site.insert(script_site)
+                    helper_script_hosted_on.insert(se, sse)
+        else:
+            if persist_errors:
+                helper_script_withdraw.insert(wse, None, True, None)
+            else:
+                pass
 
         if http_scripts is not None:
             for script in http_scripts:
                 se = helper_script.insert(script.src)
-                helper_script_withdraw.insert(wse, se, True, script.integrity)
+                helper_script_withdraw.insert(wse, se, False, script.integrity)
+                for script_site in script_script_site_dependencies[script]:
+                    sse = helper_script_site.insert(script_site)
+                    helper_script_hosted_on.insert(se, sse)
+        else:
+            if persist_errors:
+                helper_script_withdraw.insert(wse, None, False, None)
+            else:
+                pass
 
 
 def insert_ip_as_database_resolving(results: Dict[str, Tuple[ipaddress.IPv4Address, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]):

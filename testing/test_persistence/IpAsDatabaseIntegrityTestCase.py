@@ -11,7 +11,7 @@ from persistence import helper_domain_name, helper_entry_ip_as_database
 from utils import file_utils, requests_utils
 
 
-class IntegrityTestFromElaboration(unittest.TestCase):
+class IpAsDatabaseIntegrityTestCase(unittest.TestCase):
     """
     Test class
     """

@@ -15,6 +15,7 @@ from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundErr
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
@@ -67,18 +68,17 @@ class ApplicationResolvers:
             self.headless_browser = FirefoxHeadlessWebDriver()
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
-            exit(1)
-        if consider_tld:
+            return
+        if not consider_tld:
             self._tld_scraper = TLDPageScraper(self.headless_browser)
             try:
                 tlds = self._tld_scraper.scrape_tld()
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                 print(f"!!! {str(e)} !!!")
-                exit(1)
-            self.dns_resolver = DnsResolver(tlds)
+                return
         else:
-            self._tld_scraper = None
-            self.dns_resolver = DnsResolver(None)
+            tlds = None
+        self.dns_resolver = DnsResolver(tlds)
         try:
             self.dns_resolver.cache.load_csv_from_output_folder()
         except (ValueError, FilenameNotFoundError, OSError) as exc:
@@ -100,6 +100,8 @@ class ApplicationResolvers:
         self.error_logger = ErrorLogger()
         self.landing_web_sites_results = dict()
         self.landing_script_sites_results = dict()
+        self.web_site_script_dependencies = dict()
+        self.script_script_site_dependencies = tuple()
         self.mail_servers_results = dict()
         self.total_dns_results = dict()
         self.total_zone_dependencies_per_zone = dict()
@@ -120,10 +122,10 @@ class ApplicationResolvers:
         # elaboration
         current_dns_results, current_zone_dep_per_zone, current_zone_dep_per_name_server = self.do_dns_resolving(domain_names)
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
-        current_script_dependencies_results = self.do_script_dependencies_resolving()
+        self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
         # extracting
-        script_hosted_on_dependencies, script_sites = self._extract_script_hosting_dependencies(current_script_dependencies_results)
+        self.script_script_site_dependencies, script_sites = self._extract_script_hosting_dependencies()
         self.landing_script_sites_results = self.do_script_site_landing_resolving(script_sites)
 
         # merging results
@@ -208,23 +210,29 @@ class ApplicationResolvers:
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results[domain]):
                 print(f"--> Handling zone[{index_zone}] '{zone.name}'")
-                for index_rr, rr in enumerate(zone.nameservers):
+                for i, nameserver in enumerate(zone.nameservers):
                     try:
-                        ip = ipaddress.IPv4Address(rr.get_first_value())        # exception (ValueError) not catch
+                        # TODO: gestire più indirizzi per nameserver
+                        try:
+                            rr = zone.resolve_nameserver(nameserver)
+                        except NoAvailablePathError:
+                            # cosa fare???
+                            pass
+                        ip = ipaddress.IPv4Address(rr.get_first_value())
                         entry = self.ip_as_database.resolve_range(ip)
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(
-                                f"----> for nameserver[{index_rr}] '{rr.name}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
+                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
                             ip_as_db_entries_result[rr.name] = (ip, entry, belonging_network_ip_as_db)
                         except ValueError as exc:
                             print(
-                                f"----> for nameserver[{index_rr}] '{rr.name}' ({ip.compressed}) found AS record: [{entry}]")
+                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.compressed,
                                                                  f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
                             ip_as_db_entries_result[rr.name] = (ip, entry, None)
                     except AutonomousSystemNotFoundError as exc:
-                        print(f"----> for nameserver[{index_rr}] '{rr.name}' ({ip.compressed}) no AS found.")
+                        print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
                         self.error_logger.add_entry(
                             ErrorLog(exc, ip.compressed, f"No AS found in the database."))
                         ip_as_db_entries_result[rr.name] = (ip, None, None)
@@ -294,7 +302,7 @@ class ApplicationResolvers:
                 try:
                     http_scripts = self.script_resolver.search_script_application_dependencies(http_landing_page)
                     for i, script in enumerate(https_scripts):
-                        print(f"script[{i+1}/{len(http_scripts)}]: integrity={script.integrity}, src={script.src}")
+                        print(f"script[{i+1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
                 except selenium.common.exceptions.WebDriverException as e:
                     print(f"!!! {str(e)} !!!")
                     http_scripts = None
@@ -382,12 +390,12 @@ class ApplicationResolvers:
                 list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(http_result.server))
         return domain_names
 
-    def _extract_script_hosting_dependencies(self, script_dependencies_results: Dict[str, Tuple[Set[MainPageScript] or None, Set[MainPageScript] or None]]) -> Tuple[Dict[MainPageScript, Set[str]], Set[str]]:
+    def _extract_script_hosting_dependencies(self) -> Tuple[Dict[MainPageScript, Set[str]], Set[str]]:
         result = dict()
         script_sites = set()
-        for web_site in script_dependencies_results.keys():
-            https_scripts = script_dependencies_results[web_site][0]
-            http_scripts = script_dependencies_results[web_site][1]
+        for web_site in self.web_site_script_dependencies.keys():
+            https_scripts = self.web_site_script_dependencies[web_site][0]
+            http_scripts = self.web_site_script_dependencies[web_site][1]
 
             if https_scripts is None:
                 pass

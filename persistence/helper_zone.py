@@ -1,9 +1,10 @@
-from typing import Set
+from typing import Set, Tuple, List
 from peewee import DoesNotExist
 from entities.Zone import Zone
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
     helper_domain_name
-from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation
+from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, NameServerEntity, DomainNameEntity
 
 
 def insert(name: str) -> ZoneEntity:
@@ -11,18 +12,23 @@ def insert(name: str) -> ZoneEntity:
     return ze
 
 
-def insert_zone_object(zone: Zone):
+def insert_zone_object(zone: Zone) -> ZoneEntity:
     ze, created = ZoneEntity.get_or_create(name=zone.name)
     if created:
         pass
     else:
         return ze       # scorciatoia?
 
-    for rr_nameserver in zone.nameservers:
-        nse, nsdne = helper_name_server.insert(rr_nameserver.name)
+    for nameserver in zone.nameservers:
+        nse, nsdne = helper_name_server.insert(nameserver)
         helper_zone_composed.insert(ze, nse)
-        iae = helper_ip_address.insert(rr_nameserver.get_first_value())
-        helper_access.insert(nsdne, iae)
+        try:
+            rr = zone.resolve_nameserver(nameserver)
+            for value in rr.values:
+                iae = helper_ip_address.insert(value)
+                helper_access.insert(nsdne, iae)            # TODO: controllare che www.youtube.com abbia più IP collegati
+        except NoAvailablePathError:
+            raise
 
     for rr_alias in zone.aliases:
         # get???
@@ -36,23 +42,7 @@ def insert_zone_object(zone: Zone):
 
 
 def get_zone_object(zone_name: str) -> Zone:
-    try:
-        ze = get(zone_name)
-    except DoesNotExist:
-        raise
-    try:
-        nss = helper_name_server.get_from_zone_name(zone_name)
-    except DoesNotExist:
-        raise
-    result_zone_name = zone_name
-    result_nameservers = list()
-    result_aliases = list()
-    for ns in nss:
-        try:
-            aliases = helper_alias.get_all_aliases_from_name(ns.name)
-        except DoesNotExist:
-            pass
-    Zone()
+    pass
 
 
 def get(zone_name: str) -> ZoneEntity:

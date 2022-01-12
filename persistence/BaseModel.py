@@ -254,13 +254,13 @@ class ScriptEntity(BaseModel):
 
 
 class ScriptWithdrawAssociation(BaseModel):
-    script = ForeignKeyField(ScriptEntity)
-    web_site = ForeignKeyField(WebSiteEntity)
+    script = ForeignKeyField(ScriptEntity, null=True)
+    web_site = ForeignKeyField(WebSiteEntity, null=True)
     integrity = CharField(null=True)
     https = BooleanField(null=False)
 
     def __str__(self):
-        return f"<{self.script}, {self.web_site}, {self.integrity}>"
+        return f"<{self.script}, {self.web_site}, {self.integrity}, {self.https}>"
 
     class Meta:
         db_table = 'script_withdraw'

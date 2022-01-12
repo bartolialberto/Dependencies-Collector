@@ -28,6 +28,9 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
+    dns_results = None
+    zone_dependencies_per_nameserver = None
+    zone_dependencies_per_zone = None
     consider_tld = None
     import_cache_from_output_folder = None
     dns_resolver = None
@@ -35,6 +38,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     domain_names = None
     results = None
     domain_name_list = None
+    headless_browser_is_instantiated = False
 
     @staticmethod
     def get_project_root_folder() -> Path:
@@ -49,45 +53,52 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['dei.unipd.it']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = False
         # ELABORATION
         PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
-        tlds = TLDPageScraper.import_txt_from_input_folder(PRD)
         if cls.clear_cache_at_start:
             cls.dns_resolver.cache.clear()
         if cls.import_cache_from_output_folder:
             try:
-                cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=cls.PRD)
+                cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=PRD)
             except FilenameNotFoundError as e:
                 print(f"!!! {str(e)} !!!")
-                exit(1)
-        if cls.consider_tld:
+                return
+        if not cls.consider_tld:
             try:
                 headless_browser = FirefoxHeadlessWebDriver(PRD)
             except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
                 print(f"!!! {str(e)} !!!")
-                exit(1)
+                return
+            cls.headless_browser_is_instantiated = True
             tld_scraper = TLDPageScraper(headless_browser)
             try:
                 tlds = tld_scraper.scrape_tld()
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                 print(f"!!! {str(e)} !!!")
-                exit(1)
+                return
         else:
              tlds = None
         cls.dns_resolver = DnsResolver(tlds)
         print("START DNS DEPENDENCIES RESOLVER")
-        cls.dns_results, cls.zone_dependencies_per_zone, cls.zone_dependencies_per_nameserver, cls.error_logs = cls.results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
+        results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, consider_tld=cls.consider_tld)
+        cls.dns_results = results[0]
+        cls.zone_dependencies_per_zone = results[1]
+        cls.zone_dependencies_per_nameserver = results[2]
+        cls.error_logs = results[3]
         print("END DNS DEPENDENCIES RESOLVER")
         print("INSERTION INTO DATABASE... ", end='')
         try:
-            helper_application_results.insert_dns_result(cls.results)
+            helper_application_results.insert_dns_result(cls.dns_results, cls.zone_dependencies_per_zone, cls.zone_dependencies_per_nameserver, persist_errors=True)
         except InvalidDomainNameError as e:
             print(f"!!! {str(e)} !!!")
-            exit(0)
+            return
         print("DONE")
+        if cls.headless_browser_is_instantiated:
+            headless_browser.close()
 
     def test_1_domain_names_integrity(self):
         """
@@ -121,12 +132,12 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 # check presence in the db
                 for nameserver in zone.nameservers:
                     try:
-                        nse, dne = helper_name_server.get(nameserver.name)
+                        nse, dne = helper_name_server.get(nameserver)
                     except DoesNotExist as e:
                         print(f"!!! {str(e)} !!!")
 
                 # check they are the same
-                nameservers_result_set = set(map(lambda rr: rr.name, zone.nameservers))
+                nameservers_result_set = set(zone.nameservers)
                 tmp = helper_name_server.get_from_zone_name(zone.name)
                 nameservers_db_set = set(map(lambda x: x.name.name, tmp))
                 self.assertSetEqual(nameservers_result_set, nameservers_db_set)

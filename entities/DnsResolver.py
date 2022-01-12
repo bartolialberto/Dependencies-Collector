@@ -116,7 +116,8 @@ class DnsResolver:
                 zone_dependencies_per_zone.update(temp_zone_dep_per_zone)
 
                 # merge nameservers
-                zone_dependencies_per_nameserver.update(temp_zone_dep_per_nameserver)
+                # zone_dependencies_per_nameserver.update(temp_zone_dep_per_nameserver)
+                self.merge_zone_dependencies_per_nameserver_result(zone_dependencies_per_nameserver, temp_zone_dep_per_nameserver)
 
                 # merge error logs
                 for log in temp_error_logs:
@@ -193,6 +194,7 @@ class DnsResolver:
             # reset all variables for new iteration
             current_zone_nameservers = list()
             current_zone_cnames = list()
+            current_zone_addresses = list()
             current_zone_name = '_'
             rr_ns_answer = None
             rr_ns_aliases = None
@@ -211,8 +213,7 @@ class DnsResolver:
                 for zone_name in zone_names:
                     tmp = list(map(lambda z: z.name, zone_list))
                     if zone_name not in tmp:
-                        r = self.cache.resolve_zone_from_zone_name(zone_name)
-                        zone = Zone(r[0], r[1], r[2])
+                        zone = self.cache.resolve_zone_from_zone_name(zone_name)
                         zone_list.append(zone)
                         print(f"Depends on zone: {zone.name}\t\t\t[NON-AUTHORITATIVE]")
                         for nm in zone.nameservers:
@@ -243,23 +244,26 @@ class DnsResolver:
             # is domain a zone name?
             try:
                 rr_ns = self.cache.lookup_first(current_domain, TypesRR.NS)
-                current_zone_name, current_zone_nameservers, current_zone_cnames = self.cache.resolve_zone_from_ns_rr(rr_ns)  # raise NoRecordInCacheError too
+                zone = self.cache.resolve_zone_from_ns_rr(rr_ns)  # raise NoRecordInCacheError too
+                current_zone_name = zone.name
+                current_zone_nameservers = zone.nameservers
+                current_zone_cnames = zone.aliases
+                current_zone_addresses = zone.addresses
 
                 #
                 self._init_dict_key_with_an_empty_set(zone_dependencies_per_zone, current_domain)
 
-                for rr in current_zone_nameservers:
-                    self._split_domain_name_and_add_to_list(elaboration_domains, rr.name, False)
+                for nameserver in current_zone_nameservers:
+                    self._split_domain_name_and_add_to_list(elaboration_domains, nameserver, False)
 
                     #
                     try:
-                        zone_name_of_nameserver = self.resolve_zone_of_nameserver(rr.name)
+                        zone_name_of_nameserver = self.resolve_zone_of_nameserver(nameserver)
                         zone_dependencies_per_zone[current_domain].add(zone_name_of_nameserver)
                     except ValueError:
                         pass
-                    self._init_dict_key_with_an_empty_set_and_then_add(zone_dependencies_per_nameserver, rr.name, current_zone_name)
+                    self._init_dict_key_with_an_empty_set_and_then_add(zone_dependencies_per_nameserver, nameserver, current_zone_name)
 
-                zone = Zone(current_zone_name, current_zone_nameservers, current_zone_cnames)
                 if zone not in zone_list:
                     print(f"Depends on zone: {current_zone_name}\t\t\t[NON-AUTHORITATIVE]")
                     zone_list.append(zone)
@@ -285,8 +289,12 @@ class DnsResolver:
                     # corrente è solo un alias di uno di quei nameserver che ha già (appunto) rr di tipo A nella cache,
                     # quindi in verità è già risolto (==> non server metterlo in cache, sennò ho doppioni)
                     try:
-                        rr_a_cache = self.cache.resolve_path_also_from_alias(nameserver)
-                        list_utils.append_with_no_duplicates(current_zone_nameservers, rr_a_cache)  # ma se il RR ha solo il campo values diverso?
+                        # rr_a_cache = self.cache.resolve_path_also_from_alias(nameserver)
+                        rr_a, rr_cnames = self.cache.resolve_path(nameserver, as_string=False)
+                        list_utils.append_with_no_duplicates(current_zone_nameservers, nameserver)  # ma se il RR ha solo il campo values diverso?
+                        for rr_cname in rr_cnames:
+                            list_utils.append_with_no_duplicates(current_zone_cnames, rr_cname)
+                        list_utils.append_with_no_duplicates(current_zone_addresses, rr_a)
                     except (NoRecordInCacheError, NoAvailablePathError):
                         try:
                             rr_a_answer, rr_a_aliases = self.do_query(nameserver, TypesRR.A)
@@ -299,7 +307,8 @@ class DnsResolver:
                             for rr in rr_a_aliases:
                                 self.cache.add_entry(rr)
                                 list_utils.append_with_no_duplicates(current_zone_cnames, rr)
-                            list_utils.append_with_no_duplicates(current_zone_nameservers, rr_a_answer)  # ma se il RR ha solo il campo values diverso?
+                            list_utils.append_with_no_duplicates(current_zone_nameservers, nameserver)  # ma se il RR ha solo il campo values diverso?
+                            list_utils.append_with_no_duplicates(current_zone_addresses, rr_a_answer)
                         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as exc:
                             error_logs.append(ErrorLog(exc, current_domain, str(exc)))
                     self._split_domain_name_and_add_to_list(elaboration_domains, nameserver, False)
@@ -313,7 +322,7 @@ class DnsResolver:
                     self._init_dict_key_with_an_empty_set_and_then_add(zone_dependencies_per_nameserver, nameserver, current_zone_name)
 
                 print(f"Depends on zone: {current_zone_name}")
-                zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames))
+                zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames, current_zone_addresses))
         print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
 
         if not consider_tld:
@@ -385,7 +394,7 @@ class DnsResolver:
             _dict[_key].add(elem_to_add)
 
     @classmethod
-    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, str], zone_dependencies_per_nameserver: Dict[str, str]) -> Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]:
+    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, List[str]], zone_dependencies_per_nameserver: Dict[str, List[str]]) -> Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]:
         filtered_zone_list = list(filter(lambda z: z.name not in tld_list, zone_list))
 
         filtered_zone_dependencies_per_zone = dict()
@@ -405,4 +414,29 @@ class DnsResolver:
             for zn in zone_dependencies_per_nameserver[nameserver]:
                 if zn not in tld_list:
                     filtered_zone_dependencies_per_nameserver[nameserver].append(zn)
+
+        # if zone_dependencies key contains only a tld as value, now that list of values is empty... So key must be removed
+        keys_to_be_removed = set()
+        for zone_name in filtered_zone_dependencies_per_zone.keys():
+            if len(filtered_zone_dependencies_per_zone[zone_name]) == 0:
+                keys_to_be_removed.add(zone_name)
+        for key in keys_to_be_removed:
+            filtered_zone_dependencies_per_zone.pop(key)
+        keys_to_be_removed = set()
+        for nameserver in filtered_zone_dependencies_per_nameserver.keys():
+            if len(filtered_zone_dependencies_per_nameserver[nameserver]) == 0:
+                keys_to_be_removed.add(nameserver)
+        for key in keys_to_be_removed:
+            filtered_zone_dependencies_per_nameserver.pop(key)
         return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver
+
+    @classmethod
+    def merge_zone_dependencies_per_nameserver_result(cls, total_result: Dict[str, List[str]], current_result: Dict[str, List[str]]):
+        for nameserver in current_result.keys():
+            try:
+                total_result[nameserver]
+            except KeyError:
+                total_result[nameserver] = list()
+            finally:
+                for zone_dep in current_result[nameserver]:
+                    list_utils.append_with_no_duplicates(total_result[nameserver], zone_dep)

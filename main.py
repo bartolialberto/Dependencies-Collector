@@ -5,6 +5,7 @@ from entities.ApplicationResolvers import ApplicationResolvers
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_application_results
 from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils
@@ -31,8 +32,8 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
         print(f"> No domain names found in command line.")
         result = None
         try:
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
-        except FileWithExtensionNotFoundError:
+            result = file_utils.search_for_filename_in_subdirectory('input', 'websites.txt')
+        except FilenameNotFoundError:
             print(f"> No .txt file found in input folder found.")
             print(f"> Starting application with default websites as sample:")
             websites = list(default_websites)
@@ -46,10 +47,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
             lines = f.readlines()
             for line in lines:
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
-                if domain_name_utils.is_grammatically_correct(candidate):
-                    websites.append(candidate)
-                else:
-                    pass
+                websites.append(candidate)
             f.close()
             if len(websites) == 0:
                 print(f"> The .txt file in input folder doesn't contain any valid website.")
@@ -72,7 +70,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     return websites
 
 
-def get_input_mail_domains(default_mail_domains=('mail.google.it', 'mail.dei.unipd.it')) -> List[str]:
+def get_input_mail_domains(default_mail_domains=('mail.google.com', 'mail.dei.unipd.it')) -> List[str]:
     """
     Start of the application: getting the domain names, and returning them as a list of string.
     They can be set from command line and from a .txt file put in the input folder in which each domain name is written
@@ -92,8 +90,8 @@ def get_input_mail_domains(default_mail_domains=('mail.google.it', 'mail.dei.uni
         print(f"> No mail domains found in command line.")
         result = None
         try:
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".txt")
-        except FileWithExtensionNotFoundError:
+            result = file_utils.search_for_filename_in_subdirectory('input', 'mail_domains.txt')
+        except FilenameNotFoundError:
             print(f"> No .txt file found in input folder found.")
             print(f"> Starting application with default mail domains as sample:")
             mail_domains = list(default_mail_domains)
@@ -107,10 +105,7 @@ def get_input_mail_domains(default_mail_domains=('mail.google.it', 'mail.dei.uni
             lines = f.readlines()
             for line in lines:
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
-                if domain_name_utils.is_grammatically_correct(candidate):
-                    mail_domains.append(candidate)
-                else:
-                    pass
+                mail_domains.append(candidate)
             f.close()
             if len(mail_domains) == 0:
                 print(f"> The .txt file in input folder doesn't contain any valid mail domain.")
@@ -173,11 +168,16 @@ if __name__ == "__main__":
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
         print("Insertion into database... ", end='')
-        helper_application_results.insert_landing_websites_results(resolvers.landing_web_sites_results)
+        helper_application_results.insert_landing_websites_results(resolvers.landing_web_sites_results,
+                                                                   persist_errors=persist_errors)
         helper_application_results.insert_mail_servers_resolving(resolvers.mail_servers_results)
         helper_application_results.insert_dns_result(resolvers.total_dns_results,
                                                      resolvers.total_zone_dependencies_per_zone,
-                                                     resolvers.total_zone_dependencies_per_name_server)
+                                                     resolvers.total_zone_dependencies_per_name_server,
+                                                     persist_errors=persist_errors)
+        helper_application_results.insert_script_dependencies_resolving(resolvers.web_site_script_dependencies,
+                                                                        resolvers.script_script_site_dependencies,
+                                                                        persist_errors=persist_errors)
         # helper_domain_name.multiple_inserts(resolvers.dns_results)
         # helper_landing_page.multiple_inserts(resolvers.landing_page_results)
         # helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)

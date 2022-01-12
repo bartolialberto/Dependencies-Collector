@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from utils import file_utils
+from utils import file_utils, domain_name_utils
 
 
 class TLDPageScraper:
@@ -30,20 +30,19 @@ class TLDPageScraper:
             trs = tbody.find_elements(By.TAG_NAME, "tr")
         except selenium.common.exceptions.NoSuchElementException:
             raise
-        print(f"DEBUG: len(trs) = {len(trs)}")
         for i, tr in enumerate(trs):
             try:
                 a = tr.find_element(By.TAG_NAME, "a")
-                self.tld_list.append(a.text)
+                self.tld_list.append(domain_name_utils.insert_trailing_point(a.text[1:]))       # from '.it' to 'it.'
             except selenium.common.exceptions.NoSuchElementException:
                 raise
-        print(f"DEBUG: len(tld_list) = {len(self.tld_list)}")
         return self.tld_list
 
     def import_from_txt(self, filepath):
         try:
             f = open(filepath, "r")
             for line in f:
+                # self.tld_list.append(domain_name_utils.insert_trailing_point(line[1:]))
                 self.tld_list.append(line)
             f.close()
         except ValueError:
@@ -66,6 +65,7 @@ class TLDPageScraper:
         try:
             f = open(str(file), "r")
             for line in f:
+                # tlds.append(domain_name_utils.insert_trailing_point(line[1:]))
                 tlds.append(line)
             f.close()
         except ValueError:

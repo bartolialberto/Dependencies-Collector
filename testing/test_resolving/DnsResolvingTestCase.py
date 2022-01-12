@@ -2,10 +2,13 @@ import copy
 import unittest
 from pathlib import Path
 from typing import List
+import selenium
 from entities.DnsResolver import DnsResolver
+from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.TLDPageScraper import TLDPageScraper
 from entities.Zone import Zone
 from entities.error_log.ErrorLogger import ErrorLogger
+from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from old_thesis_work.Resolver import Resolver
 
 
@@ -42,6 +45,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     match in the key set, then the values that overflows with respect to the other result will be printed
 
     """
+    tld_scraper = None
     consider_tld = None
     PRD = None
     domain_names = None
@@ -60,13 +64,29 @@ class DnsResolvingTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        # cls.domain_names = ['www.google.com', 'consent.youtube.com', 'mail.google.com', 'mail.dei.unipd.it', 'www.youtube.com', 'marketingplatform.google.com']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
-        cls.consider_tld = False
+        cls.consider_tld = True
         # ELABORATION
         cls.PRD = DnsResolvingTestCase.get_project_root_folder()
-        tlds = TLDPageScraper.import_txt_from_input_folder(cls.PRD)
-        cls.dns_resolver = DnsResolver(tlds)
+        if not cls.consider_tld:
+            try:
+                headless_browser = FirefoxHeadlessWebDriver(cls.PRD)
+            except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+                print(f"!!! {str(e)} !!!")
+                return
+            cls.tld_scraper = TLDPageScraper(headless_browser)
+            try:
+                tlds = cls.tld_scraper.scrape_tld()
+            except (
+            selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
+                print(f"!!! {str(e)} !!!")
+                return
+            cls.dns_resolver = DnsResolver(tlds)
+            headless_browser.close()
+        else:
+            cls.dns_resolver = DnsResolver(None)
         cls.dns_resolver.cache.clear()
         print("START DNS DEPENDENCIES RESOLVER")
         cls.dns_results, cls.zone_dependencies, cls.nameservers, cls.error_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True, consider_tld=cls.consider_tld)
@@ -247,7 +267,71 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.assertEqual(self.nameservers.keys(), self.new_nameservers.keys())
         print(f"------- [5] END CHECK BETWEEN NAMESERVER RESULTS TEST -------")
 
-    def test_6_export_results(self):
+    def test_6_presence_of_every_nameserver(self):
+        print(f"\n------- [6] START PRESENCE OF NAMESERVERS TEST -------")
+        zone_list_nameservers = set()
+        for zone_list in self.dns_results.values():
+            for zone in zone_list:
+                zone_nameservers_set = set(zone.nameservers)
+                zone_list_nameservers = zone_list_nameservers.union(zone_nameservers_set)
+        nameserver_presence = dict()
+        for i, nameserver in enumerate(self.nameservers.keys()):
+            if nameserver in zone_list_nameservers:
+                nameserver_presence[nameserver] = True
+            else:
+                nameserver_presence[nameserver] = False
+            print(f"nameserver[{i + 1}/{len(self.nameservers.keys())}]: {nameserver} is present? {nameserver_presence[nameserver]}")
+        for nameserver in nameserver_presence.keys():
+            self.assertTrue(nameserver_presence[nameserver])
+        print(f"------- [6] END PRESENCE OF NAMESERVERS TEST -------")
+
+    def test_7_presence_of_every_zone(self):
+        print(f"\n------- [7] START PRESENCE OF ZONES TEST -------")
+        zones_names_set = set()
+        for zone_list in self.dns_results.values():
+            zone_names_set = set(map(lambda z: z.name, zone_list))
+            zones_names_set = zones_names_set.union(zone_names_set)
+        zone_presence = dict()
+        for i, zone_name in enumerate(self.zone_dependencies.keys()):
+            if zone_name in zones_names_set:
+                zone_presence[zone_name] = True
+            else:
+                zone_presence[zone_name] = False
+            print(f"nameserver[{i + 1}/{len(self.zone_dependencies.keys())}]: {zone_name} is present? {zone_presence[zone_name]}")
+        for nameserver in zone_presence.keys():
+            self.assertTrue(zone_presence[nameserver])
+        print(f"------- [7] END PRESENCE OF ZONES TEST -------")
+
+    def test_8_presence_of_every_addresses(self):
+        print(f"\n------- [8] START PRESENCE OF ADDRESSES TEST -------")
+        zone_set = set()
+        for zone_list in self.dns_results.values():
+            for zone in zone_list:
+                zone_set.add(zone)
+        for zone in zone_set:
+            count_nameservers = 0
+            count_rr_addresses = 0
+            for nameserver in zone.nameservers:
+                count_nameservers = count_nameservers + 1
+            for rr in zone.addresses:
+                count_rr_addresses = count_rr_addresses + 1
+            self.assertEqual(count_nameservers, count_rr_addresses)
+
+        zone_set = set()
+        for zone_list in self.dns_new_results.values():
+            for zone in zone_list:
+                zone_set.add(zone)
+        for zone in zone_set:
+            count_nameservers = 0
+            count_rr_addresses = 0
+            for nameserver in zone.nameservers:
+                count_nameservers = count_nameservers + 1
+            for rr in zone.addresses:
+                count_rr_addresses = count_rr_addresses + 1
+            self.assertEqual(count_nameservers, count_rr_addresses)
+        print(f"------- [8] END PRESENCE OF ADDRESSES TEST -------")
+
+    def test_9_export_results(self):
         self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)
         print(f"\n**** cache written in 'output' folder: file is named 'cache_from_dns_test.csv'")
         logger = ErrorLogger()

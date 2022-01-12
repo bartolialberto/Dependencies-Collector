@@ -29,8 +29,7 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'c.ns.c10r.facebook.com.'
-        cls.domain_name = 'mail.dei.unipd.it'
-        cls.type = TypesRR.MX
+        cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION
         PRD = DnsQueryTestCase.get_project_root_folder()
@@ -48,6 +47,7 @@ class DnsQueryTestCase(unittest.TestCase):
             answer = self.dns_resolver.resolver.resolve(self.domain_name, self.type.to_string())
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.resolver.YXDOMAIN, Exception) as e:  # name is a domain that does not exist
             print(f"!!! {str(e)} !!!")
+            print(f"------- [1] END RAW QUERY TEST -------")
             return
         print(f"answer.canonical_name = {answer.canonical_name}")
         print(f"answer.qname = {answer.qname}")
