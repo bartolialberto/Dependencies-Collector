@@ -301,7 +301,7 @@ class ScriptServerEntity(BaseModel):
 
 class ScriptSiteLandsAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
-    script_server = ForeignKeyField(ScriptServerEntity)
+    script_server = ForeignKeyField(ScriptServerEntity, null=True)
     ip_address = ForeignKeyField(IpAddressEntity, null=True)
     https = BooleanField(null=False)
 

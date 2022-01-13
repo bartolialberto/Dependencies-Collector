@@ -29,6 +29,12 @@ class ErrorLog:
         self.reason_phrase = reason_phrase
 
     def __str__(self) -> str:
+        """
+        This method returns a string representation of this object.
+
+        :return: A string representation of this object.
+        :rtype: str
+        """
         return f"{self.error_type}\t{self.entity_cause}\t{self.reason_phrase}"
 
     def __eq__(self, other) -> bool:

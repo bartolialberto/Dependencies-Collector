@@ -1,21 +1,17 @@
-import ipaddress
-from typing import Dict, Tuple, List, Set
+from typing import Dict, Set
 from peewee import DoesNotExist
-from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
-from entities.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
-from entities.results.LandingSIteResult import LandingSiteResult
-from entities.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
-from entities.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
-from entities.scrapers.ROVPageScraper import RowPrefixesTable
+from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
+from entities.resolvers.results.LandingSIteResult import LandingSiteResult
+from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
+from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
+from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from entities.resolvers.ScriptDependenciesResolver import MainPageScript
-from entities.Zone import Zone
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from persistence import helper_web_site, helper_web_site_lands, helper_web_server, helper_zone, helper_name_server, \
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
     helper_belongs, helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server
-from utils import url_utils
 
 
 def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult], persist_errors=True):
@@ -92,14 +88,14 @@ def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResu
             helper_mail_domain_composed.insert(mde, mse)
 
 
-def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str, Tuple[Set[MainPageScript] or None, Set[MainPageScript] or None]], script_script_site_dependencies: Dict[MainPageScript, Set[str]], persist_errors=True) -> None:
+def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str, ScriptDependenciesResult], script_script_site_dependencies: Dict[MainPageScript, Set[str]], persist_errors=True) -> None:
     for web_site in web_site_script_dependencies.keys():
         try:
             wse = helper_web_site.get(web_site)
         except DoesNotExist:
-            pass        # TODO
-        https_scripts = web_site_script_dependencies[web_site][0]
-        http_scripts = web_site_script_dependencies[web_site][1]
+            raise        # TODO
+        https_scripts = web_site_script_dependencies[web_site].https
+        http_scripts = web_site_script_dependencies[web_site].http
 
         if https_scripts is not None:
             for script in https_scripts:
@@ -159,38 +155,41 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult], pe
 def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping, persist_errors=True):
     for as_number in finals.results.keys():
         ase = helper_autonomous_system.insert(as_number)
-        for nameserver in finals.results[as_number].keys():
-            try:
-                nse, dne = helper_name_server.get(nameserver)
-            except DoesNotExist:
-                raise
-            if finals.results[as_number][nameserver] is not None:
-                ip_address = finals.results[as_number][nameserver].ip_address
-                entry_ip_as_db = finals.results[as_number][nameserver].entry_as_database
-                belonging_network = finals.results[as_number][nameserver].belonging_network
-                row_prefixes_table = finals.results[as_number][nameserver].entry_rov_page
+        if finals.results[as_number] is not None:
+            for nameserver in finals.results[as_number].keys():
+                try:
+                    nse, dne = helper_name_server.get(nameserver)
+                except DoesNotExist:
+                    raise
+                if finals.results[as_number][nameserver] is not None:
+                    ip_address = finals.results[as_number][nameserver].ip_address
+                    entry_ip_as_db = finals.results[as_number][nameserver].entry_as_database
+                    belonging_network = finals.results[as_number][nameserver].belonging_network
+                    row_prefixes_table = finals.results[as_number][nameserver].entry_rov_page
 
-                if ip_address is not None:
-                    iae = helper_ip_address.insert(ip_address)
-                    if row_prefixes_table is not None:
-                        re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
-                        ine = helper_ip_network.insert(row_prefixes_table.prefix)
-                        helper_prefixes_table.insert(ine, re, ase)
-                        helper_belongs.insert(ine, ase)
-                        helper_ip_address_depends.insert(iae, ine)
-                    else:
-                        if belonging_network is not None:
-                            ine = helper_ip_network.insert(belonging_network)
+                    if ip_address is not None:
+                        iae = helper_ip_address.insert(ip_address)
+                        if row_prefixes_table is not None:
+                            re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
+                            ine = helper_ip_network.insert(row_prefixes_table.prefix)
+                            helper_prefixes_table.insert(ine, re, ase)
+                            helper_belongs.insert(ine, ase)
                             helper_ip_address_depends.insert(iae, ine)
                         else:
-                            if persist_errors:
-                                helper_ip_address_depends.insert(iae, None)
+                            if belonging_network is not None:
+                                ine = helper_ip_network.insert(belonging_network)
+                                helper_ip_address_depends.insert(iae, ine)
                             else:
-                                pass
-                else:
-                    if persist_errors:
-                        helper_access.insert(dne, None)
+                                if persist_errors:
+                                    helper_ip_address_depends.insert(iae, None)
+                                else:
+                                    pass
                     else:
-                        pass
-            else:
-                pass
+                        if persist_errors:
+                            helper_access.insert(dne, None)
+                        else:
+                            pass
+                else:
+                    pass
+        else:
+            pass

@@ -2,7 +2,6 @@ import copy
 import csv
 from pathlib import Path
 from typing import List, Set, Tuple
-
 from entities.Zone import Zone
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
@@ -35,7 +34,7 @@ class LocalDnsResolverCache:
         Instantiate a LocalResolverCache initializing all the attributes defined above. You can set a personalized
         separator.
 
-        :param separator: The character separator used when exporting the file. Default is TAB (\t).
+        :param separator: The character separator used when exporting the file. Default is a comma (;).
         :type separator: str
         """
         self.cache = list()
@@ -103,19 +102,6 @@ class LocalDnsResolverCache:
             raise NoRecordInCacheError(domain_name, type_rr)
         else:
             return result
-
-    def lookup_name_from_alias(self, domain_name: str) -> Set[RRecord]:
-        """
-        Returns all CNAME RRs in which the domain_name parameter is an alias.
-
-        :param domain_name:
-        :return:
-        """
-        result = set()
-        for rr in self.cache:
-            if rr.type == TypesRR.CNAME and domain_name_utils.is_contained_in_list(rr.values, domain_name):
-                result.add(rr)
-        return result
 
     def lookup_first_name_from_alias(self, domain_name: str) -> RRecord:
         """
@@ -219,6 +205,19 @@ class LocalDnsResolverCache:
             return result
 
     def resolve_path(self, domain_name: str, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
+        """
+        This method resolves the access path from the domain name parameter.
+        It returns the final RR and all the alias along the access path.
+        There is also a boolean flag that decides to return all the aliases as RRs or simple strings.
+
+        :param domain_name: The domain name.
+        :type domain_name: str
+        :param as_string: Flag to decide the list of aliases format.
+        :param as_string: bool
+        :raise NoAvailablePathError: If there is not an access path.
+        :return: The resolution RR and the list of alises as a tuple.
+        :rtype: Tuple[RRecord, List[str] or List[RRecord]]
+        """
         try:
             inner_result = self.__inner_resolve_path(domain_name, result=None)
         except NoAvailablePathError:
@@ -232,6 +231,16 @@ class LocalDnsResolverCache:
         return inner_result[-1], aliases
 
     def __inner_resolve_path(self, domain_name: str, result=None) -> List[RRecord]:
+        """
+        This method is the real resolver for the access path of a domain name. It's recursive.
+
+        :param domain_name: The domain name.
+        :type domain_name: str
+        :param result: Is a parameter that populates with each recursive invocation.
+        :type result: None or List[RRecord]
+        :return: The access path.
+        :rtype: List[RRecord]
+        """
         if result is None:
             result = list()
         else:
@@ -309,14 +318,15 @@ class LocalDnsResolverCache:
 
     def resolve_zone_from_zone_name(self, zone_name: str) -> Zone:
         """
-        This method searches if the zone_name parameter actually represents a zone in the cache. If it so the zone is
-        'constructed' searching for all the nameservers of the zone and the aliases.
+        This method searches the Zone (the application-defined object) corresponding to the zone name parameter.
+        It is 'constructed' searching for all the nameservers of the zone and the aliases.
 
-        :param zone_name: A zone name.
+        :param zone_name: The zone name.
         :type zone_name: str
-        :raise NoRecordInCacheError: If it is impossible to resolve a zone from the name.
-        :return: All the attributes defined to instantiate a Zone object, put together as a tuple.
-        :rtype: Tuple[str, List[RRecord], List[RRecord]]
+        :raise NoRecordInCacheError: If there is no a NS RR corresponding to the zone name parameter.
+        :raise NoAvailablePathError: If there is no access path for a name server of the zone.
+        :return: The Zone (the application-defined object).
+        :rtype: Zone
         """
         try:
             rr_ns = self.lookup_first(zone_name, TypesRR.NS)
@@ -329,15 +339,14 @@ class LocalDnsResolverCache:
 
     def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Zone:
         """
-        This method searches if the RRecord parameter is actually present in the cache. If it so the zone is
-        'constructed' searching for all the nameservers of the zone and the aliases.
+        This method searches the Zone (the application-defined object) corresponding to the RR parameter.
+        It is 'constructed' searching for all the nameservers of the zone and the aliases.
 
         :param rr_ns: A NS type RR.
         :type rr_ns: RRecord
-        :raise NoRecordInCacheError: If it is impossible to resolve a zone from the NS type RR.
-        If it is impossible to resolve all the nameservers of the zone.
-        :return: All the attributes defined to instantiate a Zone object, put together as a tuple.
-        :rtype: Tuple[str, List[RRecord], List[RRecord]]
+        :raise NoAvailablePathError: If there is no access path for a name server of the zone.
+        :return: The Zone (the application-defined object).
+        :rtype: Zone
         """
         result_zone_name = rr_ns.name
         result_zone_nameservers = list()
@@ -345,66 +354,14 @@ class LocalDnsResolverCache:
         result_zone_addresses = list()
         for nameserver in rr_ns.values:
             result_zone_nameservers.append(nameserver)
-            rr_a, rr_cnames = self.resolve_path(nameserver, as_string=False)
+            try:
+                rr_a, rr_cnames = self.resolve_path(nameserver, as_string=False)
+            except NoAvailablePathError:
+                raise
             for rr in rr_cnames:
                 result_zone_cnames.append(rr)
             result_zone_addresses.append(rr_a)
         return Zone(result_zone_name, result_zone_nameservers, result_zone_cnames, result_zone_addresses)
-
-
-
-
-        """
-        try:
-            self.lookup_first(rr_ns.name, TypesRR.NS)
-        except NoRecordInCacheError:
-            raise
-        zone_name = rr_ns.name
-        zone_nameservers = list()
-        zone_aliases = list()
-        for nameserver in rr_ns.values:
-            try:
-                forward_aliases = self.lookup_forward_path(nameserver)
-            except DoesNotExist:
-                raise
-            # construct RR CNAME chain
-            if len(forward_aliases) > 1:
-                name = nameserver
-                for alias in forward_aliases[:-1]:
-                    zone_aliases.append(RRecord(name, TypesRR.CNAME, alias))
-                    name = alias
-                try:
-                    rr_a = self.lookup_first(name, TypesRR.A)
-                except NoRecordInCacheError:
-                    raise
-                zone_nameservers.append(rr_a)
-            else:
-                try:
-                    rr_a = self.lookup_first(nameserver, TypesRR.A)
-                except NoRecordInCacheError:
-                    raise
-                zone_nameservers.append(rr_a)
-        return zone_name, zone_nameservers, zone_aliases
-        """
-
-    def lookup_first_alias(self, name: str) -> RRecord:
-        """
-        This method searches for the first alias associated to name parameter in the cache.
-
-        :param name: A domain name.
-        :type name: str
-        :raise NoRecordInCacheError: If such alias is not present.
-        :return: Such alias.
-        :rtype: RRecord
-        """
-        for rr in self.cache:
-            if rr.type == TypesRR.CNAME and domain_name_utils.equals(name, rr.name):
-                return rr
-            """
-            elif rr.type == TypesRR.CNAME and domain_name_utils.is_contained_in_list(rr.values, name):
-                return rr
-            """
-        raise NoRecordInCacheError(name, TypesRR.CNAME)
 
     def resolve_zones_from_nameserver(self, nameserver: str) -> List[str]:
         """
@@ -468,8 +425,8 @@ class LocalDnsResolverCache:
     def load_csv_from_output_folder(self, filename='dns_cache.csv', project_root_directory=Path.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
-        .csv file from the output folder of the project root directory (if set correctly). So just invoking this
-        method will load the cache (if) exported from the previous execution.
+        'dns_cache.csv' file from the output folder of the project root directory (if set correctly). So just invoking
+        this method will load the cache (if) exported from the previous execution.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
@@ -477,7 +434,7 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: Name of the cache file.
+        :param filename: Name of the cache file. default is 'dns_cache.csv'.
         :type filename: str
         :param project_root_directory: Path of the project root.
         :type project_root_directory: Path
@@ -579,7 +536,7 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: The personalized filename without extension, default is cache.
+        :param filename: The personalized filename without extension, default is 'dns_cache'.
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
@@ -609,7 +566,7 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: The personalized filename without extension, default is cache.
+        :param filename: The personalized filename without extension, default is 'dns_cache'.
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
@@ -640,12 +597,20 @@ class LocalDnsResolverCache:
             if record not in self.cache:
                 self.cache.append(record)
 
-    def take_snapshot(self) -> None:
+    def take_snapshot(self, project_root_directory=Path.cwd()) -> None:
         """
         Method that copies the current state of the cache list in the input folder.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
 
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_cache.csv")
+        file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_cache.csv", project_root_directory=project_root_directory)
         if not file.exists():
             pass
         with file.open('w', encoding='utf-8', newline='') as f:

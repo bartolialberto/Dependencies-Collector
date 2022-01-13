@@ -7,10 +7,10 @@ from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
-from entities.results.DnsMailServersDependenciesResult import DnsMailServersDependenciesResult
-from entities.results.DnsZoneDependenciesResult import DnsZoneDependenciesResult
-from entities.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
-from entities.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
+from entities.resolvers.results.DnsMailServersDependenciesResult import DnsMailServersDependenciesResult
+from entities.resolvers.results.DnsZoneDependenciesResult import DnsZoneDependenciesResult
+from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
+from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAnswerError import NoAnswerError
@@ -176,7 +176,7 @@ class DnsResolver:
             print(f"!!! {str(e)} !!!")
             raise
         for i, value in enumerate(mx_values.values):
-            print(f"mail_server[{i+1}/{len(mx_values.values)}]: {value}")
+            print(f"mail server[{i+1}/{len(mx_values.values)}]: {value}")
             result.add_mail_server(value)
         return result
 

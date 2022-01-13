@@ -2,7 +2,7 @@ from ipaddress import IPv4Address
 from typing import Dict, Set
 import requests
 from entities.error_log.ErrorLog import ErrorLog
-from entities.results.LandingSIteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
+from entities.resolvers.results.LandingSIteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
 from utils import requests_utils
 
 
@@ -64,11 +64,13 @@ class LandingResolver:
 
     def resolve_web_site(self, web_site: str) -> LandingSiteResult:
         """
+        This methods resolves landing of a web site.
+        If an error occurs, it will be added in the error_logs attribute of the result, so exceptions are silent.
 
-        :param web_site:
-        :param web_site:
-        :return:
-        :rtype:
+        :param web_site: A web site.
+        :type web_site: str
+        :return: A LandingSiteResult object.
+        :rtype: LandingSiteResult
         """
         error_logs = list()
         try:
@@ -133,6 +135,15 @@ class LandingResolver:
         return final_results
 
     def resolve_script_site(self, script_site: str) -> LandingSiteResult:
+        """
+        This methods resolves landing of a script site.
+        If an error occurs, it will be added in the error_logs attribute of the result, so exceptions are silent.
+
+        :param script_site: A script site.
+        :type script_site: str
+        :return: A LandingSiteResult object.
+        :rtype: LandingSiteResult
+        """
         error_logs = list()
         try:
             landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(script_site, as_https=True)

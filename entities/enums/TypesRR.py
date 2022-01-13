@@ -44,4 +44,10 @@ class TypesRR(Enum):
             raise NotResourceRecordTypeError(string)
 
     def __str__(self):
+        """
+        This method returns a string representation of this object.
+
+        :return: A string representation of this object.
+        :rtype: str
+        """
         return self.to_string()

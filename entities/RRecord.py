@@ -40,7 +40,16 @@ class RRecord:
         else:
             self.values = values
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        """
+        This method returns True only if self and other are semantically equal.
+        This equality depends upon the developer.
+
+        :param other: Another RRecord object.
+        :type other: RRecord
+        :return: True or False if the 2 objects are equal.
+        :rtype: bool
+        """
         if isinstance(other, RRecord):
             if self.name == other.name and self.type == other.type:
                 return True
@@ -91,22 +100,11 @@ class RRecord:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)
 
-    @staticmethod
-    def parse_mailserver_from_mx_value(value: str) -> str:
+    def __str__(self):
         """
-        A static method that takes one value from the values field retrieved from a MX type query (as a string) and,
-        after separating the priority from the mailserver, it returns the mailserver.
+        This method returns a string representation of this object.
 
-        :param value: The value string.
-        :type value: str
-        :returns: The parsed mailserver.
+        :return: A string representation of this object.
         :rtype: str
         """
-        split = value.split(' ')
-        result = split[-1]
-        if '127.0.0.1' in result:
-            return 'localhost'
-        return result
-
-    def __str__(self):
         return f"{self.name}\t{self.type.to_string()}\t{str(self.values)}"

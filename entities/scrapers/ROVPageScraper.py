@@ -101,16 +101,22 @@ class RowPrefixesTable:
             raise
         self.roas = roas
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        This method returns a string representation of this object.
+
+        :return: A string representation of this object.
+        :rtype: str
+        """
         return f"[AS{self.as_number}\t{self.prefix.compressed}\t{str(self.span)}\t{self.cc}\t{str(self.visibility)}\t{self.rov_state.to_string()}\t{self.roas}]"
 
 
 class ROVPageScraper:
     """
-    This class represent a scraper that looks for the pfx_table_div (id of html element) table in the page (ROV page):
+    This class represents a scraper that looks for the 'pfx_table_div' (id of html element) table in the page (ROV page):
             https://stats.labs.apnic.net/roa/ASXXXX?c=IT&l=1&v=4&t=thist&d=thisd
     where XXXX is the autonomous system number. Requires a valid headless browser to work associated to geckodriver.
-    In particular geckodriver executable needs to be placed in the input folder of the project root folder (PRD).
+    In particular geckodriver executable needs to be placed in the 'input' folder of the project root folder (PRD).
 
     ...
 
@@ -124,7 +130,6 @@ class ROVPageScraper:
         such table. We wanna avoid traversing the DOM for each address query.
     current_as_number : int
         An integer that saves the current as page loaded.
-
     """
 
     def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
