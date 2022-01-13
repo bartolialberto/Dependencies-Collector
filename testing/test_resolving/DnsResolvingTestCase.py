@@ -60,8 +60,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        # cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['google.it']
+        cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = True
@@ -86,21 +85,21 @@ class DnsResolvingTestCase(unittest.TestCase):
             cls.dns_resolver = DnsResolver(None)
         cls.dns_resolver.cache.clear()
         print("START DNS DEPENDENCIES RESOLVER")
-        cls.dns_results, cls.zone_dependencies, cls.nameservers, cls.error_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True, consider_tld=cls.consider_tld)
+        cls.dns_results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True, consider_tld=cls.consider_tld)
         print("END DNS DEPENDENCIES RESOLVER")
         print("START CACHE DNS DEPENDENCIES RESOLVER")
-        cls.dns_new_results, cls.zone_new_dependencies, cls.new_nameservers, cls.error_new_logs = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=False, consider_tld=cls.consider_tld)
+        cls.dns_cache_results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=False, consider_tld=cls.consider_tld)
         print("END CACHE DNS DEPENDENCIES RESOLVER")
 
     def test_1_results_equality_from_cache(self):
         print(f"\n------- [1] START EQUALITY FROM CACHE TEST -------")
-        self.assertEqual(self.dns_results.keys(), self.dns_new_results.keys())
-        are_count_keys_same = (len(self.dns_results.keys()) == len(self.dns_new_results.keys()))
-        are_count_values_same = (len(self.dns_results.values()) == len(self.dns_new_results.values()))
+        self.assertEqual(self.dns_results.zone_dependencies_per_domain_name.keys(), self.dns_cache_results.zone_dependencies_per_domain_name.keys())
+        are_count_keys_same = (len(self.dns_results.zone_dependencies_per_domain_name.keys()) == len(self.dns_cache_results.zone_dependencies_per_domain_name.keys()))
+        are_count_values_same = (len(self.dns_results.zone_dependencies_per_domain_name.values()) == len(self.dns_cache_results.zone_dependencies_per_domain_name.values()))
         if are_count_keys_same and not are_count_values_same:
-            for domain_name in self.dns_results.keys():
-                set_new = set(self.dns_results[domain_name])
-                set_old = set(self.dns_new_results[domain_name])
+            for domain_name in self.dns_results.zone_dependencies_per_domain_name.keys():
+                set_new = set(self.dns_results.zone_dependencies_per_domain_name[domain_name])
+                set_old = set(self.dns_cache_results.zone_dependencies_per_domain_name[domain_name])
                 set_minor = None
                 set_major = None
                 are_same = False
@@ -122,14 +121,14 @@ class DnsResolvingTestCase(unittest.TestCase):
             print(f"No differences to print.")
         else:
             print(f"Dictionaries keys size are different, cannot print...")
-        self.assertSetEqual(set(self.dns_results), set(self.dns_new_results))
+        self.assertSetEqual(set(self.dns_results.zone_dependencies_per_domain_name), set(self.dns_cache_results.zone_dependencies_per_domain_name))
         print(f"------- [1] END EQUALITY FROM CACHE TEST -------")
 
     def test_2_are_there_duplicates_in_results(self):
         print(f"\n------- [2] START DUPLICATES IN RESULTS TEST -------")
         duplicates = list()
-        for i, rr in enumerate(self.dns_results):
-            for j, comp in enumerate(self.dns_results):
+        for i, rr in enumerate(self.dns_results.zone_dependencies_per_domain_name):
+            for j, comp in enumerate(self.dns_cache_results.zone_dependencies_per_domain_name):
                 if i != j and rr == comp:
                     duplicates.append(rr)
         if len(duplicates) != 0:
@@ -157,17 +156,17 @@ class DnsResolvingTestCase(unittest.TestCase):
 
     def test_4_zone_zone_dependencies_integrity(self):
         print(f"\n------- [4] START CHECK BETWEEN ZONE RESULTS TEST -------")
-        print(f"zone dependencies dict keys size = {len(self.zone_dependencies.keys())}")
-        print(f"zone dependencies from cache dict keys size = {len(self.zone_new_dependencies.keys())}")
-        are_keys_same = (len(self.zone_dependencies.keys()) == len(self.zone_new_dependencies.keys()))
+        print(f"zone dependencies dict keys size = {len(self.dns_results.zone_name_dependencies_per_zone.keys())}")
+        print(f"zone dependencies from cache dict keys size = {len(self.dns_results.zone_name_dependencies_per_zone.keys())}")
+        are_keys_same = (len(self.dns_results.zone_name_dependencies_per_zone.keys()) == len(self.dns_cache_results.zone_name_dependencies_per_zone.keys()))
         if are_keys_same:
-            for i, zone_name in enumerate(self.zone_dependencies.keys()):
-                print(f"[{i + 1}/{len(self.zone_dependencies.keys())}] = {zone_name}\t", end='')
-                print(f"len(results) = {len(self.zone_dependencies[zone_name])}\t", end='')
-                print(f"len(cache_results) = {len(self.zone_new_dependencies[zone_name])}\t", end='')
-                print(f"same? {(len(self.zone_dependencies[zone_name]) == len(self.zone_new_dependencies[zone_name]))}")
-                set_new = set(self.zone_dependencies[zone_name])
-                set_old = set(self.zone_new_dependencies[zone_name])
+            for i, zone_name in enumerate(self.dns_results.zone_name_dependencies_per_zone.keys()):
+                print(f"[{i + 1}/{len(self.dns_results.zone_name_dependencies_per_zone.keys())}] = {zone_name}\t", end='')
+                print(f"len(results) = {len(self.dns_results.zone_name_dependencies_per_zone[zone_name])}\t", end='')
+                print(f"len(cache_results) = {len(self.dns_cache_results.zone_name_dependencies_per_zone[zone_name])}\t", end='')
+                print(f"same? {(len(self.dns_results.zone_name_dependencies_per_zone[zone_name]) == len(self.dns_cache_results.zone_name_dependencies_per_zone[zone_name]))}")
+                set_new = set(self.dns_results.zone_name_dependencies_per_zone[zone_name])
+                set_old = set(self.dns_cache_results.zone_name_dependencies_per_zone[zone_name])
                 set_minor = None
                 set_major = None
                 are_same = False
@@ -194,8 +193,8 @@ class DnsResolvingTestCase(unittest.TestCase):
                 self.assertSetEqual(set_new, set_old)
         else:
             print(f"Dictionaries keys size are different...")
-            set_key_new = set(self.zone_dependencies.keys())
-            set_key_old = set(self.zone_new_dependencies.keys())
+            set_key_new = set(self.dns_results.zone_name_dependencies_per_zone.keys())
+            set_key_old = set(self.dns_cache_results.zone_name_dependencies_per_zone.keys())
             result = set_key_new.difference(set_key_old)
             if len(result) != 0:
                 print(f"Elements that the normal dictionary keys has more than the cache one:")
@@ -206,23 +205,23 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"Elements that the cache dictionary keys has more than the normal one:")
                 for i, elem in enumerate(result):
                     print(f"[{i+1}] = {elem}")
-        self.assertEqual(self.zone_dependencies.keys(), self.zone_new_dependencies.keys())
+        self.assertEqual(self.dns_results.zone_name_dependencies_per_zone.keys(), self.dns_cache_results.zone_name_dependencies_per_zone.keys())
         print(f"------- [4] END CHECK BETWEEN ZONE RESULTS TEST -------")
 
     # FIXME: bug
     def test_5_nameservers_zone_dependencies_integrity(self):
         print(f"\n------- [5] START CHECK BETWEEN NAMESERVER RESULTS TEST -------")
-        print(f"nameservers dict keys size = {len(self.nameservers.keys())}")
-        print(f"nameservers from cache dict keys size = {len(self.new_nameservers.keys())}")
-        are_keys_same = (len(self.nameservers.keys()) == len(self.new_nameservers.keys()))
+        print(f"nameservers dict keys size = {len(self.dns_results.zone_name_dependencies_per_name_server.keys())}")
+        print(f"nameservers from cache dict keys size = {len(self.dns_results.zone_name_dependencies_per_name_server.keys())}")
+        are_keys_same = (len(self.dns_results.zone_name_dependencies_per_name_server.keys()) == len(self.dns_cache_results.zone_name_dependencies_per_name_server.keys()))
         if are_keys_same:
-            for i, nameserver in enumerate(self.nameservers.keys()):
-                print(f"[{i + 1}/{len(self.nameservers.keys())}] = {nameserver}\t", end='')
-                print(f"len(results) = {len(self.nameservers[nameserver])}\t", end='')
-                print(f"len(cache_results) = {len(self.new_nameservers[nameserver])}\t", end='')
-                print(f"same? {(len(self.nameservers[nameserver]) == len(self.new_nameservers[nameserver]))}")
-                set_new = set(self.nameservers[nameserver])
-                set_old = set(self.new_nameservers[nameserver])
+            for i, nameserver in enumerate(self.dns_results.zone_name_dependencies_per_name_server.keys()):
+                print(f"[{i + 1}/{len(self.dns_results.zone_name_dependencies_per_name_server.keys())}] = {nameserver}\t", end='')
+                print(f"len(results) = {len(self.dns_results.zone_name_dependencies_per_name_server[nameserver])}\t", end='')
+                print(f"len(cache_results) = {len(self.dns_cache_results.zone_name_dependencies_per_name_server[nameserver])}\t", end='')
+                print(f"same? {(len(self.dns_results.zone_name_dependencies_per_name_server[nameserver]) == len(self.dns_cache_results.zone_name_dependencies_per_name_server[nameserver]))}")
+                set_new = set(self.dns_results.zone_name_dependencies_per_name_server[nameserver])
+                set_old = set(self.dns_cache_results.zone_name_dependencies_per_name_server[nameserver])
                 set_minor = None
                 set_major = None
                 are_same = False
@@ -249,8 +248,8 @@ class DnsResolvingTestCase(unittest.TestCase):
                 self.assertSetEqual(set_new, set_old)
         else:
             print(f"Dictionaries keys size are different...")
-            set_key_new = set(self.nameservers.keys())
-            set_key_old = set(self.new_nameservers.keys())
+            set_key_new = set(self.dns_results.zone_name_dependencies_per_name_server.keys())
+            set_key_old = set(self.dns_cache_results.zone_name_dependencies_per_name_server.keys())
             result = set_key_new.difference(set_key_old)
             if len(result) != 0:
                 print(f"Elements that the normal dictionary keys has more than the cache one:")
@@ -261,23 +260,23 @@ class DnsResolvingTestCase(unittest.TestCase):
                 print(f"Elements that the cache dictionary keys has more than the normal one:")
                 for i, elem in enumerate(result):
                     print(f"[{i+1}] = {elem}")
-        self.assertEqual(self.nameservers.keys(), self.new_nameservers.keys())
+        self.assertEqual(self.dns_results.zone_name_dependencies_per_name_server.keys(), self.dns_cache_results.zone_name_dependencies_per_name_server.keys())
         print(f"------- [5] END CHECK BETWEEN NAMESERVER RESULTS TEST -------")
 
     def test_6_presence_of_every_nameserver(self):
         print(f"\n------- [6] START PRESENCE OF NAMESERVERS TEST -------")
         zone_list_nameservers = set()
-        for zone_list in self.dns_results.values():
+        for zone_list in self.dns_results.zone_dependencies_per_domain_name.values():
             for zone in zone_list:
                 zone_nameservers_set = set(zone.nameservers)
                 zone_list_nameservers = zone_list_nameservers.union(zone_nameservers_set)
         nameserver_presence = dict()
-        for i, nameserver in enumerate(self.nameservers.keys()):
+        for i, nameserver in enumerate(self.dns_results.zone_name_dependencies_per_name_server.keys()):
             if nameserver in zone_list_nameservers:
                 nameserver_presence[nameserver] = True
             else:
                 nameserver_presence[nameserver] = False
-            print(f"nameserver[{i + 1}/{len(self.nameservers.keys())}]: {nameserver} is present? {nameserver_presence[nameserver]}")
+            print(f"nameserver[{i + 1}/{len(self.dns_results.zone_name_dependencies_per_name_server.keys())}]: {nameserver} is present? {nameserver_presence[nameserver]}")
         for nameserver in nameserver_presence.keys():
             self.assertTrue(nameserver_presence[nameserver])
         print(f"------- [6] END PRESENCE OF NAMESERVERS TEST -------")
@@ -285,16 +284,16 @@ class DnsResolvingTestCase(unittest.TestCase):
     def test_7_presence_of_every_zone(self):
         print(f"\n------- [7] START PRESENCE OF ZONES TEST -------")
         zones_names_set = set()
-        for zone_list in self.dns_results.values():
+        for zone_list in self.dns_results.zone_dependencies_per_domain_name.values():
             zone_names_set = set(map(lambda z: z.name, zone_list))
             zones_names_set = zones_names_set.union(zone_names_set)
         zone_presence = dict()
-        for i, zone_name in enumerate(self.zone_dependencies.keys()):
+        for i, zone_name in enumerate(self.dns_results.zone_name_dependencies_per_zone.keys()):
             if zone_name in zones_names_set:
                 zone_presence[zone_name] = True
             else:
                 zone_presence[zone_name] = False
-            print(f"nameserver[{i + 1}/{len(self.zone_dependencies.keys())}]: {zone_name} is present? {zone_presence[zone_name]}")
+            print(f"nameserver[{i + 1}/{len(self.dns_results.zone_name_dependencies_per_zone.keys())}]: {zone_name} is present? {zone_presence[zone_name]}")
         for nameserver in zone_presence.keys():
             self.assertTrue(zone_presence[nameserver])
         print(f"------- [7] END PRESENCE OF ZONES TEST -------")
@@ -302,7 +301,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     def test_8_presence_of_every_addresses(self):
         print(f"\n------- [8] START PRESENCE OF ADDRESSES TEST -------")
         zone_set = set()
-        for zone_list in self.dns_results.values():
+        for zone_list in self.dns_results.zone_dependencies_per_domain_name.values():
             for zone in zone_list:
                 zone_set.add(zone)
         for zone in zone_set:
@@ -315,7 +314,7 @@ class DnsResolvingTestCase(unittest.TestCase):
             self.assertEqual(count_nameservers, count_rr_addresses)
 
         zone_set = set()
-        for zone_list in self.dns_new_results.values():
+        for zone_list in self.dns_cache_results.zone_dependencies_per_domain_name.values():
             for zone in zone_list:
                 zone_set.add(zone)
         for zone in zone_set:
@@ -332,7 +331,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)
         print(f"\n**** cache written in 'output' folder: file is named 'cache_from_dns_test.csv'")
         logger = ErrorLogger()
-        for log in self.error_logs:
+        for log in self.dns_results.error_logs:
             logger.add_entry(log)
         logger.write_to_csv_in_output_folder(filename=self.error_logs_filename, project_root_directory=self.PRD)
         print(f"\n**** error_logs written in 'output' folder: file is named 'error_logs_from_test.csv'\n")

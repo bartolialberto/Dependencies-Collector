@@ -15,15 +15,15 @@ class EntryIpAsDatabase:
 
     Attributes
     ----------
-    start_ip_range : `ipaddress.IPv4Address`
+    start_ip_range : ipaddress.IPv4Address
         The start of the ip range. It's an ip address.
-    end_ip_range : `ipaddress.IPv4Address`
+    end_ip_range : ipaddress.IPv4Address
         The end of the ip range. It's an ip address.
-    as_number : `int`
+    as_number : int
         The Autonomous System number. It's a number.
-    country_code : `str`
+    country_code : str
         Should be the country code.
-    as_description : `str`
+    as_description : str
         Should be the Autonomous System brief description.
     """
     def __init__(self, entries_inline: List[str]):
@@ -69,8 +69,8 @@ class EntryIpAsDatabase:
         Returns a list of networks from the summarized network range given the first and last IP addresses of the range
         in the entry (self object).
 
-        :raises TypeError: If first or last are not IP addresses or are not of the same version.
-        If last is not greater than first or if first address version is not 4 or 6
+        :raise TypeError: If first or last are not IP addresses or are not of the same version.
+        :raise ValueError: If last is not greater than first or if first address version is not 4 or 6
         :returns: A list of valid ipaddress.IPv4Network.
         :rtype: List[ipaddress.IPv4Network]
         """
@@ -88,11 +88,16 @@ class EntryIpAsDatabase:
 
         :param ip: Ip address.
         :type ip: ipaddress.IPv4Address
-        :raises ValueError: If there's not a network in which is contained the ip address parameter.
-        :returns: A tuple containing the belonging network first and then all the newtorks.
+        :raise TypeError: If first or last are not IP addresses or are not of the same version.
+        :raise ValueError: If last is not greater than first or if first address version is not 4 or 6.
+        If there's not a network in which is contained the ip address parameter.
+        :returns: A tuple containing the belonging network first and then all the networks.
         :rtype: Tuple[ipaddress.IPv4Network, List[ipaddress.IPv4Network]]
         """
-        networks = self.get_all_networks()
+        try:
+            networks = self.get_all_networks()
+        except (TypeError, ValueError):
+            raise
         for network in networks:
             if ip in network:
                 return network, networks
@@ -110,11 +115,11 @@ class EntryIpAsDatabase:
 
 class IpAsDatabase:
     """
-    This class represent an object that read the .tsv database inserted in the input folder of the project directory
-    and provides the necessary methods to query such database to return a match with an Autonomous System.
+    This class represent an object that read the .tsv database inserted in the 'input' folder of the project root
+    directory and provides the necessary methods to query such database to return a match with an Autonomous System.
 
-    Instance Attributes
-    -------------------
+    Attributes
+    ----------
     filepath : `str`
         If found, it is the absolute filepath of the .tsv database.
     column_separator : `str`
@@ -139,7 +144,8 @@ class IpAsDatabase:
         :type project_root_directory: Path
         :param column_separator: The character separator between every column-value of each entry
         :type column_separator: str
-        :raises FileWithExtensionNotFoundError: If the database .tsv file is not found.
+        :raise FileWithExtensionNotFoundError: If the database .tsv file is not found.
+        :raise OSError: If is there a problem opening the .tsv file.
         """
         try:
             result = file_utils.search_for_file_type_in_subdirectory("input", ".tsv", project_root_directory)
@@ -171,7 +177,8 @@ class IpAsDatabase:
             - the start_ip_range is not a valid ip address
             - the end_ip_range is not a valid ip address
             - the as_number is not a valid integer number
-        :raises AutonomousSystemNotFoundError: If there is no Autonomous System that match the ip parameter.
+        :raise AutonomousSystemNotFoundError: If there is no Autonomous System that match the ip parameter.
+        :raise ValueError: An entry of the database is not well-formatted as described in https://iptoasn.com/.
         :returns: An EntryIpAsDatabase object of the matched entry in the database.
         :rtype: EntryIpAsDatabase
         """
@@ -197,7 +204,7 @@ class IpAsDatabase:
         :param ip_param: The ip parameter.
         :type ip_param: ipaddress.IPv4Address
         :raises ValueError: An entry of the database is not well-formatted as described in https://iptoasn.com/.
-        :returns: The corresponding index of the entry matched in array_entries.
+        :returns: The corresponding index of the entry matched in array_entries. It returns -1 if nothing is found.
         :rtype: int
         """
         inf = 0
@@ -222,13 +229,13 @@ class IpAsDatabase:
 
     def get_entry_from_as_number(self, as_number: int) -> EntryIpAsDatabase:
         """
-        Method return the database entry that matches the autonomous system associated with the parameter. Number
-        obviously with the starting 'AS'. The method needs to control every single entry, so it is pretty slow.
+        This method returns the database entry that matches the autonomous system associated with the parameter.
+        The method needs to control every single entry, so it is pretty slow.
 
         :param as_number: The autonomous system number.
         :type as_number: int
-        :raises AutonomousSystemNotFoundError: If no entry is found.
-        :raises ValueError: If the matched entry is not well-formatted.
+        :raise AutonomousSystemNotFoundError: If no entry is found.
+        :raise ValueError: If the matched entry is not well-formatted.
         :returns: An EntryIpAsDatabase object of the matched entry in the database.
         :rtype: EntryIpAsDatabase
         """

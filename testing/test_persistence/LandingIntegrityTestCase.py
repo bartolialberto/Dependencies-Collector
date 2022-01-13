@@ -30,10 +30,10 @@ class LandingIntegrityTestCase(unittest.TestCase):
         # ELABORATION
         print(f"START LANDING")
         resolver = LandingResolver()
-        cls.results, error_logs = resolver.resolve_web_sites(website_list)
+        cls.results = resolver.resolve_web_sites(website_list)
         print(f"END LANDING")
         print(f"\nSTART DB INSERTION INTO DATABASE... ", end='')
-        helper_application_results.insert_landing_websites_results(cls.results, persist_errors=persist_errors)
+        helper_application_results.insert_landing_web_sites_results(cls.results, persist_errors=persist_errors)
         print(f"DONE")
 
     def test_1_website_has_only_two_website_lands_association_at_most(self):
@@ -51,18 +51,18 @@ class LandingIntegrityTestCase(unittest.TestCase):
         print("\nSTART INTEGRITY CHECK")
         for i, website in enumerate(self.results.keys()):
             print(f"Result for '{website}' through elaboration:")
-            if self.results[website][0] is None:
+            if self.results[website].https is None:
                 elaboration_https_url = 'null'
                 elaboration_https = 'null'
             else:
-                elaboration_https_url = self.results[website][0].url
-                elaboration_https = url_utils.deduct_second_component(self.results[website][0].url)
-            if self.results[website][1] is None:
+                elaboration_https_url = self.results[website].https.url
+                elaboration_https = url_utils.deduct_second_component(self.results[website].https.url)
+            if self.results[website].http is None:
                 elaboration_http_url = 'null'
                 elaboration_http = 'null'
             else:
-                elaboration_http_url = self.results[website][1].url
-                elaboration_http = url_utils.deduct_second_component(self.results[website][1].url)
+                elaboration_http_url = self.results[website].http.url
+                elaboration_http = url_utils.deduct_second_component(self.results[website].http.url)
             print(f"--> HTTPS landing_http_url from elaboration: {elaboration_https_url}")
             print(f"--> HTTPS landing_url from elaboration: {elaboration_https}")
             print(f"--> HTTP landing_http_url from elaboration: {elaboration_http_url}")

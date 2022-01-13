@@ -4,9 +4,9 @@ class AutonomousSystemNotFoundError(Exception):
 
     def __init__(self, param: str or int):      # str --> a ip address. int --> an as number.
         if isinstance(param, str):
-            temp = f"No Autonomous System found for ip '{param}'."
+            temp = f"No Autonomous System found for IP address: {param}."
         else:
-            temp = f"No Autonomous System found for AS number '{str(param)}'."
+            temp = f"No Autonomous System found for AS number: {str(param)}."
         self.for_param = param
         self.message = temp
         BaseException.__init__(self, temp)

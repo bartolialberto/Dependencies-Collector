@@ -5,7 +5,12 @@ from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesReso
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.IpAsDatabase import IpAsDatabase, EntryIpAsDatabase
-from entities.resolvers.LandingResolver import LandingResolver, SiteLandingResult
+from entities.resolvers.LandingResolver import LandingResolver
+from entities.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
+from entities.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
+from entities.results.LandingSIteResult import LandingSiteResult
+from entities.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
+from entities.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.scrapers.ROVPageScraper import ROVPageScraper
 from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.Zone import Zone
@@ -115,25 +120,21 @@ class ApplicationResolversWrapper:
         self.landing_script_sites_results = dict()
         self.web_site_script_dependencies = dict()
         self.script_script_site_dependencies = tuple()
-        self.mail_domains_results = dict()
-        self.total_dns_results = dict()
-        self.total_zone_dependencies_per_zone = dict()
-        self.total_zone_dependencies_per_name_server = dict()
-        self.total_ip_as_db_results = dict()
+        self.mail_domains_results = MultipleDnsMailServerDependenciesResult()
+        self.total_dns_results = MultipleDnsZoneDependenciesResult()
+        self.total_ip_as_db_results = AutonomousSystemResolutionResults()
         self.total_landing_page_results = dict()
-        self.total_content_dependencies_results = dict()
-        self.total_rov_page_scraper_results = dict()
+        self.total_rov_page_scraper_results = None
 
     def do_preamble_execution(self, web_sites: List[str], mail_domains: List[str]) -> List[str]:
         # elaboration
         self.landing_web_sites_results = self.do_web_site_landing_resolving(set(web_sites))
-        self.mail_domains_results, temp_error_logs = self.do_mail_domains_resolving(mail_domains)
-        self.error_logger.add_entries(temp_error_logs)
+        self.mail_domains_results = self.do_mail_domains_resolving(mail_domains)
         return self._extract_domain_names_from_preamble(mail_domains)
 
     def do_midst_execution(self, domain_names: List[str]) -> List[str]:
         # elaboration
-        current_dns_results, current_zone_dep_per_zone, current_zone_dep_per_name_server = self.do_dns_resolving(domain_names)
+        current_dns_results = self.do_dns_resolving(domain_names)
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
         self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
@@ -142,49 +143,48 @@ class ApplicationResolversWrapper:
         self.landing_script_sites_results = self.do_script_site_landing_resolving(script_sites)
 
         # merging results
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
+        self.total_dns_results.merge(current_dns_results)
+        self.total_ip_as_db_results.merge(current_ip_as_db_results)
 
         return self._extract_domain_names_from_landing_script_sites_results()
 
     def do_epilogue_execution(self, domain_names: List[str]) -> None:
         # elaboration
-        current_dns_results, current_zone_dep_per_zone, current_zone_dep_per_name_server = self.do_dns_resolving(domain_names)
+        current_dns_results = self.do_dns_resolving(domain_names)
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
 
         # merging results
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
-        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
+        self.total_dns_results.merge(current_dns_results)
+        self.total_ip_as_db_results.merge(current_ip_as_db_results)
 
         # elaboration
-        reformat_dict = ApplicationResolversWrapper._reformat_entries(self.total_ip_as_db_results)
-        self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat_dict)
+        reformat = ASResolverResultForROVPageScraping(self.total_ip_as_db_results)
+        self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat)
 
-    def do_web_site_landing_resolving(self, web_sites: Set[str]) -> Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]:
+    def do_web_site_landing_resolving(self, web_sites: Set[str]) -> Dict[str, LandingSiteResult]:
         print("\n\nSTART WEB SITE LANDING RESOLVER")
-        results, error_logs = self.landing_resolver.resolve_web_sites(web_sites)
-        self.error_logger.add_entries(error_logs)
+        results = self.landing_resolver.resolve_web_sites(web_sites)
+        for web_site in results.keys():
+            self.error_logger.add_entries(results[web_site].error_logs)
         print("END WEB SITE LANDING RESOLVER")
         return results
 
-    def do_script_site_landing_resolving(self, script_sites: Set[str]) -> Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]:
+    def do_script_site_landing_resolving(self, script_sites: Set[str]) -> Dict[str, LandingSiteResult]:
         print("\n\nSTART SCRIPT SITE LANDING RESOLVER")
-        results, error_logs = self.landing_resolver.resolve_script_sites(script_sites)
-        self.error_logger.add_entries(error_logs)
+        results = self.landing_resolver.resolve_script_sites(script_sites)
+        for script_site in results.keys():
+            self.error_logger.add_entries(results[script_site].error_logs)
         print("END SCRIPT SITE LANDING RESOLVER")
         return results
 
-    def do_mail_domains_resolving(self, mail_domains: List[str]):
+    def do_mail_domains_resolving(self, mail_domains: List[str]) -> MultipleDnsMailServerDependenciesResult:
         print("\n\nSTART MAIL DOMAINS RESOLVER")
-        result = self.dns_resolver.resolve_multiple_mail_domains(mail_domains)
+        results = self.dns_resolver.resolve_multiple_mail_domains(mail_domains)
+        self.error_logger.add_entries(results.error_logs)
         print("END MAIL DOMAINS RESOLVER")
-        return result
+        return results
 
-    def do_dns_resolving(self, domain_names: List[str]) -> Tuple[Dict[str, List[Zone]], Dict[str, List[str]], Dict[str, List[str]]]:
+    def do_dns_resolving(self, domain_names: List[str]) -> MultipleDnsZoneDependenciesResult:
         """
         DNS resolver elaboration. Given a list of domain names, it search and resolve the zone dependencies of each
         domain name. The result is a dictionary in which the key is the domain name, and the value is the list of Zones.
@@ -197,11 +197,12 @@ class ApplicationResolversWrapper:
         """
         print("\n\nSTART DNS DEPENDENCIES RESOLVER")
         self.dns_resolver.cache.take_snapshot()
-        dns_results, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs = self.dns_resolver.resolve_multiple_domains_dependencies(domain_names)
+        results = self.dns_resolver.resolve_multiple_domains_dependencies(domain_names)
+        self.error_logger.add_entries(results.error_logs)
         print("END DNS DEPENDENCIES RESOLVER")
-        return dns_results, zone_dependencies_per_zone, zone_dependencies_per_nameserver
+        return results
 
-    def do_ip_as_database_resolving(self, dns_results: dict) -> Dict[str, Tuple[ipaddress.IPv4Address, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]:
+    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult) -> AutonomousSystemResolutionResults:
         """
         .tsv database elaboration. Given the result of the DNS resolver, this component tries to match every IP address
         associated with every nameserver in the DNS result to a row of the .tsv database (in particular tries to find a
@@ -217,54 +218,60 @@ class ApplicationResolversWrapper:
         :rtype: Dict[str: Tuple[str, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]
         """
         print("\n\nSTART IP-AS RESOLVER")
+        results = AutonomousSystemResolutionResults()
         ip_as_db_entries_result = dict()
         zone_obj_dict = dict()
-        for domain_name in dns_results.keys():
-            for zone in dns_results[domain_name]:
+        for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
+            for zone in dns_results.zone_dependencies_per_domain_name[domain_name]:
                 try:
                     zone_obj_dict[zone.name]
                 except KeyError:
                     zone_obj_dict[zone.name] = zone
-        for index_domain, domain in enumerate(dns_results.keys()):
+        for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
             print(f"Handling domain[{index_domain}] '{domain}'")
-            for index_zone, zone in enumerate(dns_results[domain]):
+            for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
                 print(f"--> Handling zone[{index_zone}] '{zone.name}'")
                 for i, nameserver in enumerate(zone.nameservers):
+                    results.add_name_server(nameserver)
                     try:
                         # TODO: gestire più indirizzi per nameserver
                         try:
                             rr = zone.resolve_nameserver(nameserver)
                         except NoAvailablePathError:
-                            # cosa fare???
-                            pass
-                        ip = ipaddress.IPv4Address(rr.get_first_value())
+                            results.set_name_server_to_none(nameserver)
+                            continue
+                        ip = ipaddress.IPv4Address(rr.get_first_value())        # no exception catch needed
+                        results.insert_ip_address(nameserver, ip)
                         entry = self.ip_as_database.resolve_range(ip)
+                        results.insert_ip_as_entry(nameserver, entry)
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(
                                 f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
                             ip_as_db_entries_result[rr.name] = (ip, entry, belonging_network_ip_as_db)
+                            results.insert_belonging_network(nameserver, belonging_network_ip_as_db)
                         except ValueError as exc:
-                            print(
-                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
-                            self.error_logger.add_entry(ErrorLog(exc, ip.compressed,
-                                                                 f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
+                            print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
+                            self.error_logger.add_entry(ErrorLog(exc, ip.compressed, f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
                             ip_as_db_entries_result[rr.name] = (ip, entry, None)
+                            results.insert_belonging_network(nameserver, None)
                     except AutonomousSystemNotFoundError as exc:
                         print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
-                        self.error_logger.add_entry(
-                            ErrorLog(exc, ip.compressed, f"No AS found in the database."))
+                        self.error_logger.add_entry(ErrorLog(exc, ip.compressed, str(exc)))
                         ip_as_db_entries_result[rr.name] = (ip, None, None)
+                        results.insert_ip_as_entry(nameserver, None)
+                        results.insert_belonging_network(nameserver, None)
         print("END IP-AS RESOLVER")
-        return ip_as_db_entries_result
+        # return ip_as_db_entries_result
+        return results
 
     def do_script_dependencies_resolving(self) -> Dict[str, Tuple[Set[MainPageScript] or None, Set[MainPageScript] or None]]:
         print("\n\nSTART SCRIPT DEPENDENCIES RESOLVER")
         script_dependencies_result = dict()
         for website in self.landing_web_sites_results.keys():
             print(f"Searching script dependencies for website: {website}")
-            https_result = self.landing_web_sites_results[website][0]
-            http_result = self.landing_web_sites_results[website][1]
+            https_result = self.landing_web_sites_results[website].https
+            http_result = self.landing_web_sites_results[website].http
 
             if https_result is None and http_result is None:
                 print(f"!!! Neither HTTPS nor HTTP landing possible for: {website} !!!")
@@ -331,7 +338,7 @@ class ApplicationResolversWrapper:
         print("END SCRIPT DEPENDENCIES RESOLVER")
         return script_dependencies_result
 
-    def do_rov_page_scraping(self, reformat_dict: Dict[int, Dict[str, List[str or EntryIpAsDatabase or ipaddress.IPv4Network]] or None]) -> Dict[int, Dict[str, List[str or EntryIpAsDatabase or ipaddress.IPv4Network]] or None]:
+    def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping) -> ASResolverResultForROVPageScraping:
         """
         ROV Page scraping. This method takes all the results of the .tsv database elaboration (saved in the state of
         self object) and scrapes all the AS pages in search of a valid entry in the prefixes table.
@@ -342,69 +349,59 @@ class ApplicationResolversWrapper:
         :rtype: Dict[int: Dict[str: List[str or EntryIpAsDatabase or IPv4Network or RowPrefixesTable or None]]]
         """
         print("\n\nSTART ROV PAGE SCRAPING")
-        # reformat_dict = ApplicationResolvers._reformat_entries(self._total_ip_as_db_results)
-        for as_number in reformat_dict.keys():
+        for as_number in reformat.results.keys():
             print(f"Loading page for AS{as_number}")
             try:
                 self.rov_page_scraper.load_as_page(as_number)
             except selenium.common.exceptions.WebDriverException as exc:
                 print(f"!!! {str(exc)} !!!")
                 # non tengo neanche traccia di ciò
-                reformat_dict[as_number] = None
+                reformat.results[as_number] = None
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
             except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
                 print(f"!!! {str(exc)} !!!")
-                reformat_dict[as_number] = None
+                reformat.results[as_number] = None
                 # entries_result_by_as.pop(as_number)       # tenerlo oppure no?
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
-            for nameserver in reformat_dict[as_number].keys():
-                ip_string = reformat_dict[as_number][nameserver][0]
-                entry_ip_as_db = reformat_dict[as_number][nameserver][1]
-                belonging_network_ip_as_db = reformat_dict[as_number][nameserver][2]
+            for nameserver in reformat.results[as_number].keys():
+                ip_string = reformat.results[as_number][nameserver].ip_address
+                entry_ip_as_db = reformat.results[as_number][nameserver].entry_as_database
+                belonging_network_ip_as_db = reformat.results[as_number][nameserver].belonging_network
                 try:
                     row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
-                    reformat_dict[as_number][nameserver].append(row)
+                    reformat.results[as_number][nameserver].insert_rov_entry(row)
                     print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
-                except TableNotPresentError as exc:
+                except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {exc.message} !!!")
-                    reformat_dict[as_number][nameserver].append(None)
-                    self.error_logger.add_entry(ErrorLog(exc, ip_string, str(exc)))
-                except TableEmptyError as exc:
-                    print(f"!!! {exc.message} !!!")
-                    reformat_dict[as_number][nameserver].append(None)
-                    self.error_logger.add_entry(ErrorLog(exc, ip_string, str(exc)))
-                except NetworkNotFoundError as exc:
-                    print(f"!!! {exc.message} !!!")
-                    reformat_dict[as_number][nameserver].append(None)
+                    reformat.results[as_number][nameserver].insert_rov_entry(None)
                     self.error_logger.add_entry(ErrorLog(exc, ip_string, str(exc)))
         print("END ROV PAGE SCRAPING")
-        # self.total_rov_page_scraper_results = reformat_dict
-        return reformat_dict
+        return reformat
 
     def _extract_domain_names_from_preamble(self, mail_domains: List[str]) -> List[str]:
         domain_names = list()
         # adding domain names from webservers
         for website in self.landing_web_sites_results.keys():
-            https_webserver = self.landing_web_sites_results[website][0].server
-            http_webserver = self.landing_web_sites_results[website][1].server
+            https_webserver = self.landing_web_sites_results[website].https.server
+            http_webserver = self.landing_web_sites_results[website].http.server
             list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(https_webserver))
             list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(http_webserver))
         # adding domain names from mail_domains and mailservers
         for mail_domain in mail_domains:
             list_utils.append_with_no_duplicates(domain_names, mail_domain)
-            for mailserver in self.mail_domains_results:
-                list_utils.append_with_no_duplicates(domain_names, mailserver)
+            for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers:
+                list_utils.append_with_no_duplicates(domain_names, mail_server)
         return domain_names
 
     def _extract_domain_names_from_landing_script_sites_results(self) -> List[str]:
         domain_names = list()
         for script_site in self.landing_script_sites_results.keys():
-            https_result = self.landing_script_sites_results[script_site][0]
+            https_result = self.landing_script_sites_results[script_site].https
             if https_result is not None:
                 list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(https_result.server))
-            http_result = self.landing_script_sites_results[script_site][1]
+            http_result = self.landing_script_sites_results[script_site].http
             if http_result is not None:
                 list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(http_result.server))
         return domain_names

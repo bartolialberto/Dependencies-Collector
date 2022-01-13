@@ -53,7 +53,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['dei.unipd.it']
+        # cls.domain_names = ['dei.unipd.it']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = False
@@ -85,14 +85,14 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         cls.dns_resolver = DnsResolver(tlds)
         print("START DNS DEPENDENCIES RESOLVER")
         results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, consider_tld=cls.consider_tld)
-        cls.dns_results = results[0]
-        cls.zone_dependencies_per_zone = results[1]
-        cls.zone_dependencies_per_nameserver = results[2]
-        cls.error_logs = results[3]
+        cls.dns_results = results.zone_dependencies_per_domain_name
+        cls.zone_dependencies_per_zone = results.zone_name_dependencies_per_zone
+        cls.zone_dependencies_per_nameserver = results.zone_name_dependencies_per_name_server
+        cls.error_logs = results.error_logs
         print("END DNS DEPENDENCIES RESOLVER")
         print("INSERTION INTO DATABASE... ", end='')
         try:
-            helper_application_results.insert_dns_result(cls.dns_results, cls.zone_dependencies_per_zone, cls.zone_dependencies_per_nameserver, persist_errors=True)
+            helper_application_results.insert_dns_result(results)
         except InvalidDomainNameError as e:
             print(f"!!! {str(e)} !!!")
             return

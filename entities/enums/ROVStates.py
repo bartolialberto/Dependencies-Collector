@@ -4,7 +4,7 @@ from exceptions.NotROVStateTypeError import NotROVStateTypeError
 
 class ROVStates(Enum):
     """
-    This class represent all the states of a ROV in the ROVPage (web page).
+    This class represents all the states of a ROV in the ROVPage (web page).
 
     """
     UNK = "UNK",
@@ -13,7 +13,7 @@ class ROVStates(Enum):
 
     def to_string(self) -> str:
         """
-        This method return a string representation of the type, which is also the exact representation used in the web
+        This method returns a string representation of the type, which is also the exact representation used in the web
         page.
 
         :returns: The string representation of the type.
@@ -24,7 +24,7 @@ class ROVStates(Enum):
     @staticmethod
     def parse_from_string(string: str) -> 'ROVStates':
         """
-        This method parse a string and returns if it match a representation of one of the type.
+        This method parses a string and returns if it match a representation of one of the types.
 
         :param string: The string parameter.
         :type string: str

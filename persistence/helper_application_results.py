@@ -2,7 +2,10 @@ import ipaddress
 from typing import Dict, Tuple, List, Set
 from peewee import DoesNotExist
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
-from entities.resolvers.LandingResolver import SiteLandingResult
+from entities.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
+from entities.results.LandingSIteResult import LandingSiteResult
+from entities.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
+from entities.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.scrapers.ROVPageScraper import RowPrefixesTable
 from entities.resolvers.ScriptDependenciesResolver import MainPageScript
 from entities.Zone import Zone
@@ -11,73 +14,69 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
-    helper_belongs, helper_ip_address_depends, helper_access
+    helper_belongs, helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server
 from utils import url_utils
 
 
-def insert_landing_websites_results(result: Dict[str, Tuple[SiteLandingResult, SiteLandingResult]], persist_errors=True):
+def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult], persist_errors=True):
     for web_site in result.keys():
         wse = helper_web_site.insert(web_site)
         helper_web_site_lands.delete_all_from_website_entity(wse)
 
         # HTTPS result
         is_https = True
-        https_result = result[web_site][0]
-        if https_result is None and persist_errors == True:
+        if result[web_site].https is None and persist_errors == True:
             helper_web_site_lands.insert(wse, None, is_https, None)
-        elif https_result is None and persist_errors == False:
+        elif result[web_site].https is None and persist_errors == False:
             pass
         else:
-            webserver_https = url_utils.deduct_http_url(result[web_site][0].url, as_https=is_https)
-            wsvr_https = helper_web_server.insert(webserver_https)
-            iae = helper_ip_address.insert(https_result.ip)
+            wsvr_https = helper_web_server.insert(result[web_site].https.url)
+            iae = helper_ip_address.insert(result[web_site].https.ip)
             helper_web_site_lands.insert(wse, wsvr_https, is_https, iae)
 
         # HTTP result
         is_https = False
-        http_result = result[web_site][1]
-        if http_result is None and persist_errors == True:
+        if result[web_site].http is None and persist_errors == True:
             helper_web_site_lands.insert(wse, None, is_https, None)
-        elif http_result is None and persist_errors == False:
+        elif result[web_site].http is None and persist_errors == False:
             pass
         else:
-            webserver_http = url_utils.deduct_http_url(http_result.url, as_https=is_https)
-            wsvr_http = helper_web_server.insert(webserver_http)
-            iae = helper_ip_address.insert(https_result.ip)
+            wsvr_http = helper_web_server.insert(result[web_site].http.url)
+            iae = helper_ip_address.insert(result[web_site].http.ip)
             helper_web_site_lands.insert(wse, wsvr_http, is_https, iae)
 
 
-def insert_dns_result(dns_results: Dict[str, List[Zone]], zone_dependencies_per_zone: Dict[str, List[str]], zone_names_per_nameserver: Dict[str, List[str]], persist_errors=True):
+def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
     ze_dict = dict()
 
-    for domain_name in dns_results.keys():
+    for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
         try:
             dne = helper_domain_name.insert(domain_name)
         except InvalidDomainNameError:
             raise
-        for zone in dns_results[domain_name]:
+        for zone in dns_results.zone_dependencies_per_domain_name[domain_name]:
             ze = helper_zone.insert_zone_object(zone)
             helper_domain_name_dependencies.insert(dne, ze)
             ze_dict[zone.name] = ze
 
-    for zone_name in zone_dependencies_per_zone.keys():
+    for zone_name in dns_results.zone_name_dependencies_per_zone.keys():
         try:
             ze = ze_dict[zone_name]
         except KeyError:
             raise
-        for zone_dependency in zone_dependencies_per_zone[zone_name]:
+        for zone_dependency in dns_results.zone_name_dependencies_per_zone[zone_name]:
             try:
                 ze_dep = ze_dict[zone_dependency]
             except KeyError:
                 raise
             helper_zone_links.insert(ze, ze_dep)
 
-    for name_server in zone_names_per_nameserver.keys():
+    for name_server in dns_results.zone_name_dependencies_per_name_server.keys():
         try:
             nse, dne = helper_name_server.get(name_server)
         except DoesNotExist:
             raise
-        for zone_name in zone_names_per_nameserver[name_server]:
+        for zone_name in dns_results.zone_name_dependencies_per_name_server[name_server]:
             try:
                 ze = ze_dict[zone_name]
             except KeyError:
@@ -85,10 +84,10 @@ def insert_dns_result(dns_results: Dict[str, List[Zone]], zone_dependencies_per_
             helper_domain_name_dependencies.insert(dne, ze)
 
 
-def insert_mail_servers_resolving(results: Dict[str, List[str]]) -> None:
-    for mail_domain in results.keys():
+def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResult) -> None:
+    for mail_domain in results.dependencies.keys():
         mde, dne_mde = helper_mail_domain.insert(mail_domain)
-        for mail_server in results[mail_domain]:
+        for mail_server in results.dependencies[mail_domain].mail_servers:
             mse, dne_mse = helper_mail_server.insert(mail_server)
             helper_mail_domain_composed.insert(mde, mse)
 
@@ -129,19 +128,47 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str,
                 pass
 
 
-def insert_ip_as_and_rov_resolving(results: Dict[int, Dict[str, List[str or EntryIpAsDatabase or ipaddress.IPv4Network or RowPrefixesTable or None] or None]], persist_errors=True):
-    for as_number in results.keys():
+def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult], persist_errors=True):
+    for script_site in result.keys():
+        sse = helper_script_site.insert(script_site)
+        helper_script_site_lands.delete_all_from_script_site_entity(sse)
+
+        # HTTPS result
+        is_https = True
+        if result[script_site].https is None and persist_errors == True:
+            helper_script_site_lands.insert(sse, None, is_https, None)
+        elif result[script_site].https is None and persist_errors == False:
+            pass
+        else:
+            sservere_https = helper_script_server.insert(result[script_site].https.url)
+            iae = helper_ip_address.insert(result[script_site].https.ip)
+            helper_script_site_lands.insert(sse, sservere_https, is_https, iae)
+
+        # HTTP result
+        is_https = False
+        if result[script_site].http is None and persist_errors == True:
+            helper_script_site_lands.insert(sse, None, is_https, None)
+        elif result[script_site].http is None and persist_errors == False:
+            pass
+        else:
+            sservere_http = helper_script_server.insert(result[script_site].http.url)
+            iae = helper_ip_address.insert(result[script_site].http.ip)
+            helper_script_site_lands.insert(sse, sservere_http, is_https, iae)
+
+
+def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping, persist_errors=True):
+    for as_number in finals.results.keys():
         ase = helper_autonomous_system.insert(as_number)
-        for nameserver in results[as_number].keys():
+        for nameserver in finals.results[as_number].keys():
             try:
                 nse, dne = helper_name_server.get(nameserver)
             except DoesNotExist:
                 raise
-            if results[as_number][nameserver] is not None:
-                ip_address = results[as_number][nameserver][0]
-                entry_ip_as_db = results[as_number][nameserver][1]
-                belonging_network = results[as_number][nameserver][2]
-                row_prefixes_table = results[as_number][nameserver][3]
+            if finals.results[as_number][nameserver] is not None:
+                ip_address = finals.results[as_number][nameserver].ip_address
+                entry_ip_as_db = finals.results[as_number][nameserver].entry_as_database
+                belonging_network = finals.results[as_number][nameserver].belonging_network
+                row_prefixes_table = finals.results[as_number][nameserver].entry_rov_page
 
                 if ip_address is not None:
                     iae = helper_ip_address.insert(ip_address)

@@ -21,7 +21,7 @@ class WebServerQueryTestCase(unittest.TestCase):
             exit(0)
         results = dict()
         results[cls.website] = (https_result, http_result)
-        helper_application_results.insert_landing_websites_results(results)
+        helper_application_results.insert_landing_web_sites_results(results)
         #
         cls.wse = helper_web_site.get(cls.website)
 

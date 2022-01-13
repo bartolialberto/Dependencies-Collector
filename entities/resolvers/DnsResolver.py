@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Tuple, Dict
 import dns.resolver
 from dns.name import Name
@@ -6,6 +7,10 @@ from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
+from entities.results.DnsMailServersDependenciesResult import DnsMailServersDependenciesResult
+from entities.results.DnsZoneDependenciesResult import DnsZoneDependenciesResult
+from entities.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
+from entities.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAnswerError import NoAnswerError
@@ -15,7 +20,6 @@ from exceptions.UnknownReasonError import UnknownReasonError
 from utils import domain_name_utils, list_utils, email_address_utils
 
 
-# TODO: documentazione
 class DnsResolver:
     """
     This class represents a simple DNS resolver for the application. Is based on a real and complete DNS resolver from
@@ -29,11 +33,18 @@ class DnsResolver:
         The real and complete DNS resolver from the dnpython module.
     cache : LocalDnsResolverCache
         The cache used to handle requests.
+    tld_list : List[str] or None
+        The list of Top-Level Domains to use when the application is executed with the intention of exclude them.
+        The format of each tld is: no starting point only trailing point.
+                example: com.
+        It can be set to None to avoid any confrontation.
     """
     def __init__(self, tld_list: List[str] or None):
         """
         Instantiate this DnsResolver object.
 
+        :param tld_list: A list of Top-Level Domains or None
+        :type tld_list: List[str] or None
         """
         self.resolver = dns.resolver.Resolver()
         self.cache = LocalDnsResolverCache()
@@ -42,9 +53,9 @@ class DnsResolver:
     def do_query(self, name: str, type_rr: TypesRR) -> Tuple[RRecord, List[RRecord]]:
         """
         This method executes a real DNS query. It takes the domain name and the type as parameters.
-        The result is a RR containing all the values in the values field, and another RR of type CNAME containing (in
-        the values field) all the aliases found in the resolving path. If the latter has no aliases then the RR has an
-        empty values field.
+        The result is a RR containing all the values in the values field, and a list of RRs of type CNAME containing (in
+        the values field) all the aliases found in the resolving path. If the latter has no aliases then the list of
+        aliases is empty.
 
         :param name: Name parameter.
         :type name: str
@@ -54,8 +65,8 @@ class DnsResolver:
         :raise NoAnswerError: If the query has no answer.
         :raise UnknownReasonError: If no non-broken nameservers are available to answer the question, or if the query
         name is too long after DNAME substitution.
-        :return: A tuple with 2 RR: one with the results, and the other with the aliases
-        :rtype: Tuple[RRecord, RRecord]
+        :return: A tuple containing the RR result and a list of RR containing the alias path.
+        :rtype: Tuple[RRecord, List[RRecord]]
         """
         try:
             answer = self.resolver.resolve(name, type_rr.to_string())
@@ -86,60 +97,70 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> Tuple[Dict[str, List[Zone]], Dict[str, List[str]], Dict[str, List[str]], List[ErrorLog]]:
+    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> MultipleDnsZoneDependenciesResult:
         """
-        This method resolves the zone dependencies of a list of domain names.
+        This method resolves the zone dependencies of multiple domain names.
+        If something goes wrong, exceptions are not raised but the error_logs of the result will be populated with what
+        went wrong.
 
         :param domain_list: A list of domain names.
         :type domain_list: List[str]
-        :raise :
-        :return: A tuple containing a dictionary in which each key is a domain name of the domain names list parameter,
-        and the value is the list of zone; as second element of the tuple there's the list of error logs.
-        :rtype: Tuple[Dict[str: List[Zone]], List[ErrorLog]]
+        :param reset_cache_per_elaboration: Flag that indicates if cache should be cleared after each domain name
+        resolving. Useful only for testing.
+        :type reset_cache_per_elaboration: bool
+        :param consider_tld: Flag that indicates if Top-Level Domains should be considered.
+        :type consider_tld: bool
+        :return: A MultipleDnsZoneDependenciesResult object.
+        :rtype: MultipleDnsZoneDependenciesResult
         """
-        dns_results = dict()
-        error_logs = list()
-        zone_dependencies_per_zone = dict()
-        zone_dependencies_per_nameserver = dict()
+        final_results = MultipleDnsZoneDependenciesResult()
         for domain in domain_list:
             try:
                 if reset_cache_per_elaboration:
                     self.cache.clear()
-
-                temp_dns_result, temp_zone_dep_per_zone, temp_zone_dep_per_nameserver, temp_error_logs = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
-
-                # insert domain dns dependencies
-                dns_results[domain] = temp_dns_result
-
-                # merge zone dependencies
-                zone_dependencies_per_zone.update(temp_zone_dep_per_zone)
-
-                # merge nameservers
-                # zone_dependencies_per_nameserver.update(temp_zone_dep_per_nameserver)
-                self.merge_zone_dependencies_per_nameserver_result(zone_dependencies_per_nameserver, temp_zone_dep_per_nameserver)
-
-                # merge error logs
-                for log in temp_error_logs:
-                    error_logs.append(log)
-
+                resolver_result = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
+                final_results.merge_single_resolver_result(domain, resolver_result)
             except InvalidDomainNameError as e:
-                error_logs.append(ErrorLog(e, domain, str(e)))
+                final_results.error_logs.append(ErrorLog(e, domain, str(e)))
 
-        return dns_results, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs
+        return final_results
 
-    def resolve_multiple_mail_domains(self, mail_domains: List[str]) -> Tuple[Dict[str, List[str]], List[ErrorLog]]:
-        results = dict()
-        error_logs = list()
+    def resolve_multiple_mail_domains(self, mail_domains: List[str]) -> MultipleDnsMailServerDependenciesResult:
+        """
+        This method resolves the mail servers dependencies of multiple mail domains.
+        If something goes wrong, exceptions are not raised but the error_logs of the result will be populated with what
+        went wrong.
+
+        :param mail_domains: A list of mail domains.
+        :param mail_domains: List[str]
+        :return: A MultipleDnsMailServerDependenciesResult object.
+        :rtype: MultipleDnsMailServerDependenciesResult
+        """
+        final_results = MultipleDnsMailServerDependenciesResult()
         for mail_domain in mail_domains:
+            print(f"Resolving mail domain: {mail_domain}")
             try:
-                results[mail_domain] = self.resolve_mail_domain(mail_domain)
+                resolver_result = self.resolve_mail_domain(mail_domain)
+                final_results.add_dependency(mail_domain, resolver_result)
             except (InvalidDomainNameError, NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
-                error_logs.append(ErrorLog(e, mail_domain, str(e)))
-        return results, error_logs
+                print(f"!!! {str(e)} !!!")
+                final_results.append_error_log(ErrorLog(e, mail_domain, str(e)))
+            print()
+        return final_results
 
-    def resolve_mail_domain(self, mail_domain: str) -> List[str]:
-        # TODO: docs
-        print(f"Resolving mail domain: {mail_domain}")
+    def resolve_mail_domain(self, mail_domain: str) -> DnsMailServersDependenciesResult:
+        """
+        This method resolves the mail servers dependencies of a mail domain.
+
+        :param mail_domain: A mail domain.
+        :type mail_domain: str
+        :raise InvalidDomainNameError: If mail domain is not a well-formatted domain name or email address.
+        :raise DomainNonExistentError: If query response says that name is a non-existent domain.
+        :raise NoAnswerError: If query has no response.
+        :raise UnknownReasonError: If query execution went wrong.
+        :return: A DnsMailServersDependenciesResult object.
+        :rtype: DnsMailServersDependenciesResult
+        """
         try:
             domain_name_utils.grammatically_correct(mail_domain)
         except InvalidDomainNameError:
@@ -148,7 +169,7 @@ class DnsResolver:
             except InvalidDomainNameError as e:
                 print(f"!!! {str(e)} !!!")
                 raise
-        result = list()
+        result = DnsMailServersDependenciesResult()
         try:
             mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
         except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
@@ -156,29 +177,25 @@ class DnsResolver:
             raise
         for i, value in enumerate(mx_values.values):
             print(f"mail_server[{i+1}/{len(mx_values.values)}]: {value}")
-            result.append(value)
+            result.add_mail_server(value)
         return result
 
-    def resolve_domain_dependencies(self, domain: str, consider_tld=True):
+    def resolve_domain_dependencies(self, domain: str, consider_tld=True) -> DnsZoneDependenciesResult:
         """
         This method resolves the zone dependencies of a domain name.
-        It returns a list containing the zones and a list of error logs encountered during the elaboration.
 
         :param domain: A domain name.
         :type domain: str
-        :param is_mail_domain: Flag that says if the domain has to be considered as mail domain.
-        :type is_mail_domain: bool
-        :raise :
-        :return: The list of zone dependencies and the list of error logs, put together in a tuple.
-        :rtype: Tuple[List[Zone], List[ErrorLog]]
+        :param consider_tld: Flag that indicates if Top-Level Domains should be considered.
+        :type consider_tld: bool
+        :raise InvalidDomainNameError: If domain name parameter is not a well-formatted domain name.
+        :return: A DnsZoneDependenciesResult object.
+        :rtype: DnsZoneDependenciesResult
         """
         try:
             domain_name_utils.grammatically_correct(domain)
         except InvalidDomainNameError:
-            try:
-                email_address_utils.grammatically_correct(domain)
-            except InvalidDomainNameError:
-                raise
+            raise
 
         #
         zone_dependencies_per_zone = dict()
@@ -328,7 +345,7 @@ class DnsResolver:
 
         if not consider_tld:
             zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver)
-        return zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs
+        return DnsZoneDependenciesResult(zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
     def resolve_zone_of_nameserver(self, nameserver: str):
         subdomains = domain_name_utils.get_subdomains_name_list(nameserver, False)
@@ -344,13 +361,20 @@ class DnsResolver:
                     pass
         raise ValueError
 
-    def export_cache(self) -> None:
+    def export_cache(self, filename="dns_cache", project_root_directory=Path.cwd()) -> None:
         """
-        It exports the cache to a .csv file named 'dns_cache.csv' in the output folder of the project root folder (PRD).
+        It exports the cache to a .csv file named 'dns_cache' in the output folder of the project root folder (PRD).
 
+        :param filename: The personalized filename without extension, default is 'dns_cache'.
+        :type filename: str
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
+        :raise PermissionError: If filepath points to a directory.
+        :raise FileNotFoundError: If it is impossible to open the file.
+        :raise OSError: If a general I/O error occurs.
         """
         try:
-            self.cache.write_to_csv_in_output_folder()
+            self.cache.write_to_csv_in_output_folder(filename=filename, project_root_directory=project_root_directory)
         except (PermissionError, FileNotFoundError, OSError):
             raise
 
@@ -372,13 +396,6 @@ class DnsResolver:
                 _list.append(sub_domain)
 
     @classmethod
-    def _split_domain_name_and_add_to_dict(cls, _dict: Dict[str, List[str]], key: str, domain_name: str, root_included: bool) -> None:
-        split = domain_name_utils.get_subdomains_name_list(domain_name, root_included=root_included)
-        for sub_domain in split:
-            if sub_domain not in _dict[key]:
-                _dict[key].append(sub_domain)
-
-    @classmethod
     def _init_dict_key_with_an_empty_set(cls, _dict: dict, _key: any) -> None:
         try:
             _dict[_key]
@@ -396,6 +413,22 @@ class DnsResolver:
 
     @classmethod
     def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, List[str]], zone_dependencies_per_nameserver: Dict[str, List[str]]) -> Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]:
+        """
+        This method removes TLDs from all data structures used as parameters.
+        It needs also (as a parameter) a list of TLDs. The format of each TLD should be:
+                example: com.
+
+        :param tld_list:
+        :type tld_list: List[str]
+        :param zone_list:
+        :type zone_list: List[Zone]
+        :param zone_dependencies_per_zone:
+        :type zone_dependencies_per_zone: Dict[str, List[str]]
+        :param zone_dependencies_per_nameserver:
+        :type zone_dependencies_per_nameserver: Dict[str, List[str]]
+        :return: All the parameters 'filtered' from TLDs as a tuple.
+        :rtype: Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]
+        """
         filtered_zone_list = list(filter(lambda z: z.name not in tld_list, zone_list))
 
         filtered_zone_dependencies_per_zone = dict()
@@ -430,14 +463,3 @@ class DnsResolver:
         for key in keys_to_be_removed:
             filtered_zone_dependencies_per_nameserver.pop(key)
         return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver
-
-    @classmethod
-    def merge_zone_dependencies_per_nameserver_result(cls, total_result: Dict[str, List[str]], current_result: Dict[str, List[str]]):
-        for nameserver in current_result.keys():
-            try:
-                total_result[nameserver]
-            except KeyError:
-                total_result[nameserver] = list()
-            finally:
-                for zone_dep in current_result[nameserver]:
-                    list_utils.append_with_no_duplicates(total_result[nameserver], zone_dep)

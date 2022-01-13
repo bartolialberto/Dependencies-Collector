@@ -170,16 +170,15 @@ if __name__ == "__main__":
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
         print("\nInsertion into database... ", end='')
-        helper_application_results.insert_landing_websites_results(resolvers.landing_web_sites_results,
-                                                                   persist_errors=persist_errors)
+        helper_application_results.insert_landing_web_sites_results(resolvers.landing_web_sites_results,
+                                                                    persist_errors=persist_errors)
         helper_application_results.insert_mail_servers_resolving(resolvers.mail_domains_results)
-        helper_application_results.insert_dns_result(resolvers.total_dns_results,
-                                                     resolvers.total_zone_dependencies_per_zone,
-                                                     resolvers.total_zone_dependencies_per_name_server,
-                                                     persist_errors=persist_errors)
+        helper_application_results.insert_dns_result(resolvers.total_dns_results)
         helper_application_results.insert_script_dependencies_resolving(resolvers.web_site_script_dependencies,
                                                                         resolvers.script_script_site_dependencies,
                                                                         persist_errors=persist_errors)
+        helper_application_results.insert_landing_script_sites_results(resolvers.landing_script_sites_results,
+                                                                    persist_errors=persist_errors)
         helper_application_results.insert_ip_as_and_rov_resolving(resolvers.total_rov_page_scraper_results, persist_errors=persist_errors)
         print("DONE.")
         # export dns cache and error_logs
