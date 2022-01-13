@@ -50,7 +50,7 @@ def handle_tables_creation():       # execute at the end of the file
             IpAddressEntity,
             AccessAssociation,
             IpNetworkEntity,
-            AddressDependencyAssociation,
+            IpAddressDependsAssociation,
             AutonomousSystemEntity,
             ROVEntity,
             BelongsAssociation,
@@ -327,7 +327,7 @@ class ScriptServerDomainNameAssociation(BaseModel):
 
 class AccessAssociation(BaseModel):
     domain_name = ForeignKeyField(DomainNameEntity)
-    ip_address = ForeignKeyField(IpAddressEntity)
+    ip_address = ForeignKeyField(IpAddressEntity, null=True)
 
     def __str__(self):
         return f"<{self.domain_name}, {self.ip_address}>"
@@ -346,9 +346,9 @@ class IpNetworkEntity(BaseModel):
         db_table = 'ip_network'
 
 
-class AddressDependencyAssociation(BaseModel):
+class IpAddressDependsAssociation(BaseModel):
     ip_address = ForeignKeyField(IpAddressEntity)
-    ip_network = ForeignKeyField(IpNetworkEntity)
+    ip_network = ForeignKeyField(IpNetworkEntity, null=True)
 
     def __str__(self):
         return f"<{self.ip_address}, {self.ip_network}>"

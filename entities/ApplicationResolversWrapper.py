@@ -1,13 +1,13 @@
 import ipaddress
 from typing import List, Dict, Tuple, Set
 import selenium
-from entities.ScriptDependenciesResolver import ScriptDependenciesResolver, MainPageScript
-from entities.DnsResolver import DnsResolver
+from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainPageScript
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.IpAsDatabase import IpAsDatabase, EntryIpAsDatabase
-from entities.LandingResolver import LandingResolver, SiteLandingResult
-from entities.ROVPageScraper import ROVPageScraper
-from entities.TLDPageScraper import TLDPageScraper
+from entities.resolvers.IpAsDatabase import IpAsDatabase, EntryIpAsDatabase
+from entities.resolvers.LandingResolver import LandingResolver, SiteLandingResult
+from entities.scrapers.ROVPageScraper import ROVPageScraper
+from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
 from entities.error_log.ErrorLogger import ErrorLogger
@@ -22,7 +22,7 @@ from exceptions.TableNotPresentError import TableNotPresentError
 from utils import file_utils, requests_utils, list_utils, domain_name_utils, url_utils
 
 
-class ApplicationResolvers:
+class ApplicationResolversWrapper:
     """
     This class represents the resolvers of the application all in one. Thanks to this it can track and handle all the
     results of each component and save all of them as object state (instance attributes).
@@ -31,30 +31,42 @@ class ApplicationResolvers:
 
     Attributes
     ----------
-    _dns_resolver : DnsResolver
-        Instance of a DnsResolver object.
-    _ip_as_database : IpAsDatabase
-        Instance of a IpAsDatabase object.
-    _headless_browser : FirefoxHeadlessWebDriver
+    landing_resolver : LandingResolver
+        Instance of a LandingResolver object.
+    headless_browser : FirefoxHeadlessWebDriver
         Instance of a FirefoxHeadlessWebDriver object.
-    _content_resolver : ContentDependenciesResolver
-        Instance of a ContentDependenciesResolver object.
-    _rov_page_scraper : ROVPageScraper
+    _tld_scraper : TLDPageScraper
+        Instance of a TLDPageScraper object.
+    dns_resolver : DnsResolver
+        Instance of a DnsResolver object.
+    ip_as_database : IpAsDatabase
+        Instance of a IpAsDatabase object.
+    script_resolver : ScriptDependenciesResolver
+        Instance of a ScriptDependenciesResolver object.
+    rov_page_scraper : ROVPageScraper
         Instance of a ROVPageScraper object.
-    _error_logger : ErrorLogger
-        Instance of a ApplicationErrorLogger object.
-    _total_domain_names : List[str]
-        List of all domain names.
-    _total_dns_results : Dict[str: List[Zone]]
-        Dictionary of all results of each execution of _dns_resolver.
-    _total_ip_as_db_results : Dict[str: Tuple[str, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]
-        Dictionary of all results of each execution of _ip_as_database.
-    _total_landing_page_results : Dict[str: Tuple[str, List[str], bool]
-        Dictionary of all results of each invocation of the resolve_landing_page method in requests_utils.
-    _total_content_dependencies_results : Dict[str: List[ContentDependencyEntry]]
-        Dictionary of all results of each execution of _content_resolver.
-    _total_rov_page_scraper_results : Dict[int: Dict[str: List[str or EntryIpAsDatabase or IPv4Network or RowPrefixesTable or None]]]
-        Dictionary of all results of each execution of _rov_page_scraper.
+    error_logger : ErrorLogger
+        Instance of a ErrorLogger object.
+    landing_web_sites_results : Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]
+        Dictionary of results from web sites landing resolving.
+    landing_script_sites_results : Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]
+        Dictionary of results from script sites landing resolving.
+    web_site_script_dependencies : Dict[str, Tuple[Set[MainPageScript], Set[MainPageScript]]]
+        Dictionary of results from script dependencies of web sites.
+    script_script_site_dependencies : Tuple[Dict[MainPageScript, Set[str]], Set[str]]
+        Tuple containing a dictionary for script-script site association and a set of all scrip sites.
+    mail_domains_results : Tuple[Dict[str, List[str]], List[ErrorLog]]
+        Tuple containing a dictionary for mail domain-mail servers association and a list or errors occurred.
+    total_dns_results : Dict[str, List[Zone]]
+        Dictionary of entire results from DNS resolving of mail domain zone dependencies.
+    total_zone_dependencies_per_zone : Dict[str, List[str]]
+        Dictionary of entire results from DNS resolving of zone name dependencies of zones.
+    total_zone_dependencies_per_name_server : Dict[str, List[str]]
+        Dictionary of entire results from DNS resolving of zone name dependencies of name servers.
+    landing_web_sites_results : Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]
+        Dictionary of results from web sites landing resolving.
+    landing_web_sites_results : Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]
+        Dictionary of results from web sites landing resolving.
     """
     def __init__(self, consider_tld=False):
         """
@@ -68,14 +80,14 @@ class ApplicationResolvers:
             self.headless_browser = FirefoxHeadlessWebDriver()
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
-            return
+            raise Exception
         if not consider_tld:
             self._tld_scraper = TLDPageScraper(self.headless_browser)
             try:
                 tlds = self._tld_scraper.scrape_tld()
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                 print(f"!!! {str(e)} !!!")
-                return
+                raise Exception
         else:
             tlds = None
         self.dns_resolver = DnsResolver(tlds)
@@ -94,15 +106,16 @@ class ApplicationResolvers:
             self.ip_as_database = IpAsDatabase()
         except (FileWithExtensionNotFoundError, OSError) as e:
             print(f"!!! {str(e)} !!!")
-            exit(1)
+            raise Exception
         self.script_resolver = ScriptDependenciesResolver(self.headless_browser)
         self.rov_page_scraper = ROVPageScraper(self.headless_browser)
         self.error_logger = ErrorLogger()
+        # results
         self.landing_web_sites_results = dict()
         self.landing_script_sites_results = dict()
         self.web_site_script_dependencies = dict()
         self.script_script_site_dependencies = tuple()
-        self.mail_servers_results = dict()
+        self.mail_domains_results = dict()
         self.total_dns_results = dict()
         self.total_zone_dependencies_per_zone = dict()
         self.total_zone_dependencies_per_name_server = dict()
@@ -114,7 +127,7 @@ class ApplicationResolvers:
     def do_preamble_execution(self, web_sites: List[str], mail_domains: List[str]) -> List[str]:
         # elaboration
         self.landing_web_sites_results = self.do_web_site_landing_resolving(set(web_sites))
-        self.mail_servers_results, temp_error_logs = self.dns_resolver.resolve_multiple_mail_domains(mail_domains)
+        self.mail_domains_results, temp_error_logs = self.do_mail_domains_resolving(mail_domains)
         self.error_logger.add_entries(temp_error_logs)
         return self._extract_domain_names_from_preamble(mail_domains)
 
@@ -129,10 +142,10 @@ class ApplicationResolvers:
         self.landing_script_sites_results = self.do_script_site_landing_resolving(script_sites)
 
         # merging results
-        ApplicationResolvers.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
 
         return self._extract_domain_names_from_landing_script_sites_results()
 
@@ -142,13 +155,13 @@ class ApplicationResolvers:
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
 
         # merging results
-        ApplicationResolvers.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
-        ApplicationResolvers.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_dns_results, current_dns_results)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_zone, current_zone_dep_per_zone)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_zone_dependencies_per_name_server, current_zone_dep_per_name_server)
+        ApplicationResolversWrapper.merge_current_dict_to_total(self.total_ip_as_db_results, current_ip_as_db_results)
 
         # elaboration
-        reformat_dict = ApplicationResolvers._reformat_entries(self.total_ip_as_db_results)
+        reformat_dict = ApplicationResolversWrapper._reformat_entries(self.total_ip_as_db_results)
         self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat_dict)
 
     def do_web_site_landing_resolving(self, web_sites: Set[str]) -> Dict[str, Tuple[SiteLandingResult, SiteLandingResult]]:
@@ -164,6 +177,12 @@ class ApplicationResolvers:
         self.error_logger.add_entries(error_logs)
         print("END SCRIPT SITE LANDING RESOLVER")
         return results
+
+    def do_mail_domains_resolving(self, mail_domains: List[str]):
+        print("\n\nSTART MAIL DOMAINS RESOLVER")
+        result = self.dns_resolver.resolve_multiple_mail_domains(mail_domains)
+        print("END MAIL DOMAINS RESOLVER")
+        return result
 
     def do_dns_resolving(self, domain_names: List[str]) -> Tuple[Dict[str, List[Zone]], Dict[str, List[str]], Dict[str, List[str]]]:
         """
@@ -375,7 +394,7 @@ class ApplicationResolvers:
         # adding domain names from mail_domains and mailservers
         for mail_domain in mail_domains:
             list_utils.append_with_no_duplicates(domain_names, mail_domain)
-            for mailserver in self.mail_servers_results:
+            for mailserver in self.mail_domains_results:
                 list_utils.append_with_no_duplicates(domain_names, mailserver)
         return domain_names
 
@@ -434,7 +453,7 @@ class ApplicationResolvers:
 
     # TODO: tenere traccia del fatto che il nameserver non ha nessuna delle 2 entry
     @staticmethod
-    def _reformat_entries(ip_as_db_entries_result: dict) -> dict:
+    def _reformat_entries(ip_as_db_entries_result: Dict[str, Tuple[ipaddress.IPv4Address, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]) -> Dict[int, Dict[str, List[EntryIpAsDatabase or ipaddress.IPv4Network or None]]]:
         """
         This method concern is to re-write the results of the .tsv database elaboration.
         That is necessary because the ROVPageScraper loads an AS page that obviously contains all infos about that AS.

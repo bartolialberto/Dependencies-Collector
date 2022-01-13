@@ -1,53 +1,93 @@
 import unittest
-from entities.LandingResolver import LandingResolver
+from entities.resolvers.LandingResolver import LandingResolver
 
 
 class LandingTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.resolver = LandingResolver()
-        self.website_list = [
-            'login.microsoftonline.com',
-            'auth.digidentity.eu',
-            'clave-dninbrt.seg-social.gob.es',
-            'youtube.it',
-            'darklyrics.com',
-            'esse3.units.it/auth/studente/AreaRegistrato.do'
+        self.web_site_list = [
+            'google.it/doodles',
+            'www.youtube.it/feed/explore'
         ]
-        self.scriptsite_list = [
-            'gmail.com'
+        self.script_site_list = [
+            'www.youtube.com/s/desktop/5650b92e/jsbin/spf.vflset/spf.js',
+            'www.youtube.com/s/player/f93a7034/player_ias.vflset/it_IT/base.js',
+            'ssl.google-analytics.com/ga.js'
         ]
 
-    def test_domain_name_landing_page(self):
-        for domain_name in self.website_list:
-            print(f"Trying to resolve landing page of '{domain_name}':")
-            results = self.resolver.resolve_web_site(domain_name)
+    def test_1_web_sites_landing(self):
+        print(f"\n------- [1] START WEB SITE LANDING TEST -------")
+        for i, web_site in enumerate(self.web_site_list):
+            print(f"Trying to resolve landing of websites[{i+1}/{len(self.web_site_list)}]: {web_site}")
+            results = self.resolver.resolve_web_site(web_site)
 
             # HTTPS
             print(f"**** via HTTPS *****")
-            if results[0] is not None:
-                (landing_url, redirection_path, hsts, ip) = results[0]
-                print(f"HTTPS Landing url: {landing_url}")
-                print(f"HTTPS IP: {ip.compressed}")
-                print(f"Strict Transport Security: {hsts}")
+            https_result = results[0]
+            if https_result is not None:
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS WebServer: {https_result.server}")
+                print(f"HTTPS IP: {https_result.ip}")
+                print(f"Strict Transport Security: {https_result.hsts}")
                 print(f"HTTPS Redirection path:")
-                for index, url in enumerate(redirection_path):
-                    print(f"----> [{index + 1}/{len(redirection_path)}]: {url}")
+                for index, url in enumerate(https_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(https_result.redirection_path)}]: {url}")
             else:
                 print(f"Impossible to land somewhere via HTTPS...")
 
             # HTTP
             print(f"***** via HTTP *****")
-            if results[1] is not None:
-                (landing_url, redirection_path, hsts, ip) = results[1]
-                print(f"HTTP Landing url: {landing_url}")
-                print(f"HTTP IP: {ip.compressed}")
-                print(f"Strict Transport Security: {hsts}")
+            http_result = results[1]
+            if http_result is not None:
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP WebServer: {http_result.server}")
+                print(f"HTTP IP: {http_result.ip}")
+                print(f"Strict Transport Security: {http_result.hsts}")
                 print(f"HTTP Redirection path:")
-                for index, url in enumerate(redirection_path):
-                    print(f"----> [{index + 1}/{len(redirection_path)}]: {url}")
+                for index, url in enumerate(http_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(http_result.redirection_path)}]: {url}")
             else:
                 print(f"Impossible to land somewhere via HTTP...")
-            print()
+            if i != len(self.web_site_list)-1:
+                print()
+        print(f"------- [1] END WEB SITE LANDING TEST -------")
+
+    def test_2_script_sites_landing(self):
+        print(f"\n------- [2] START SCRIPT SITE LANDING TEST -------")
+        for i, script_site in enumerate(self.script_site_list):
+            print(f"Trying to resolve landing of script site[{i+1}/{len(self.script_site_list)}]: {script_site}:")
+            results = self.resolver.resolve_web_site(script_site)
+
+            # HTTPS
+            print(f"**** via HTTPS *****")
+            https_result = results[0]
+            if https_result is not None:
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS ScriptServer: {https_result.server}")
+                print(f"HTTPS IP: {https_result.ip}")
+                print(f"Strict Transport Security: {https_result.hsts}")
+                print(f"HTTPS Redirection path:")
+                for index, url in enumerate(https_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(https_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTPS...")
+
+            # HTTP
+            print(f"***** via HTTP *****")
+            http_result = results[1]
+            if http_result is not None:
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP ScriptServer: {http_result.server}")
+                print(f"HTTP IP: {http_result.ip}")
+                print(f"Strict Transport Security: {http_result.hsts}")
+                print(f"HTTP Redirection path:")
+                for index, url in enumerate(http_result.redirection_path):
+                    print(f"----> [{index + 1}/{len(http_result.redirection_path)}]: {url}")
+            else:
+                print(f"Impossible to land somewhere via HTTP...")
+            if i != len(self.script_site_list)-1:
+                print()
+        print(f"------- [2] END SCRIPT SITE LANDING TEST -------")
 
 
 if __name__ == '__main__':

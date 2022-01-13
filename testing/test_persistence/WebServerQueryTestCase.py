@@ -1,6 +1,6 @@
 import unittest
 from peewee import DoesNotExist
-from entities.LandingResolver import LandingResolver
+from entities.resolvers.LandingResolver import LandingResolver
 from persistence import helper_web_server, helper_web_site, helper_application_results
 
 

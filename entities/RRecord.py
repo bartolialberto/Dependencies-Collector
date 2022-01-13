@@ -1,5 +1,5 @@
 from typing import List
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
 
 

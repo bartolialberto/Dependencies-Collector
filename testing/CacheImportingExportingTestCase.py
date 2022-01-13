@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 
 
 class CacheImportingExportingTestCase(unittest.TestCase):

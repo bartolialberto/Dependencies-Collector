@@ -3,9 +3,9 @@ from pathlib import Path
 
 import selenium
 from peewee import DoesNotExist
-from entities.DnsResolver import DnsResolver
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.TLDPageScraper import TLDPageScraper
+from entities.scrapers.TLDPageScraper import TLDPageScraper
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError

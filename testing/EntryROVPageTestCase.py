@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.ROVPageScraper import ROVPageScraper
+from entities.scrapers.ROVPageScraper import ROVPageScraper
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError

@@ -1,7 +1,7 @@
 import ipaddress
 import unittest
 from pathlib import Path
-from entities.IpAsDatabase import IpAsDatabase
+from entities.resolvers.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 
 

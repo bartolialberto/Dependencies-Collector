@@ -1,10 +1,9 @@
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict
 import dns.resolver
 from dns.name import Name
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.RRecord import RRecord
-from entities.TLDPageScraper import TLDPageScraper
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
 from exceptions.DomainNonExistentError import DomainNonExistentError
@@ -140,21 +139,23 @@ class DnsResolver:
 
     def resolve_mail_domain(self, mail_domain: str) -> List[str]:
         # TODO: docs
+        print(f"Resolving mail domain: {mail_domain}")
         try:
             domain_name_utils.grammatically_correct(mail_domain)
         except InvalidDomainNameError:
             try:
                 email_address_utils.grammatically_correct(mail_domain)
-            except InvalidDomainNameError:
+            except InvalidDomainNameError as e:
+                print(f"!!! {str(e)} !!!")
                 raise
         result = list()
         try:
             mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
-        except NoAnswerError:
+        except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
+            print(f"!!! {str(e)} !!!")
             raise
-        except (DomainNonExistentError, UnknownReasonError):
-            raise
-        for value in mx_values.values:
+        for i, value in enumerate(mx_values.values):
+            print(f"mail_server[{i+1}/{len(mx_values.values)}]: {value}")
             result.append(value)
         return result
 
@@ -345,7 +346,7 @@ class DnsResolver:
 
     def export_cache(self) -> None:
         """
-        It exports the cache to a .csv file named 'cache.csv' in the output folder of the project root folder (PRD).
+        It exports the cache to a .csv file named 'dns_cache.csv' in the output folder of the project root folder (PRD).
 
         """
         try:

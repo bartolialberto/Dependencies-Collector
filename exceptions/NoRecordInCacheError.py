@@ -1,4 +1,4 @@
-from entities import TypesRR
+from entities.enums import TypesRR
 
 
 class NoRecordInCacheError(Exception):

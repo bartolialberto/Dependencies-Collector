@@ -1,15 +1,12 @@
 import copy
 import unittest
 from pathlib import Path
-from typing import List
 import selenium
-from entities.DnsResolver import DnsResolver
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.TLDPageScraper import TLDPageScraper
-from entities.Zone import Zone
+from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.error_log.ErrorLogger import ErrorLogger
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
-from old_thesis_work.Resolver import Resolver
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -63,8 +60,8 @@ class DnsResolvingTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        # cls.domain_names = ['www.google.com', 'consent.youtube.com', 'mail.google.com', 'mail.dei.unipd.it', 'www.youtube.com', 'marketingplatform.google.com']
+        # cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['google.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = True

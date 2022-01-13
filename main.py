@@ -1,10 +1,8 @@
-import ipaddress
 import sys
 from typing import List, Tuple
-from entities.ApplicationResolvers import ApplicationResolvers
+from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_application_results
 from persistence.BaseModel import db
@@ -14,17 +12,15 @@ from utils import domain_name_utils
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
     """
-    Start of the application: getting the domain names, and returning them as a list of string.
-    They can be set from command line and from a .txt file put in the input folder in which each domain name is written
-    per line. The application will control first the command line and then the file. If no domain name is set neither in
-    the 2 ways, the application will start with 2 default domain names to show its behaviour.
-    Such domain names are: google.it, youtube.it.
-    Every domain name is checked if matches the correct rules of defining a domain name. Then, at the end, duplicates
-    are removed.
+    Start of the application: getting the websites, and returning them as a list of string.
+    They can be set from command line and from a file name websites.txt put in the input folder in which each website is
+    written per line. The application will control first the command line and then the file. If no website is set
+    neither in the 2 ways, the application will start with 2 default websites show its behaviour.
+    Such websites are: google.it/doodles, www.youtube.it/feed/explore.
 
-    :param default_websites: The default domain names to use when no one is set by the user.
+    :param default_websites: The default websites to use when no one is set by the user.
     :type default_websites: List[str]
-    :return: A list of 'grammatically' correct domain names.
+    :return: The list of computed websites.
     :rtype: List[str]
     """
     websites = list()
@@ -34,7 +30,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
         try:
             result = file_utils.search_for_filename_in_subdirectory('input', 'websites.txt')
         except FilenameNotFoundError:
-            print(f"> No .txt file found in input folder found.")
+            print(f"> No websites.txt file found in input folder found.")
             print(f"> Starting application with default websites as sample:")
             websites = list(default_websites)
             for index, website in enumerate(websites):
@@ -70,19 +66,17 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     return websites
 
 
-def get_input_mail_domains(default_mail_domains=('mail.google.com', 'mail.dei.unipd.it')) -> List[str]:
+def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) -> List[str]:
     """
-    Start of the application: getting the domain names, and returning them as a list of string.
-    They can be set from command line and from a .txt file put in the input folder in which each domain name is written
-    per line. The application will control first the command line and then the file. If no domain name is set neither in
-    the 2 ways, the application will start with 2 default domain names to show its behaviour.
-    Such domain names are: google.it, youtube.it.
-    Every domain name is checked if matches the correct rules of defining a domain name. Then, at the end, duplicates
-    are removed.
+    Start of the application: getting the mail domains, and returning them as a list of string.
+    They can be set from command line and from a file name mail_domains.txt put in the input folder in which each mail
+    domain is written per line. The application will control first the command line and then the file. If no mail domain
+    is set neither in the 2 ways, the application will start with 2 default mail domains show its behaviour.
+    Such mail domains are: gmail.com, outlook.com.
 
-    :param default_websites: The default domain names to use when no one is set by the user.
-    :type default_websites: List[str]
-    :return: A list of 'grammatically' correct domain names.
+    :param default_mail_domains: The default mail domains to use when no one is set by the user.
+    :type default_mail_domains: List[str]
+    :return: The list of computed mail domains.
     :rtype: List[str]
     """
     mail_domains = list()
@@ -92,7 +86,7 @@ def get_input_mail_domains(default_mail_domains=('mail.google.com', 'mail.dei.un
         try:
             result = file_utils.search_for_filename_in_subdirectory('input', 'mail_domains.txt')
         except FilenameNotFoundError:
-            print(f"> No .txt file found in input folder found.")
+            print(f"> No mail_domain.txt file found in input folder found.")
             print(f"> Starting application with default mail domains as sample:")
             mail_domains = list(default_mail_domains)
             for index, mail_domain in enumerate(mail_domains):
@@ -130,12 +124,20 @@ def get_input_mail_domains(default_mail_domains=('mail.google.com', 'mail.dei.un
 
 def get_input_application_flags(default_persist_errors=True, default_consider_tld=False) -> Tuple[bool, bool]:
     """
-    Start of the application: getting the intention of persist errors in the database.
+    Start of the application: getting the parameters that can personalized the elaboration of the application.
+    Such parameters (properties: they can be set or not set) are:
+
+    1- persist_errors: a flag that set the will to save the explicit lack of results in database between entities (where
+    it is possible)
+
+    2- consider_tld: a flag that will consider or remove the Top-Level Domains when computing zone dependencies
 
     :param default_persist_errors: The default value of the flag.
     :type default_persist_errors: bool
-    :return: A boolean to set the flag.
-    :rtype: bool
+    :param default_consider_tld: The default value of the flag.
+    :type default_consider_tld: bool
+    :return: A tuple of booleans for each flag.
+    :rtype: Tuple[bool]
     """
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
@@ -157,7 +159,7 @@ if __name__ == "__main__":
         input_mail_domains = get_input_mail_domains()
         persist_errors, consider_tld = get_input_application_flags()
         # entities
-        resolvers = ApplicationResolvers(consider_tld)
+        resolvers = ApplicationResolversWrapper(consider_tld)
         headless_browser_is_instantiated = True
         # auxiliary elaborations
         domain_name_utils.take_snapshot(input_websites)   # for future error reproducibility
@@ -167,10 +169,10 @@ if __name__ == "__main__":
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
-        print("Insertion into database... ", end='')
+        print("\nInsertion into database... ", end='')
         helper_application_results.insert_landing_websites_results(resolvers.landing_web_sites_results,
                                                                    persist_errors=persist_errors)
-        helper_application_results.insert_mail_servers_resolving(resolvers.mail_servers_results)
+        helper_application_results.insert_mail_servers_resolving(resolvers.mail_domains_results)
         helper_application_results.insert_dns_result(resolvers.total_dns_results,
                                                      resolvers.total_zone_dependencies_per_zone,
                                                      resolvers.total_zone_dependencies_per_name_server,
@@ -178,10 +180,7 @@ if __name__ == "__main__":
         helper_application_results.insert_script_dependencies_resolving(resolvers.web_site_script_dependencies,
                                                                         resolvers.script_script_site_dependencies,
                                                                         persist_errors=persist_errors)
-        # helper_domain_name.multiple_inserts(resolvers.dns_results)
-        # helper_landing_page.multiple_inserts(resolvers.landing_page_results)
-        # helper_content_dependency.multiple_inserts(resolvers.content_dependencies_results)
-        # helper_matches.insert_all_entries_associated(results)
+        helper_application_results.insert_ip_as_and_rov_resolving(resolvers.total_rov_page_scraper_results, persist_errors=persist_errors)
         print("DONE.")
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()

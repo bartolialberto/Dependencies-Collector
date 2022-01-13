@@ -3,8 +3,8 @@ from datetime import datetime
 from pathlib import Path
 import dns
 from dns.name import Name
-from entities.DnsResolver import DnsResolver
-from entities.TypesRR import TypesRR
+from entities.resolvers.DnsResolver import DnsResolver
+from entities.enums.TypesRR import TypesRR
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAnswerError import NoAnswerError

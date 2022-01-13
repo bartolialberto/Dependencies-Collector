@@ -1,5 +1,5 @@
 from entities.RRecord import RRecord
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 
 
 def append_with_no_duplicates(_list: list, element) -> None:

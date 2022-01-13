@@ -3,15 +3,13 @@ import csv
 from pathlib import Path
 from typing import List, Set, Tuple
 
-from peewee import DoesNotExist
-
 from entities.Zone import Zone
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import file_utils, csv_utils, list_utils, string_utils, domain_name_utils
+from utils import file_utils, csv_utils, list_utils, domain_name_utils
 from entities.RRecord import RRecord
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 
 
@@ -467,7 +465,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def load_csv_from_output_folder(self, filename='cache.csv', project_root_directory=Path.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename='dns_cache.csv', project_root_directory=Path.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
         .csv file from the output folder of the project root directory (if set correctly). So just invoking this
@@ -570,7 +568,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def write_to_csv_in_output_folder(self, filename="cache", project_root_directory=Path.cwd()) -> None:
+    def write_to_csv_in_output_folder(self, filename="dns_cache", project_root_directory=Path.cwd()) -> None:
         """
         Export the cache in the list to a .csv file in the output folder of the project directory (if set correctly).
         It uses the separator set to separate every attribute of the resource record.
@@ -600,7 +598,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def write_to_txt_in_output_folder(self, filename="cache", project_root_directory=Path.cwd()) -> None:
+    def write_to_txt_in_output_folder(self, filename="dns_cache", project_root_directory=Path.cwd()) -> None:
         """
         Export the cache in the list to a .txt file in the output folder of the project directory. It uses the separator
         set to separate every attribute of the resource record.

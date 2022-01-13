@@ -2,8 +2,8 @@ import ipaddress
 import unittest
 from pathlib import Path
 from typing import List
-from entities.DnsResolver import DnsResolver
-from entities.IpAsDatabase import IpAsDatabase
+from entities.resolvers.DnsResolver import DnsResolver
+from entities.resolvers.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError

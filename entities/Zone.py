@@ -1,6 +1,6 @@
 from typing import List
 from entities.RRecord import RRecord
-from entities.TypesRR import TypesRR
+from entities.enums.TypesRR import TypesRR
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from utils import list_utils
 

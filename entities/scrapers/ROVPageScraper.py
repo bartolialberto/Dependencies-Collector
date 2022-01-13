@@ -3,7 +3,7 @@ from typing import List
 import selenium
 from selenium.webdriver.common.by import By
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.ROVStates import ROVStates
+from entities.enums.ROVStates import ROVStates
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError

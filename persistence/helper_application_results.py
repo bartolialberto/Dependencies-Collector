@@ -1,15 +1,17 @@
 import ipaddress
 from typing import Dict, Tuple, List, Set
 from peewee import DoesNotExist
-from entities.IpAsDatabase import EntryIpAsDatabase
-from entities.LandingResolver import SiteLandingResult
-from entities.ScriptDependenciesResolver import MainPageScript
+from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
+from entities.resolvers.LandingResolver import SiteLandingResult
+from entities.scrapers.ROVPageScraper import RowPrefixesTable
+from entities.resolvers.ScriptDependenciesResolver import MainPageScript
 from entities.Zone import Zone
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from persistence import helper_web_site, helper_web_site_lands, helper_web_server, helper_zone, helper_name_server, \
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
-    helper_script_hosted_on
+    helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
+    helper_belongs, helper_ip_address_depends, helper_access
 from utils import url_utils
 
 
@@ -127,5 +129,41 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str,
                 pass
 
 
-def insert_ip_as_database_resolving(results: Dict[str, Tuple[ipaddress.IPv4Address, EntryIpAsDatabase or None, ipaddress.IPv4Network or None]]):
-    pass
+def insert_ip_as_and_rov_resolving(results: Dict[int, Dict[str, List[str or EntryIpAsDatabase or ipaddress.IPv4Network or RowPrefixesTable or None] or None]], persist_errors=True):
+    for as_number in results.keys():
+        ase = helper_autonomous_system.insert(as_number)
+        for nameserver in results[as_number].keys():
+            try:
+                nse, dne = helper_name_server.get(nameserver)
+            except DoesNotExist:
+                raise
+            if results[as_number][nameserver] is not None:
+                ip_address = results[as_number][nameserver][0]
+                entry_ip_as_db = results[as_number][nameserver][1]
+                belonging_network = results[as_number][nameserver][2]
+                row_prefixes_table = results[as_number][nameserver][3]
+
+                if ip_address is not None:
+                    iae = helper_ip_address.insert(ip_address)
+                    if row_prefixes_table is not None:
+                        re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
+                        ine = helper_ip_network.insert(row_prefixes_table.prefix)
+                        helper_prefixes_table.insert(ine, re, ase)
+                        helper_belongs.insert(ine, ase)
+                        helper_ip_address_depends.insert(iae, ine)
+                    else:
+                        if belonging_network is not None:
+                            ine = helper_ip_network.insert(belonging_network)
+                            helper_ip_address_depends.insert(iae, ine)
+                        else:
+                            if persist_errors:
+                                helper_ip_address_depends.insert(iae, None)
+                            else:
+                                pass
+                else:
+                    if persist_errors:
+                        helper_access.insert(dne, None)
+                    else:
+                        pass
+            else:
+                pass
