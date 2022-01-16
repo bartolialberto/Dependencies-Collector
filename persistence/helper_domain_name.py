@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
@@ -27,14 +27,33 @@ def get(domain_name: str) -> DomainNameEntity:
         raise
 
 
-def resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[IpAddressEntity, List[DomainNameEntity]]:
+def resolve_access_path(domain_name_parameter: DomainNameEntity or str, get_only_first_address=False) -> Tuple[IpAddressEntity or Set[IpAddressEntity], List[DomainNameEntity]]:
+    dne = None
+    if isinstance(domain_name_parameter, DomainNameEntity):
+        dne = domain_name_parameter
+    else:
+        try:
+            dne = get(domain_name_parameter)
+        except DoesNotExist:
+            raise
+    try:
+        inner_result = __inner_resolve_access_path(dne)
+    except (DoesNotExist, NoAliasFoundError):
+        raise
+    if get_only_first_address:
+        return inner_result[0].pop(), inner_result[1]
+    else:
+        return inner_result
+
+
+def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[Set[IpAddressEntity], List[DomainNameEntity]]:
     if chain_dne is None:
         chain_dne = list()
     else:
         pass
     chain_dne.append(dne)
     try:
-        iae = helper_ip_address.get_first_of(dne)
+        iae = helper_ip_address.get_all_of(dne)
         return iae, chain_dne
     except DoesNotExist:
         try:
@@ -43,7 +62,7 @@ def resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[IpAddres
             raise
         for adne in adnes:
             try:
-                return resolve_access_path(adne, chain_dne)
+                return __inner_resolve_access_path(adne, chain_dne)
             except DoesNotExist:
                 pass
         raise DoesNotExist

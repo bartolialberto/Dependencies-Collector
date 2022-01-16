@@ -39,25 +39,23 @@ def get_from_string_website(website_url: str) -> List[WebServerEntity]:
         raise
 
     query = WebSiteLandsAssociation.select()\
-        .join_from(WebSiteLandsAssociation, WebSiteEntity)\
         .join_from(WebSiteLandsAssociation, WebServerEntity)\
         .where(WebSiteLandsAssociation.web_site == wse)
 
     result = list()
     for row in query:
-        result.append(row.server)
+        result.append(row.web_server)
     return result
 
 
 def get_from_website_entity(wse: WebSiteEntity) -> List[WebServerEntity]:
     query = WebSiteLandsAssociation.select()\
-        .join_from(WebSiteLandsAssociation, WebSiteEntity)\
         .join_from(WebSiteLandsAssociation, WebServerEntity)\
         .where(WebSiteLandsAssociation.web_site == wse)
 
     result = list()
     for row in query:
-        result.append(row.server)
+        result.append(row.web_server)
     return result
 
 

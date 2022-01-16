@@ -154,10 +154,9 @@ class ROVPageScraper:
         try:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.WebDriverException:
+            self.prefixes_table.clear()
+            self.current_as_number = -1
             raise
-        # self.prefixes_table.clear()
-        self.prefixes_table = None
-        self.current_as_number = -1
 
     def load_as_page(self, as_number: int) -> None:
         """

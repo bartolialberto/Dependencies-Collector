@@ -1,6 +1,7 @@
-from typing import Tuple
-from persistence import helper_domain_name
-from persistence.BaseModel import MailServerEntity, DomainNameEntity
+from typing import Tuple, Set
+from peewee import DoesNotExist
+from persistence import helper_domain_name, helper_mail_domain
+from persistence.BaseModel import MailServerEntity, DomainNameEntity, MailDomainEntity, MailDomainComposedAssociation
 
 
 def insert(mailserver: str) -> Tuple[MailServerEntity, DomainNameEntity]:
@@ -8,3 +9,31 @@ def insert(mailserver: str) -> Tuple[MailServerEntity, DomainNameEntity]:
     nse, created = MailServerEntity.get_or_create(name=dne)
     return nse, dne
 
+
+def get(mail_server: str) -> MailServerEntity:
+    try:
+        dne = helper_domain_name.get(mail_server)
+    except DoesNotExist:
+        raise
+    try:
+        return MailServerEntity.get(MailServerEntity.name == dne)
+    except DoesNotExist:
+        raise
+
+
+def get_every_of(mail_domain_parameter: MailDomainEntity or str) -> Set[MailServerEntity]:
+    mde = None
+    if isinstance(mail_domain_parameter, MailDomainEntity):
+        mde = mail_domain_parameter
+    else:
+        try:
+            mde = helper_mail_domain.get(mail_domain_parameter)
+        except DoesNotExist:
+            raise
+    query = MailDomainComposedAssociation.select()\
+        .join_from(MailDomainComposedAssociation, MailServerEntity)\
+        .where(MailDomainComposedAssociation.mail_domain == mde)
+    result = set()
+    for row in query:
+        result.add(row.mail_server)
+    return result

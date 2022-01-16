@@ -15,7 +15,9 @@ def take_snapshot(exception: Exception):
     folder = Path(f"{str(Path.cwd())}{os.sep}SNAPSHOTS{os.sep}{folder_name}")
     folder.mkdir(parents=True, exist_ok=False)
     starting_cache_file = Path(f"{str(folder)}{os.sep}starting_cache.csv")
-    domain_names_file = Path(f"{str(folder)}{os.sep}domain_names.csv")
+    web_sites_file = Path(f"{str(folder)}{os.sep}web_sites.csv")
+    mail_domains_file = Path(f"{str(folder)}{os.sep}mail_domains.csv")
+    flags_file = Path(f"{str(folder)}{os.sep}flags.csv")
     error_file = Path(f"{str(folder)}{os.sep}error.txt")
 
     # load starting cache
@@ -27,14 +29,32 @@ def take_snapshot(exception: Exception):
         # means that there's no entry in the cache. So we create an empty file
         starting_cache_file.touch()
 
-    # load domain names
+    # load web sites
     try:
         result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_domain_names.csv")
         file = result[0]
-        shutil.copy(file, domain_names_file)
+        shutil.copy(file, web_sites_file)
     except FilenameNotFoundError:
-        # means that there's no domain names. So we create an empty file
-        domain_names_file.touch()
+        # means that there's no web sites. So we create an empty file
+        web_sites_file.touch()
+
+    # load web sites
+    try:
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_domain_names.csv")
+        file = result[0]
+        shutil.copy(file, mail_domains_file)
+    except FilenameNotFoundError:
+        # means that there's no mail domains. So we create an empty file
+        mail_domains_file.touch()
+
+    # load flags
+    try:
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_flags.csv")
+        file = result[0]
+        shutil.copy(file, flags_file)
+    except FilenameNotFoundError:
+        # means that there's no mail domains. So we create an empty file
+        flags_file.touch()
 
     # write error file
     with open(str(error_file), 'w') as f:  # 'w' or 'x'

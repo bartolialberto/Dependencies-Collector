@@ -2,7 +2,7 @@ from ipaddress import IPv4Address
 from typing import Dict, Set
 import requests
 from entities.error_log.ErrorLog import ErrorLog
-from entities.resolvers.results.LandingSIteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
+from entities.resolvers.results.LandingSiteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
 from utils import requests_utils
 
 

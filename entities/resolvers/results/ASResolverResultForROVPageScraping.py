@@ -23,7 +23,7 @@ class ASResolverValueForROVPageScraping:
      belonging_network : ipaddress.IPv4Network or None
         An IP network or None.
     """
-    def __init__(self, ip_address: ipaddress.IPv4Address or None, entry_as_database: EntryIpAsDatabase, network: ipaddress.IPv4Network or None):
+    def __init__(self, ip_address: ipaddress.IPv4Address, entry_as_database: EntryIpAsDatabase or None, network: ipaddress.IPv4Network or None):
         """
         Initialize the object but sets the 'entry_rov_page' to None, because the idea is that ROVPageScraping it has yet
         to happen, so the object should updated later.

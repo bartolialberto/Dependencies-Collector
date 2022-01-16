@@ -19,7 +19,7 @@ class AutonomousSystemResolutionValues:
         An IP network or None.
     """
     def __init__(self):
-        self.ip_address = None or ipaddress.IPv4Address
+        self.ip_address = ipaddress.IPv4Address
         self.entry = None or EntryIpAsDatabase
         self.belonging_network = None or ipaddress.IPv4Network
 

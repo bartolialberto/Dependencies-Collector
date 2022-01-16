@@ -1,6 +1,5 @@
 import unittest
 from pathlib import Path
-
 import selenium
 from peewee import DoesNotExist
 from entities.resolvers.DnsResolver import DnsResolver
@@ -66,13 +65,13 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=PRD)
             except FilenameNotFoundError as e:
                 print(f"!!! {str(e)} !!!")
-                return
+                cls.fail(str(e))
         if not cls.consider_tld:
             try:
                 headless_browser = FirefoxHeadlessWebDriver(PRD)
             except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
                 print(f"!!! {str(e)} !!!")
-                return
+                cls.fail(str(e))
             cls.headless_browser_is_instantiated = True
             tld_scraper = TLDPageScraper(headless_browser)
             try:
@@ -138,7 +137,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
 
                 # check they are the same
                 nameservers_result_set = set(zone.nameservers)
-                tmp = helper_name_server.get_from_zone_name(zone.name)
+                tmp = helper_name_server.get_all_from_zone_name(zone.name)
                 nameservers_db_set = set(map(lambda x: x.name.name, tmp))
                 self.assertSetEqual(nameservers_result_set, nameservers_db_set)
                 count_assertions = count_assertions + 1
@@ -212,7 +211,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         count_assertions = 0
         for i, domain_name in enumerate(self.dns_results.keys()):
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of(domain_name)
+                zones_set_db = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
                 continue
@@ -241,7 +240,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print("\n------- [6] START ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")
         for i, nameserver in enumerate(self.zone_dependencies_per_nameserver.keys()):
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of(nameserver)
+                zones_set_db = helper_zone.get_zone_dependencies_of_domain_name(nameserver)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
                 continue

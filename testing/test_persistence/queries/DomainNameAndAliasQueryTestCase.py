@@ -1,16 +1,16 @@
 import unittest
 from peewee import DoesNotExist
-from persistence import helper_zone, helper_domain_name, helper_alias
+from persistence import helper_zone, helper_domain_name, helper_alias, helper_ip_network
 
 
-class DatabaseQueriesTestCase(unittest.TestCase):
+class DomainNameAndAliasQueryTestCase(unittest.TestCase):
     def test_01_query_zone_dependencies_from_domain_name(self):
         print(f"\n------- [1] QUERY ZONE DEPENDENCIES FROM DOMAIN NAME -------")
         # PARAMETER
         domain_name = 'mail.google.it'
         # QUERY
         try:
-            zes = helper_zone.get_zone_dependencies_of(domain_name)
+            zes = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
             print(f"Zone dependencies of domain name: {domain_name}")
             for i, ze in enumerate(zes):
                 print(f"zone[{i + 1}/{len(zes)}]: {ze.name}")
@@ -40,11 +40,16 @@ class DatabaseQueriesTestCase(unittest.TestCase):
         try:
             domain_name_entity = helper_domain_name.get(domain_name)
             try:
-                iae, dnes = helper_domain_name.resolve_access_path(domain_name_entity)
+                iae, dnes = helper_domain_name.resolve_access_path(domain_name_entity, get_only_first_address=True)
                 print(f"Access path of domain name: {domain_name}")
                 for i, dne in enumerate(dnes):
                     print(f"path[{i + 1}/{len(dnes)}]: {dne.name}")
-                print(f"IP resolved: {iae.exploded_notation}")
+                print(f"(first) IP resolved: {iae.exploded_notation}")
+                try:
+                    ine = helper_ip_network.get_of(iae)
+                    print(f"Belonging IP network of such IP address: {ine.compressed_notation}")
+                except DoesNotExist as exc:
+                    print(f"!!! {str(exc)} !!!")
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
         except DoesNotExist as exc:

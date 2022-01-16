@@ -1,7 +1,8 @@
 from typing import Dict, Set
 from peewee import DoesNotExist
+from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
-from entities.resolvers.results.LandingSIteResult import LandingSiteResult
+from entities.resolvers.results.LandingSiteResult import LandingSiteResult
 from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
@@ -11,7 +12,33 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
-    helper_belongs, helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server
+    helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server
+
+
+def insert_all_application_results(resolvers: ApplicationResolversWrapper, persist_errors: bool) -> None:
+    print("[1/6] LANDING WEB SITES RESOLVING RESULTS... ", end='')
+    insert_landing_web_sites_results(resolvers.landing_web_sites_results,
+                                                                persist_errors=persist_errors)
+    print("DONE.")
+    print("[2/6] DNS MAIL SERVERS DEPENDENCIES RESOLVING RESULTS... ", end='')
+    insert_mail_servers_resolving(resolvers.mail_domains_results)
+    print("DONE.")
+    print("[3/6] DNS ZONE DEPENDENCIES RESOLVING RESULTS... ", end='')
+    insert_dns_result(resolvers.total_dns_results)
+    print("DONE.")
+    print("[4/6] SCRIPT DEPENDENCIES RESOLVING RESULTS... ", end='')
+    insert_script_dependencies_resolving(resolvers.web_site_script_dependencies,
+                                                                    resolvers.script_script_site_dependencies,
+                                                                    persist_errors=persist_errors)
+    print("DONE.")
+    print("[5/6] LANDING SCRIPT SITES RESOLVING RESULTS... ", end='')
+    insert_landing_script_sites_results(resolvers.landing_script_sites_results,
+                                                                   persist_errors=persist_errors)
+    print("DONE.")
+    print("[6/6] IP-AS and ROV RESOLVING RESULTS... ", end='')
+    insert_ip_as_and_rov_resolving(resolvers.total_rov_page_scraper_results,
+                                                              persist_errors=persist_errors)
+    print("DONE.")
 
 
 def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult], persist_errors=True):
@@ -21,10 +48,11 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult], persi
 
         # HTTPS result
         is_https = True
-        if result[web_site].https is None and persist_errors == True:
-            helper_web_site_lands.insert(wse, None, is_https, None)
-        elif result[web_site].https is None and persist_errors == False:
-            pass
+        if result[web_site].https is None:
+            if persist_errors:
+                helper_web_site_lands.insert(wse, None, is_https, None)
+            else:
+                pass
         else:
             wsvr_https = helper_web_server.insert(result[web_site].https.url)
             iae = helper_ip_address.insert(result[web_site].https.ip)
@@ -32,10 +60,11 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult], persi
 
         # HTTP result
         is_https = False
-        if result[web_site].http is None and persist_errors == True:
-            helper_web_site_lands.insert(wse, None, is_https, None)
-        elif result[web_site].http is None and persist_errors == False:
-            pass
+        if result[web_site].http is None:
+            if persist_errors:
+                helper_web_site_lands.insert(wse, None, is_https, None)
+            else:
+                pass
         else:
             wsvr_http = helper_web_server.insert(result[web_site].http.url)
             iae = helper_ip_address.insert(result[web_site].http.ip)
@@ -131,10 +160,11 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult], pe
 
         # HTTPS result
         is_https = True
-        if result[script_site].https is None and persist_errors == True:
-            helper_script_site_lands.insert(sse, None, is_https, None)
-        elif result[script_site].https is None and persist_errors == False:
-            pass
+        if result[script_site].https is None:
+            if persist_errors:
+                helper_script_site_lands.insert(sse, None, is_https, None)
+            else:
+                pass
         else:
             sservere_https = helper_script_server.insert(result[script_site].https.url)
             iae = helper_ip_address.insert(result[script_site].https.ip)
@@ -142,10 +172,11 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult], pe
 
         # HTTP result
         is_https = False
-        if result[script_site].http is None and persist_errors == True:
-            helper_script_site_lands.insert(sse, None, is_https, None)
-        elif result[script_site].http is None and persist_errors == False:
-            pass
+        if result[script_site].http is None:
+            if persist_errors:
+                helper_script_site_lands.insert(sse, None, is_https, None)
+            else:
+                pass
         else:
             sservere_http = helper_script_server.insert(result[script_site].http.url)
             iae = helper_ip_address.insert(result[script_site].http.ip)
@@ -167,29 +198,31 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping, p
                     belonging_network = finals.results[as_number][nameserver].belonging_network
                     row_prefixes_table = finals.results[as_number][nameserver].entry_rov_page
 
-                    if ip_address is not None:
-                        iae = helper_ip_address.insert(ip_address)
+                    iae = helper_ip_address.insert(ip_address)
+                    helper_access.insert(dne, iae)
+
+                    if entry_ip_as_db is not None:
                         if row_prefixes_table is not None:
-                            re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
                             ine = helper_ip_network.insert(row_prefixes_table.prefix)
-                            helper_prefixes_table.insert(ine, re, ase)
-                            helper_belongs.insert(ine, ase)
                             helper_ip_address_depends.insert(iae, ine)
+                            re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
+                            helper_prefixes_table.insert(ine, re, ase)
                         else:
                             if belonging_network is not None:
                                 ine = helper_ip_network.insert(belonging_network)
                                 helper_ip_address_depends.insert(iae, ine)
+                                helper_prefixes_table.insert(ine, None, ase)
                             else:
                                 if persist_errors:
                                     helper_ip_address_depends.insert(iae, None)
                                 else:
                                     pass
                     else:
-                        if persist_errors:
-                            helper_access.insert(dne, None)
-                        else:
-                            pass
+                        pass
                 else:
-                    pass
+                    if persist_errors:
+                        helper_access.insert(dne, None)
+                    else:
+                        pass
         else:
             pass

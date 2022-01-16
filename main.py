@@ -6,7 +6,7 @@ from pathlib import Path
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_application_results
 from persistence.BaseModel import db
-from utils import network_utils, list_utils, file_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils
 from utils import domain_name_utils
 
 
@@ -23,14 +23,15 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     :return: The list of computed websites.
     :rtype: List[str]
     """
+    input_filename = 'websites.txt'
     websites = list()
     if len(sys.argv) == 1:
         print(f"> No domain names found in command line.")
         result = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory('input', 'websites.txt')
+            result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
         except FilenameNotFoundError:
-            print(f"> No websites.txt file found in input folder found.")
+            print(f"> No 'websites.txt' file found in input folder found.")
             print(f"> Starting application with default websites as sample:")
             websites = list(default_websites)
             for index, website in enumerate(websites):
@@ -39,10 +40,11 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
-            print(f"> Found file: {abs_filepath}")
+            print(f"> Found '{input_filename}' file in 'input' folder.")
             lines = f.readlines()
-            for line in lines:
+            for i, line in enumerate(lines):
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
+                print(f"> [{i+1}/{len(lines)}]: {lines}")
                 websites.append(candidate)
             f.close()
             if len(websites) == 0:
@@ -79,14 +81,15 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
     :return: The list of computed mail domains.
     :rtype: List[str]
     """
+    input_filename = 'mail_domains.txt'
     mail_domains = list()
     if len(sys.argv) == 1:
         print(f"> No mail domains found in command line.")
         result = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory('input', 'mail_domains.txt')
+            result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
         except FilenameNotFoundError:
-            print(f"> No mail_domain.txt file found in input folder found.")
+            print(f"> No 'mail_domains.txt' file found in input folder found.")
             print(f"> Starting application with default mail domains as sample:")
             mail_domains = list(default_mail_domains)
             for index, mail_domain in enumerate(mail_domains):
@@ -95,10 +98,11 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
         file = result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
-            print(f"> Found file: {abs_filepath}")
+            print(f"> Found '{input_filename}' file in 'input' folder.")
             lines = f.readlines()
-            for line in lines:
+            for i, line in enumerate(lines):
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
+                print(f"> [{i + 1}/{len(lines)}]: {lines}")
                 mail_domains.append(candidate)
             f.close()
             if len(mail_domains) == 0:
@@ -122,7 +126,7 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
     return mail_domains
 
 
-def get_input_application_flags(default_persist_errors=True, default_consider_tld=False) -> Tuple[bool, bool]:
+def get_input_application_flags(default_persist_errors=False, default_consider_tld=False) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -162,32 +166,24 @@ if __name__ == "__main__":
         resolvers = ApplicationResolversWrapper(consider_tld)
         headless_browser_is_instantiated = True
         # auxiliary elaborations
-        domain_name_utils.take_snapshot(input_websites)   # for future error reproducibility
-        resolvers.dns_resolver.cache.take_snapshot()        # for future error reproducibility
+        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, persist_errors, consider_tld)    # for future error reproducibility
+        resolvers.dns_resolver.cache.take_temp_snapshot()        # for future error reproducibility
         # actual elaboration of all resolvers
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
-        print("\nInsertion into database... ", end='')
-        helper_application_results.insert_landing_web_sites_results(resolvers.landing_web_sites_results,
-                                                                    persist_errors=persist_errors)
-        helper_application_results.insert_mail_servers_resolving(resolvers.mail_domains_results)
-        helper_application_results.insert_dns_result(resolvers.total_dns_results)
-        helper_application_results.insert_script_dependencies_resolving(resolvers.web_site_script_dependencies,
-                                                                        resolvers.script_script_site_dependencies,
-                                                                        persist_errors=persist_errors)
-        helper_application_results.insert_landing_script_sites_results(resolvers.landing_script_sites_results,
-                                                                    persist_errors=persist_errors)
-        helper_application_results.insert_ip_as_and_rov_resolving(resolvers.total_rov_page_scraper_results, persist_errors=persist_errors)
-        print("DONE.")
+        print("\nInsertion into database started... ")
+        helper_application_results.insert_all_application_results(resolvers, persist_errors)
+        print("Insertion into database finished.")
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
     except Exception as e:
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
-        print(f"!!! {str(e)} !!!")
+        print(f"!!! type: {type(e)} !!!")
+        print(f"!!! str: {str(e)} !!!")
     finally:
         # closing
         if headless_browser_is_instantiated:

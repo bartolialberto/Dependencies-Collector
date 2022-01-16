@@ -53,8 +53,7 @@ def handle_tables_creation():       # execute at the end of the file
             IpAddressDependsAssociation,
             AutonomousSystemEntity,
             ROVEntity,
-            BelongsAssociation,
-            PrefixesTableAssociation],    # 30 entities and associations
+            PrefixesTableAssociation],    # 29 entities and associations
             safe=True)
 
 
@@ -378,20 +377,9 @@ class ROVEntity(BaseModel):
         db_table = 'rov'
 
 
-class BelongsAssociation(BaseModel):
-    ip_network = ForeignKeyField(IpNetworkEntity)
-    autonomous_system = ForeignKeyField(AutonomousSystemEntity)
-
-    def __str__(self):
-        return f"<{self.ip_network}, {self.autonomous_system}>"
-
-    class Meta:
-        db_table = 'belongs'
-
-
 class PrefixesTableAssociation(BaseModel):
     ip_network = ForeignKeyField(IpNetworkEntity)
-    rov = ForeignKeyField(ROVEntity)
+    rov = ForeignKeyField(ROVEntity, null=True)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
     def __str__(self):

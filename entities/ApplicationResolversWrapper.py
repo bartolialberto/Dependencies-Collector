@@ -8,7 +8,7 @@ from entities.resolvers.IpAsDatabase import IpAsDatabase
 from entities.resolvers.LandingResolver import LandingResolver
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
-from entities.resolvers.results.LandingSIteResult import LandingSiteResult
+from entities.resolvers.results.LandingSiteResult import LandingSiteResult
 from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
@@ -243,7 +243,7 @@ class ApplicationResolversWrapper:
         :rtype: MultipleDnsZoneDependenciesResult
         """
         print("\n\nSTART DNS DEPENDENCIES RESOLVER")
-        self.dns_resolver.cache.take_snapshot()
+        self.dns_resolver.cache.take_temp_snapshot()
         results = self.dns_resolver.resolve_multiple_domains_dependencies(domain_names)
         self.error_logger.add_entries(results.error_logs)
         print("END DNS DEPENDENCIES RESOLVER")

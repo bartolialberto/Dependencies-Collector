@@ -15,12 +15,12 @@ class WebServerQueryTestCase(unittest.TestCase):
         # ELABORATION
         resolver = LandingResolver()
         try:
-            https_result, http_result = resolver.resolve_web_site(cls.website)
+            resolver_results = resolver.resolve_web_site(cls.website)
         except Exception as e:
             print(f"ERROR: {str(e)}")
-            exit(0)
+            return
         results = dict()
-        results[cls.website] = (https_result, http_result)
+        results[cls.website] = resolver_results
         helper_application_results.insert_landing_web_sites_results(results)
         #
         cls.wse = helper_web_site.get(cls.website)
@@ -31,7 +31,7 @@ class WebServerQueryTestCase(unittest.TestCase):
             wses = helper_web_server.get_from_string_website(self.website)
         except DoesNotExist:
             print(f"NO WEBSERVER FOR WEBSITE: {self.website} ...")
-            exit(0)
+            return
         for i, wse in enumerate(wses):
             print(f"[{i+1}/{len(wses)}]: https={wse}, url={wse.url}")
             # print(f"[{i+1}/{len(wses)}]: https={wse[1]}, url={wse[0].url}")   # and the https flag?

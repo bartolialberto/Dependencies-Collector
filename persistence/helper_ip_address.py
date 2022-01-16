@@ -1,7 +1,9 @@
 import ipaddress
+from typing import Set
+
 from peewee import DoesNotExist
-from persistence import helper_access
-from persistence.BaseModel import IpAddressEntity, DomainNameEntity
+from persistence import helper_access, helper_domain_name
+from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation
 
 
 def insert(address_param: str or ipaddress.IPv4Address) -> IpAddressEntity:
@@ -25,14 +27,29 @@ def get(ip_string_exploded_notation: str) -> IpAddressEntity:
     return iae
 
 
-def get_first_of(dne: DomainNameEntity) -> IpAddressEntity:
-    try:
-        aa = helper_access.get_first_of(dne)
-    except DoesNotExist:
-        raise
-    try:
-        # print(f"DEBUG: aa.ip_address = {aa.ip_address}")
-        iae = get(aa.ip_address)
-    except DoesNotExist:
-        raise
-    return iae
+def get_first_of(domain_name_parameter: DomainNameEntity or str) -> IpAddressEntity:
+    dne = None
+    if isinstance(domain_name_parameter, DomainNameEntity):
+        dne = domain_name_parameter
+    else:
+        try:
+            dne = helper_domain_name.get(domain_name_parameter)
+        except DoesNotExist:
+            raise
+    query = AccessAssociation.select()\
+        .join_from(AccessAssociation, IpAddressEntity)\
+        .where(AccessAssociation.domain_name == dne)\
+        .limit(1)
+    for row in query:
+        return row.ip_address
+    raise DoesNotExist
+
+
+def get_all_of(dne: DomainNameEntity) -> Set[IpAddressEntity]:
+    result = set()
+    query = AccessAssociation.select()\
+        .join_from(AccessAssociation, IpAddressEntity)\
+        .where(AccessAssociation.domain_name == dne)
+    for row in query:
+        result.add(row.ip_address)
+    return result

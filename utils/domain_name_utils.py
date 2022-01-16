@@ -1,9 +1,8 @@
-import csv
 import re
 from typing import List
 from urllib.parse import urlparse
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from utils import file_utils, string_utils, url_utils
+from utils import string_utils, url_utils
 
 
 # TODO: method doesn't work for 'c.ns.c10r.facebook.com.' ==> MUST BE MODIFIED OR DELETED
@@ -197,23 +196,6 @@ def deduct_domain_name(url: str) -> str:
         parser = urlparse(url_utils.deduct_http_url(url))
         domain_name = parser.netloc
     return domain_name
-
-
-def take_snapshot(domain_name_list: List[str]) -> None:
-    """
-    Export the domain list as a .csv file in the SNAPSHOTS folder of the project root folder (PRD) with a predefined
-    filename.
-
-
-    :param domain_name_list: A list of domain name.
-    :type domain_name_list: List[str]
-    """
-    file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_domain_names.csv")
-    with file.open('w', encoding='utf-8', newline='') as f:
-        write = csv.writer(f)
-        for domain_name in domain_name_list:
-            write.writerow([domain_name])
-        f.close()
 
 
 def equals(domain_name1: str, domain_name2: str) -> bool:

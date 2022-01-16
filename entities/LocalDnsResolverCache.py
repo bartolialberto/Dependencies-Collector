@@ -146,63 +146,14 @@ class LocalDnsResolverCache:
         :rtype: Set[str]
         """
         try:
-            result = set(self.resolve_path_aliases(name))
-            result.remove(name)
-            return result
+            rr_a, aliases = self.resolve_path(name, as_string=True)
         except NoAvailablePathError:
-            raise
-
-    def lookup_forward_path(self, name: str, result=None) -> List[str]:
-        if result is None:
-            result = list()
-        else:
-            pass
-        result.append(name)
-        try:
-            rr_a = self.lookup_first(name, TypesRR.A)
+            result = set()
+            result.add(name)
             return result
-        except NoRecordInCacheError:
-            try:
-                rr_cname = self.lookup_first(name, TypesRR.CNAME)
-                return self.lookup_forward_path(rr_cname.get_first_value(), result)
-            except NoRecordInCacheError:
-                raise
-
-    def lookup_backward_path(self, name: str, result=None) -> List[str]:
-        if result is None:
-            result = list()
-        else:
-            pass
-        result.append(name)
-        try:
-            rr = self.lookup_first_name_from_alias(name)
-            return self.lookup_backward_path(rr.name, result)
-        except NoRecordInCacheError:
-            if len(result) == 1:
-                raise
-            else:
-                result.pop(0)
-                return result
-
-    def resolve_path_aliases(self, domain_name: str) -> List[str]:
-        try:
-            forward_list = self.lookup_forward_path(domain_name)
-        except NoRecordInCacheError:
-            forward_list = list()
-        try:
-            backward_list = self.lookup_backward_path(domain_name)
-            # backward_list.pop(0)
-        except NoRecordInCacheError:
-            backward_list = list()
-        if len(forward_list) + len(backward_list) == 0:
-            raise NoAvailablePathError(domain_name)
-        elif len(forward_list) + len(backward_list) == 1:
-            return forward_list
-        else:
-            result = copy.deepcopy(backward_list)
-            for forward_elem in forward_list:
-                result.append(forward_elem)
-            return result
+        result = set(aliases)
+        result.add(name)
+        return result
 
     def resolve_path(self, domain_name: str, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
         """
@@ -256,65 +207,6 @@ class LocalDnsResolverCache:
                 return self.__inner_resolve_path(rr_cname.get_first_value(), result=result)
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name)
-
-    def resolve_path_also_from_alias(self, nameserver: str) -> RRecord:
-        """
-        This method searches for A type's RR in the cache first using (as name field) the nameserver parameter, and then
-        searches all aliases in the cache to search again other A type's RR for each alias as name.
-        This might help in situations where we found a zone dependency through a NS type query that returns nameservers
-        which lead to A type's query with no answer; some nameservers are only alias, so better check them in the cache.
-
-        :param nameserver: A nameserver.
-        :type nameserver: str
-        :raise NoRecordInCacheError: If there's no such A type RR in the cache.
-        :return: The first valid A type RR that leads to an ip address.
-        :rtype: RRecord
-        """
-        try:
-            return self.lookup_first(nameserver, TypesRR.A)
-        except NoRecordInCacheError:
-            pass
-        try:
-            aliases = self.lookup_all_aliases(nameserver)
-        except NoAvailablePathError:
-            raise
-        for alias in aliases:
-            try:
-                return self.resolve_path_also_from_alias(alias)
-            except NoRecordInCacheError:
-                pass
-        raise NoRecordInCacheError(nameserver, TypesRR.A)
-
-    def resolve_zones_from_nameserver_and_aliases(self, nameserver: str) -> List[Tuple[str, List[RRecord], List[RRecord]]]:
-        """
-        This method, given the nameserver parameter, first tries to resolve such nameserver (in the cache); if an A type
-        RR is found from the nameserver or from all the aliases associated to it, then this method searches in the cache
-        if the resolved nameserver is 'nameserver of the zone' of some zones. In the end the zones are 'constructed'
-        searching for all the nameservers of the zone and the aliases.
-
-        :param nameserver: A name.
-        :type nameserver: str
-        :raise NoRecordInCacheError: If it is impossible to resolve an A type RR from the nameserver parameter.
-        If it is impossible to resolve a zone from the resolved nameserver.
-        :return: A list of all the attributes defined to instantiate a Zone object, put together as a tuple.
-        :rtype: List[Tuple[str, List[RRecord], List[RRecord]]]
-        """
-        results = list()
-        try:
-            rr_a = self.resolve_path_also_from_alias(nameserver)
-        except NoRecordInCacheError:
-            raise
-        try:
-            zone_names = self.resolve_zones_from_nameserver(rr_a.name)
-        except NoRecordInCacheError:
-            raise
-        for zone_name in zone_names:
-            try:
-                result = self.resolve_zone_from_zone_name(zone_name)
-                results.append(result)
-            except NoRecordInCacheError:
-                pass
-        return results
 
     def resolve_zone_from_zone_name(self, zone_name: str) -> Zone:
         """
@@ -412,7 +304,7 @@ class LocalDnsResolverCache:
                     pass
             f.close()
             if take_snapshot:
-                self.take_snapshot()
+                self.take_temp_snapshot()
         except ValueError:
             raise
         except PermissionError:
@@ -597,7 +489,7 @@ class LocalDnsResolverCache:
             if record not in self.cache:
                 self.cache.append(record)
 
-    def take_snapshot(self, project_root_directory=Path.cwd()) -> None:
+    def take_temp_snapshot(self, project_root_directory=Path.cwd()) -> None:
         """
         Method that copies the current state of the cache list in the input folder.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in

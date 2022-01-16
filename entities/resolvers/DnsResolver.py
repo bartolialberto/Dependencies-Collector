@@ -176,8 +176,8 @@ class DnsResolver:
             print(f"!!! {str(e)} !!!")
             raise
         for i, value in enumerate(mx_values.values):
-            print(f"mail server[{i+1}/{len(mx_values.values)}]: {value}")
-            result.add_mail_server(value)
+            print(f"mail server[{i+1}/{len(mx_values.values)}]: {RRecord.parse_mail_server_from_value(value)}")
+            result.add_mail_server(RRecord.parse_mail_server_from_value(value))
         return result
 
     def resolve_domain_dependencies(self, domain: str, consider_tld=True) -> DnsZoneDependenciesResult:

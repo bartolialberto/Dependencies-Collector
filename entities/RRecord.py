@@ -100,6 +100,11 @@ class RRecord:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)
 
+    @staticmethod
+    def parse_mail_server_from_value(value: str) -> str:
+        split_value = value.split(' ')      # TODO: se è un IP? Da gestire
+        return split_value[1]
+
     def __str__(self):
         """
         This method returns a string representation of this object.
