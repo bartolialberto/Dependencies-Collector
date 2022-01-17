@@ -1,5 +1,7 @@
 import unittest
 from peewee import DoesNotExist
+from exceptions.NoAliasFoundError import NoAliasFoundError
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_zone, helper_domain_name, helper_alias, helper_ip_network, helper_rov
 
 
@@ -7,8 +9,9 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
     def test_01_query_zone_dependencies_from_domain_name(self):
         print(f"\n------- [1] QUERY ZONE DEPENDENCIES FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'mail.google.it'
+        domain_name = 'www.youtube.com.'
         # QUERY
+        print(f"Parameter: {domain_name}")
         try:
             zes = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
             print(f"Zone dependencies of domain name: {domain_name}")
@@ -21,22 +24,24 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
     def test_02_query_aliases_from_domain_name(self):
         print(f"\n------- [2] QUERY ALIAS AND ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'mail.google.it'
+        domain_name = 'www.youtube.com.'
         # QUERY
+        print(f"Parameter: {domain_name}")
         try:
             dnes = helper_alias.get_all_aliases_from_name(domain_name)
             print(f"All aliases of domain name: {domain_name}")
             for i, dne in enumerate(dnes):
                 print(f"alias[{i + 1}/{len(dne)}]: {dne.name}")
-        except DoesNotExist as e:
+        except (DoesNotExist, NoAliasFoundError) as e:
             print(f"!!! {str(e)} !!!")
         print(f"------- [2] END QUERY ALIAS AND ACCESS PATH FROM DOMAIN NAME -------")
 
     def test_03_query_access_path_from_domain_name(self):
         print(f"\n------- [3] QUERY ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'dns.nic.it'
+        domain_name = 'www.youtube.com.'
         # QUERY
+        print(f"Parameter: {domain_name}")
         try:
             domain_name_entity = helper_domain_name.get(domain_name)
             try:
@@ -50,7 +55,7 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
                     print(f"Belonging IP network of such IP address: {ine.compressed_notation}")
                 except DoesNotExist as exc:
                     print(f"!!! {str(exc)} !!!")
-            except DoesNotExist as e:
+            except NoAvailablePathError as e:
                 print(f"!!! {str(e)} !!!")
         except DoesNotExist as exc:
             print(f"!!! {str(exc)} !!!")

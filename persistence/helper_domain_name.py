@@ -2,6 +2,7 @@ from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_ip_address, helper_alias
 from persistence.BaseModel import DomainNameEntity, IpAddressEntity
 from utils import domain_name_utils
@@ -38,8 +39,10 @@ def resolve_access_path(domain_name_parameter: DomainNameEntity or str, get_only
             raise
     try:
         inner_result = __inner_resolve_access_path(dne)
-    except (DoesNotExist, NoAliasFoundError):
+    except NoAvailablePathError:
         raise
+    if len(inner_result[0]) == 0:
+        raise NoAvailablePathError(dne.name)
     if get_only_first_address:
         return inner_result[0].pop(), inner_result[1]
     else:
@@ -59,11 +62,11 @@ def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[
         try:
             adnes = helper_alias.get_all_aliases_from_entity(dne)
         except NoAliasFoundError:
-            raise
+            raise NoAvailablePathError(dne.name)
         for adne in adnes:
             try:
                 return __inner_resolve_access_path(adne, chain_dne)
-            except DoesNotExist:
+            except NoAvailablePathError:
                 pass
         raise DoesNotExist
 

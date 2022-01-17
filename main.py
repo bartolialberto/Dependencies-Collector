@@ -65,8 +65,8 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
             print(f"> No '{input_filename}' file found in 'input' folder found.")
             print(f"> Starting application with default values as sample:")
             result_list = list(default_values)
-            for index, mail_domain in enumerate(result_list):
-                print(f"> [{index + 1}/{len(result_list)}]: {mail_domain}")
+            for index, value in enumerate(result_list):
+                print(f"> [{index + 1}/{len(result_list)}]: {value}")
             return result_list
         file = search_result[0]
         abs_filepath = str(file)
@@ -74,9 +74,9 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
             print(f"> Found '{input_filename}' file in 'input' folder.")
             lines = f.readlines()
             for i, line in enumerate(lines):
-                candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
-                print(f"> [{i + 1}/{len(lines)}]: {line}")
-                result_list.append(candidate)
+                value = line.strip()
+                print(f"> [{i+1}/{len(lines)}]: {value}")
+                result_list.append(value)
             f.close()
             if len(result_list) == 0:
                 print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
@@ -92,7 +92,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(persist_errors=False, consider_tld=False) -> Tuple[bool, bool]:
+def get_input_application_flags(default_persist_errors=True, default_consider_tld=True) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -102,10 +102,10 @@ def get_input_application_flags(persist_errors=False, consider_tld=False) -> Tup
 
     2- consider_tld: a flag that will consider or remove the Top-Level Domains when computing zone dependencies
 
-    :param persist_errors: The default value of the flag.
-    :type persist_errors: bool
-    :param consider_tld: The default value of the flag.
-    :type consider_tld: bool
+    :param default_persist_errors: The default value of the flag.
+    :type default_persist_errors: bool
+    :param default_consider_tld: The default value of the flag.
+    :type default_consider_tld: bool
     :return: A tuple of booleans for each flag.
     :rtype: Tuple[bool]
     """
@@ -113,14 +113,15 @@ def get_input_application_flags(persist_errors=False, consider_tld=False) -> Tup
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
         if arg == 'qualcosa_da_definire':
-            persist_errors = True
+            default_persist_errors = True
         if arg == 'qualcosa_da_definire':
-            consider_tld = True
-    print(f"> PERSIST_ERRORS flag: {str(persist_errors)}")
-    print(f"> CONSIDER_TLDs flag: {str(consider_tld)}")
-    return persist_errors, consider_tld
+            default_consider_tld = True
+    print(f"> PERSIST_ERRORS flag: {str(default_persist_errors)}")
+    print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")
+    return default_persist_errors, default_consider_tld
 
 
+# TODO: controllare il file readme.md
 if __name__ == "__main__":
     print("********** START APPLICATION **********")
     headless_browser_is_instantiated = False
@@ -133,7 +134,7 @@ if __name__ == "__main__":
         persist_errors, consider_tld = get_input_application_flags()
         # entities
         print("********** START ACTUAL APPLICATION ELABORATION **********")
-        resolvers = ApplicationResolversWrapper(consider_tld)
+        resolvers = ApplicationResolversWrapper(consider_tld=consider_tld)
         headless_browser_is_instantiated = True
         # auxiliary elaborations
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility

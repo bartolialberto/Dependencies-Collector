@@ -57,6 +57,23 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.results[name_server] = AutonomousSystemResolutionValues()
 
+    def add_ip_address(self, ip_address_parameter: str or ipaddress.IPv4Address):
+        """
+        This method adds (initialize) a new key to the dictionary.
+
+        :param name_server: A name server.
+        :type name_server: str
+        """
+        ip_address_exploded = None
+        if isinstance(ip_address_parameter, ipaddress.IPv4Address):
+            ip_address_exploded = ip_address_parameter.exploded
+        else:
+            ip_address_exploded = ip_address_parameter
+        try:
+            self.results[ip_address_exploded]
+        except KeyError:
+            self.results[ip_address_exploded] = AutonomousSystemResolutionValues()
+
     def set_name_server_to_none(self, for_name_server: str):
         """
         This method sets the value of the name server key to None.

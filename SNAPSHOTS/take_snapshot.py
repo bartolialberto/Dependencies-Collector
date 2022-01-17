@@ -15,9 +15,9 @@ def take_snapshot(exception: Exception):
     folder = Path(f"{str(Path.cwd())}{os.sep}SNAPSHOTS{os.sep}{folder_name}")
     folder.mkdir(parents=True, exist_ok=False)
     starting_cache_file = Path(f"{str(folder)}{os.sep}starting_cache.csv")
-    web_sites_file = Path(f"{str(folder)}{os.sep}web_sites.csv")
-    mail_domains_file = Path(f"{str(folder)}{os.sep}mail_domains.csv")
-    flags_file = Path(f"{str(folder)}{os.sep}flags.csv")
+    web_sites_file = Path(f"{str(folder)}{os.sep}web_sites.txt")
+    mail_domains_file = Path(f"{str(folder)}{os.sep}mail_domains.txt")
+    flags_file = Path(f"{str(folder)}{os.sep}flags.txt")
     error_file = Path(f"{str(folder)}{os.sep}error.txt")
 
     # load starting cache

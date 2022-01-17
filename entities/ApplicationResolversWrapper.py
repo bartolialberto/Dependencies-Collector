@@ -93,7 +93,9 @@ class ApplicationResolversWrapper:
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                 print(f"!!! {str(e)} !!!")
                 raise Exception
+            print(f"> TLDs scraping completed. {len(tlds)} TLDs parsed.")
         else:
+            print(f"> No TLDs scraping executed.")
             self._tld_scraper = None
             tlds = None
         self.dns_resolver = DnsResolver(tlds)
@@ -118,6 +120,9 @@ class ApplicationResolversWrapper:
         self.error_logger = ErrorLogger()
         # results
         self.landing_web_sites_results = dict()
+
+        self.landing_web_sites_ip_map_to_as_number = dict()     # Dict[ipaddress.IPv4Address, ipaddress.IPv4Network]
+
         self.landing_script_sites_results = dict()
         self.web_site_script_dependencies = dict()
         self.script_script_site_dependencies = tuple()
@@ -260,14 +265,6 @@ class ApplicationResolversWrapper:
         """
         print("\n\nSTART IP-AS RESOLVER")
         results = AutonomousSystemResolutionResults()
-        # ip_as_db_entries_result = dict()
-        zone_obj_dict = dict()
-        for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
-            for zone in dns_results.zone_dependencies_per_domain_name[domain_name]:
-                try:
-                    zone_obj_dict[zone.name]
-                except KeyError:
-                    zone_obj_dict[zone.name] = zone
         for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
@@ -289,21 +286,47 @@ class ApplicationResolversWrapper:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(
                                 f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            # ip_as_db_entries_result[rr.name] = (ip, entry, belonging_network_ip_as_db)
                             results.insert_belonging_network(nameserver, belonging_network_ip_as_db)
                         except ValueError as exc:
                             print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.compressed, f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
-                            # ip_as_db_entries_result[rr.name] = (ip, entry, None)
                             results.insert_belonging_network(nameserver, None)
                     except AutonomousSystemNotFoundError as exc:
                         print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
                         self.error_logger.add_entry(ErrorLog(exc, ip.compressed, str(exc)))
-                        # ip_as_db_entries_result[rr.name] = (ip, None, None)
                         results.insert_ip_as_entry(nameserver, None)
                         results.insert_belonging_network(nameserver, None)
+        print()
+        for i, web_site in enumerate(self.landing_web_sites_results.keys()):
+            print(f"Handling web site[{i+1}/{len(self.landing_web_sites_results.keys())}]:")
+            https_result = self.landing_web_sites_results[web_site].https
+            http_result = self.landing_web_sites_results[web_site].http
+            if https_result is not None:
+                try:
+                    entry = self.ip_as_database.resolve_range(https_result.ip)
+                    print(f"--> HTTPS IP address {https_result.ip.exploded} resolved in AS{entry.as_number}")
+                    self.landing_web_sites_ip_map_to_as_number[https_result.ip.exploded] = entry.as_number
+                    try:
+                        belonging_network, networks = entry.get_network_of_ip(ip)
+                    except ValueError as e:
+                        pass
+                        # TODO
+                except AutonomousSystemNotFoundError as e:
+                    self.error_logger.add_entry(ErrorLog(e, https_result.ip.exploded, str(e)))
+                    print(f"--> HTTPS IP address {https_result.ip.exploded} was not resolved.")
+            else:
+                print(f"--> HTTPS didn't land anywhere.")
+            if http_result is not None:
+                try:
+                    entry = self.ip_as_database.resolve_range(http_result.ip)
+                    print(f"--> HTTP IP address {http_result.ip.exploded} resolved in AS{entry.as_number}")
+                    self.landing_web_sites_ip_map_to_as_number[http_result.ip.exploded] = entry.as_number
+                except AutonomousSystemNotFoundError as e:
+                    self.error_logger.add_entry(ErrorLog(e, http_result.ip.exploded, str(e)))
+                    print(f"--> HTTP IP address {http_result.ip.exploded} was not resolved.")
+            else:
+                print(f"--> HTTP didn't land anywhere.")
         print("END IP-AS RESOLVER")
-        # return ip_as_db_entries_result
         return results
 
     def do_script_dependencies_resolving(self) -> Dict[str, ScriptDependenciesResult]:
