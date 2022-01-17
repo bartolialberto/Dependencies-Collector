@@ -325,7 +325,7 @@ class ScriptServerDomainNameAssociation(BaseModel):
 
 
 class AccessAssociation(BaseModel):
-    domain_name = ForeignKeyField(DomainNameEntity)
+    domain_name = ForeignKeyField(DomainNameEntity, null=True)
     ip_address = ForeignKeyField(IpAddressEntity, null=True)
 
     def __str__(self):

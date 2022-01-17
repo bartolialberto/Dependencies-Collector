@@ -120,9 +120,6 @@ class ApplicationResolversWrapper:
         self.error_logger = ErrorLogger()
         # results
         self.landing_web_sites_results = dict()
-
-        self.landing_web_sites_ip_map_to_as_number = dict()     # Dict[ipaddress.IPv4Address, ipaddress.IPv4Network]
-
         self.landing_script_sites_results = dict()
         self.web_site_script_dependencies = dict()
         self.script_script_site_dependencies = tuple()
@@ -158,7 +155,7 @@ class ApplicationResolversWrapper:
         :rtype: List[str]
         """
         current_dns_results = self.do_dns_resolving(domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results)
         self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
         # extracting
@@ -181,7 +178,7 @@ class ApplicationResolversWrapper:
         :type domain_names: List[str]
         """
         current_dns_results = self.do_dns_resolving(domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results)
 
         # merging results
         self.total_dns_results.merge(current_dns_results)
@@ -254,7 +251,7 @@ class ApplicationResolversWrapper:
         print("END DNS DEPENDENCIES RESOLVER")
         return results
 
-    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult) -> AutonomousSystemResolutionResults:
+    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[str, LandingSiteResult]) -> AutonomousSystemResolutionResults:
         """
         This method executes IP-AS resolving from the DNS resolving results.
 
@@ -266,64 +263,87 @@ class ApplicationResolversWrapper:
         print("\n\nSTART IP-AS RESOLVER")
         results = AutonomousSystemResolutionResults()
         for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
-            print(f"Handling domain[{index_domain}] '{domain}'")
+            print(f"Handling domain[{index_domain}]: {domain}")
             for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
-                print(f"--> Handling zone[{index_zone}] '{zone.name}'")
+                print(f"--> Handling zone[{index_zone}]: {zone.name}")
                 for i, nameserver in enumerate(zone.nameservers):
-                    results.add_name_server(nameserver)
                     try:
-                        # TODO: gestire più indirizzi per nameserver
+                        rr_a = zone.resolve_nameserver(nameserver)
+                    except NoAvailablePathError:
+                        print(f"!!! NO RESOLVED IP ADDRESS FROM name server: {nameserver} !!!")
+                        continue
+                    for ip_string in rr_a.values:
+                        results.add_ip_address(ip_string)
+                        results.insert_name_server(ip_string, nameserver)
+                        ip = ipaddress.IPv4Address(ip_string)        # no exception catch needed
                         try:
-                            rr = zone.resolve_nameserver(nameserver)
-                        except NoAvailablePathError:
-                            results.set_name_server_to_none(nameserver)
+                            entry = self.ip_as_database.resolve_range(ip)
+                        except (AutonomousSystemNotFoundError, ValueError) as e:
+                            results.insert_ip_as_entry(ip, None)
+                            results.insert_belonging_network(ip, None)
+                            print(f"!!! {str(e)} !!!")
                             continue
-                        ip = ipaddress.IPv4Address(rr.get_first_value())        # no exception catch needed
-                        results.insert_ip_address(nameserver, ip)
-                        entry = self.ip_as_database.resolve_range(ip)
-                        results.insert_ip_as_entry(nameserver, entry)
+                        results.insert_ip_as_entry(ip_string, entry)
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
-                            print(
-                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            results.insert_belonging_network(nameserver, belonging_network_ip_as_db)
+                            print(f"----> for {ip.compressed} ({nameserver}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
+                            results.insert_belonging_network(ip_string, belonging_network_ip_as_db)
                         except ValueError as exc:
-                            print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
+                            print(f"----> for {ip.compressed} ({nameserver}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.compressed, f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
-                            results.insert_belonging_network(nameserver, None)
-                    except AutonomousSystemNotFoundError as exc:
-                        print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
-                        self.error_logger.add_entry(ErrorLog(exc, ip.compressed, str(exc)))
-                        results.insert_ip_as_entry(nameserver, None)
-                        results.insert_belonging_network(nameserver, None)
+                            results.insert_belonging_network(ip_string, None)
         print()
-        for i, web_site in enumerate(self.landing_web_sites_results.keys()):
-            print(f"Handling web site[{i+1}/{len(self.landing_web_sites_results.keys())}]:")
-            https_result = self.landing_web_sites_results[web_site].https
-            http_result = self.landing_web_sites_results[web_site].http
+        for i, site in enumerate(landing_results.keys()):
+            print(f"Handling site[{i+1}/{len(landing_results.keys())}]: {site}")
+            https_result = landing_results[site].https
+            http_result = landing_results[site].http
             if https_result is not None:
+                results.add_ip_address(https_result.ip.exploded)
+                results.insert_name_server(https_result.ip.exploded, None)
+                print(f"--> HTTPS IP address {https_result.ip.exploded}")
                 try:
                     entry = self.ip_as_database.resolve_range(https_result.ip)
-                    print(f"--> HTTPS IP address {https_result.ip.exploded} resolved in AS{entry.as_number}")
-                    self.landing_web_sites_ip_map_to_as_number[https_result.ip.exploded] = entry.as_number
+                    print(f"----> Resolved in AS{entry.as_number}")
+                    results.insert_ip_as_entry(https_result.ip.exploded, entry)
                     try:
-                        belonging_network, networks = entry.get_network_of_ip(ip)
-                    except ValueError as e:
-                        pass
-                        # TODO
+                        belonging_network, networks = entry.get_network_of_ip(https_result.ip)
+                        print(f"----> belonging network: {belonging_network.compressed}")
+                        results.insert_belonging_network(https_result.ip.exploded, belonging_network)
+                    except ValueError as exc:
+                        print(f"----> belonging network: NOT FOUND")
+                        self.error_logger.add_entry(ErrorLog(exc, https_result.ip.exploded, str(exc)))
+                        results.insert_belonging_network(https_result.ip.exploded, None)
                 except AutonomousSystemNotFoundError as e:
                     self.error_logger.add_entry(ErrorLog(e, https_result.ip.exploded, str(e)))
-                    print(f"--> HTTPS IP address {https_result.ip.exploded} was not resolved.")
+                    results.insert_ip_as_entry(https_result.ip.exploded, None)
+                    results.insert_belonging_network(https_result.ip.exploded, None)
+                    print(f"----> Not resolved.")
+                    print(f"----> belonging network: NOT FOUND")
             else:
                 print(f"--> HTTPS didn't land anywhere.")
             if http_result is not None:
-                try:
-                    entry = self.ip_as_database.resolve_range(http_result.ip)
-                    print(f"--> HTTP IP address {http_result.ip.exploded} resolved in AS{entry.as_number}")
-                    self.landing_web_sites_ip_map_to_as_number[http_result.ip.exploded] = entry.as_number
-                except AutonomousSystemNotFoundError as e:
-                    self.error_logger.add_entry(ErrorLog(e, http_result.ip.exploded, str(e)))
-                    print(f"--> HTTP IP address {http_result.ip.exploded} was not resolved.")
+                if https_result is not None:
+                    if http_result.ip.exploded != https_result.ip.exploded:
+                        results.add_ip_address(http_result.ip.exploded)
+                        results.insert_name_server(http_result.ip.exploded, None)
+                        try:
+                            entry = self.ip_as_database.resolve_range(http_result.ip)
+                            print(f"--> HTTP IP address {http_result.ip.exploded} resolved in AS{entry.as_number}")
+                            results.insert_ip_as_entry(http_result.ip.exploded, entry)
+                            try:
+                                belonging_network, networks = entry.get_network_of_ip(http_result.ip)
+                                print(f"----> belonging network: {belonging_network.compressed}")
+                                results.insert_belonging_network(http_result.ip.exploded, belonging_network)
+                            except ValueError as exc:
+                                print(f"----> belonging network: NOT FOUND")
+                                self.error_logger.add_entry(ErrorLog(exc, http_result.ip.exploded, str(exc)))
+                                results.insert_belonging_network(http_result.ip.exploded, None)
+                        except AutonomousSystemNotFoundError as e:
+                            self.error_logger.add_entry(ErrorLog(e, http_result.ip.exploded, str(e)))
+                            results.insert_ip_as_entry(http_result.ip.exploded, None)
+                            results.insert_belonging_network(http_result.ip.exploded, None)
+                            print(f"----> Not resolved.")
+                            print(f"----> belonging network: NOT FOUND")
             else:
                 print(f"--> HTTP didn't land anywhere.")
         print("END IP-AS RESOLVER")
@@ -439,18 +459,18 @@ class ApplicationResolversWrapper:
                 # entries_result_by_as.pop(as_number)       # tenerlo oppure no?
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
-            for nameserver in reformat.results[as_number].keys():
-                ip_string = reformat.results[as_number][nameserver].ip_address
-                entry_ip_as_db = reformat.results[as_number][nameserver].entry_as_database
-                belonging_network_ip_as_db = reformat.results[as_number][nameserver].belonging_network
+            for ip_address in reformat.results[as_number].keys():
+                name_server = reformat.results[as_number][ip_address].name_server
+                entry_ip_as_db = reformat.results[as_number][ip_address].entry_as_database
+                belonging_network_ip_as_db = reformat.results[as_number][ip_address].belonging_network
                 try:
-                    row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
-                    reformat.results[as_number][nameserver].insert_rov_entry(row)
-                    print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
+                    row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_address))  # non gestisco ValueError perché non può accadere qua
+                    reformat.results[as_number][ip_address].insert_rov_entry(row)
+                    print(f"--> for {ip_address} ({name_server}) found row: {str(row)}")
                 except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {exc.message} !!!")
-                    reformat.results[as_number][nameserver].insert_rov_entry(None)
-                    self.error_logger.add_entry(ErrorLog(exc, ip_string, str(exc)))
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)
+                    self.error_logger.add_entry(ErrorLog(exc, name_server, str(exc)))
         print("END ROV PAGE SCRAPING")
         return reformat
 

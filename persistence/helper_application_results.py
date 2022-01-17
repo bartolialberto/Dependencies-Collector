@@ -187,41 +187,48 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping, p
     for as_number in finals.results.keys():
         ase = helper_autonomous_system.insert(as_number)
         if finals.results[as_number] is not None:
-            for nameserver in finals.results[as_number].keys():
+            for ip_address in finals.results[as_number].keys():
                 try:
-                    nse, dne = helper_name_server.get(nameserver)
+                    iae = helper_ip_address.get(ip_address)
                 except DoesNotExist:
                     raise
-                if finals.results[as_number][nameserver] is not None:
-                    ip_address = finals.results[as_number][nameserver].ip_address
-                    entry_ip_as_db = finals.results[as_number][nameserver].entry_as_database
-                    belonging_network = finals.results[as_number][nameserver].belonging_network
-                    row_prefixes_table = finals.results[as_number][nameserver].entry_rov_page
+                if finals.results[as_number][ip_address] is not None:
+                    name_server = finals.results[as_number][ip_address].name_server
+                    if name_server is not None:
+                        entry_ip_as_db = finals.results[as_number][ip_address].entry_as_database
+                        belonging_network = finals.results[as_number][ip_address].belonging_network
+                        row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
 
-                    iae = helper_ip_address.insert(ip_address)
-                    helper_access.insert(dne, iae)
+                        nse, dne = helper_name_server.insert(name_server)
+                        helper_access.insert(dne, iae)
 
-                    if entry_ip_as_db is not None:
-                        if row_prefixes_table is not None:
-                            ine = helper_ip_network.insert(row_prefixes_table.prefix)
-                            helper_ip_address_depends.insert(iae, ine)
-                            re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
-                            helper_prefixes_table.insert(ine, re, ase)
-                        else:
-                            if belonging_network is not None:
-                                ine = helper_ip_network.insert(belonging_network)
+                        if entry_ip_as_db is not None:
+                            if row_prefixes_table is not None:
+                                ine = helper_ip_network.insert(row_prefixes_table.prefix)
                                 helper_ip_address_depends.insert(iae, ine)
-                                helper_prefixes_table.insert(ine, None, ase)
+                                re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
+                                helper_prefixes_table.insert(ine, re, ase)
                             else:
-                                if persist_errors:
-                                    helper_ip_address_depends.insert(iae, None)
+                                if belonging_network is not None:
+                                    ine = helper_ip_network.insert(belonging_network)
+                                    helper_ip_address_depends.insert(iae, ine)
+                                    helper_prefixes_table.insert(ine, None, ase)
                                 else:
-                                    pass
+                                    if persist_errors:
+                                        helper_ip_address_depends.insert(iae, None)
+                                    else:
+                                        pass
+                        else:
+                            pass
                     else:
-                        pass
+                        if persist_errors:
+                            helper_access.insert(None, iae)
+                        else:
+                            pass
                 else:
                     if persist_errors:
-                        helper_access.insert(dne, None)
+                        helper_access.insert(None, iae)
+                        helper_ip_address_depends.insert(iae, None)
                     else:
                         pass
         else:

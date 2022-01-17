@@ -6,13 +6,13 @@ from pathlib import Path
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_application_results
 from persistence.BaseModel import db
-from utils import network_utils, list_utils, file_utils, snapshot_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
 
 
-def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
+def get_input_websites(default_websites=('https://google.it/doodles', 'https://www.youtube.it/feed/explore')) -> List[str]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
-    They can be set from command line and from a file name websites.txt put in the input folder in which each website is
+    They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is
     written per line. The application will control first the command line and then the file. If no website is set
     neither in the 2 ways, the application will start with 2 default websites show its behaviour.
     Such websites are: google.it/doodles, www.youtube.it/feed/explore.
@@ -23,7 +23,11 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
-    return get_input_generic_file('web_sites.txt', default_websites)
+    lines = get_input_generic_file('web_pages.txt', default_websites)
+    values = list(map(lambda line: url_utils.deduct_second_component(line), lines))
+    for i, value in enumerate(values):
+        print(f"> [{i+1}/{len(lines)}]: {value}")
+    return values
 
 
 def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) -> List[str]:
@@ -40,7 +44,10 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
-    return get_input_generic_file('mail_domains.txt', default_mail_domains)
+    lines = get_input_generic_file('mail_domains.txt', default_mail_domains)
+    for i, value in enumerate(lines):
+        print(f"> [{i+1}/{len(lines)}]: {value}")
+    return lines
 
 
 def get_input_generic_file(input_filename: str, default_values: tuple) -> List[str]:
@@ -56,38 +63,26 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     :rtype: List[str]
     """
     result_list = list()
-    if len(sys.argv) == 1:
-        print(f"> No values found in command line.")
-        search_result = None
-        try:
-            search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
-        except FilenameNotFoundError:
-            print(f"> No '{input_filename}' file found in 'input' folder found.")
-            print(f"> Starting application with default values as sample:")
-            result_list = list(default_values)
-            for index, value in enumerate(result_list):
-                print(f"> [{index + 1}/{len(result_list)}]: {value}")
-            return result_list
-        file = search_result[0]
-        abs_filepath = str(file)
-        with open(abs_filepath, 'r') as f:  # 'w' or 'x'
-            print(f"> Found '{input_filename}' file in 'input' folder.")
-            lines = f.readlines()
-            for i, line in enumerate(lines):
-                value = line.strip()
-                print(f"> [{i+1}/{len(lines)}]: {value}")
-                result_list.append(value)
-            f.close()
-            if len(result_list) == 0:
-                print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
-                exit(0)
-    else:
-        print('> Argument List:', str(sys.argv))
-        for arg in sys.argv[1:]:
-            result_list.append(arg)
-        print(f"> Parsed {len(result_list)} well-formatted inputs:")
-        for index, value in enumerate(result_list):
-            print(f"> [{index + 1}/{len(result_list)}]: {value}")
+    search_result = None
+    try:
+        search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
+    except FilenameNotFoundError:
+        print(f"> No '{input_filename}' file found in 'input' folder found.")
+        print(f"> Starting application with default values as sample:")
+        result_list = list(default_values)
+        return result_list
+    file = search_result[0]
+    abs_filepath = str(file)
+    with open(abs_filepath, 'r') as f:  # 'w' or 'x'
+        print(f"> Found '{input_filename}' file in 'input' folder.")
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            value = line.strip()
+            result_list.append(value)
+        f.close()
+        if len(result_list) == 0:
+            print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
+            exit(0)
     result_list = list_utils.remove_duplicates(result_list)
     return result_list
 

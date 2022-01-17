@@ -6,7 +6,6 @@ from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.error_log.ErrorLogger import ErrorLogger
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -16,6 +15,9 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
+
+
 class DnsResolvingTestCase(unittest.TestCase):
     """
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
@@ -69,7 +71,7 @@ class DnsResolvingTestCase(unittest.TestCase):
         if not cls.consider_tld:
             try:
                 headless_browser = FirefoxHeadlessWebDriver(cls.PRD)
-            except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+            except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
                 print(f"!!! {str(e)} !!!")
                 return
             cls.tld_scraper = TLDPageScraper(headless_browser)

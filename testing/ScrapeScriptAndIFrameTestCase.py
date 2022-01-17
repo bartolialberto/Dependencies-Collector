@@ -3,7 +3,7 @@ from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 
 
 class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
@@ -28,7 +28,7 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
         PRD = ScrapeScriptAndIFrameTestCase.get_project_root_folder()
         try:
             cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
-        except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+        except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             return
         script_resolver = ScriptDependenciesResolver(cls.headless_browser)

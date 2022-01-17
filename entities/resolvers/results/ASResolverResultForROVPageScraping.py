@@ -14,28 +14,28 @@ class ASResolverValueForROVPageScraping:
 
      Attributes
      ----------
-     ip_address : ipaddress.IPv4Address or None
-        An IP address or None.
-     entry_as_database : EntryIpAsDatabase
+     name_server : str or None
+        A name server.
+     entry_as_database : EntryIpAsDatabase or None
         An entry of the IpAsDatabase.
      entry_rov_page : RowPrefixesTable or None
         A row of the prefixes table of the ROVPageScraper or None.
      belonging_network : ipaddress.IPv4Network or None
         An IP network or None.
     """
-    def __init__(self, ip_address: ipaddress.IPv4Address, entry_as_database: EntryIpAsDatabase or None, network: ipaddress.IPv4Network or None):
+    def __init__(self, name_server: str or None, entry_as_database: EntryIpAsDatabase or None, network: ipaddress.IPv4Network or None):
         """
         Initialize the object but sets the 'entry_rov_page' to None, because the idea is that ROVPageScraping it has yet
         to happen, so the object should updated later.
 
-        :param ip_address: A valid IP address or None.
-        :type ip_address: ipaddress.IPv4Address or None
+        :param name_server: A name server.
+        :type name_server: str
         :param entry_as_database: An entry of the IpAsDatabase.
         :type entry_as_database: EntryIpAsDatabase
         :param network: An IP network or None.
         :type network: ipaddress.IPv4Network or None
         """
-        self.ip_address = ip_address
+        self.name_server = name_server
         self.entry_as_database = entry_as_database
         self.entry_rov_page = None
         self.belonging_network = network
@@ -60,14 +60,14 @@ class ASResolverValueForROVPageScraping:
         :return: An ASResolverValueForROVPageScraping object.
         :rtype: ASResolverValueForROVPageScraping
         """
-        return ASResolverValueForROVPageScraping(value.ip_address, value.entry, value.belonging_network)
+        return ASResolverValueForROVPageScraping(value.name_server, value.entry, value.belonging_network)
 
 
 class ASResolverResultForROVPageScraping:
     """
     This class represents a reformatted AutonomousSystemResolutionResults object. This reformat consists in reverting
     the dictionary belonging to the AutonomousSystemResolutionResults object in a manner that uses the autonomous
-    system's number as keys, then the associated value to such key is another dictionary that uses name server as keys;
+    system's number as keys, then the associated value to such key is another dictionary that uses IP addresses as keys;
     the latter dictionary then associate such keys to a collection of infos, that are all 'contained' in a
     ASResolverValueForROVPageScraping object.
 
@@ -87,16 +87,16 @@ class ASResolverResultForROVPageScraping:
         :type as_results: AutonomousSystemResolutionResults
         """
         self.results = dict()
-        for name_server in as_results.results.keys():
-            if as_results.results[name_server].entry.as_number is None:
+        for ip_address in as_results.results.keys():
+            if as_results.results[ip_address].entry.as_number is None:
                 continue
             try:
-                self.results[as_results.results[name_server].entry.as_number]
+                self.results[as_results.results[ip_address].entry.as_number]
                 try:
-                    self.results[as_results.results[name_server].entry.as_number][name_server]
+                    self.results[as_results.results[ip_address].entry.as_number][ip_address]
                 except KeyError:
-                    self.results[as_results.results[name_server].entry.as_number][name_server] = ASResolverValueForROVPageScraping.construct_from(as_results.results[name_server])
+                    self.results[as_results.results[ip_address].entry.as_number][ip_address] = ASResolverValueForROVPageScraping.construct_from(as_results.results[ip_address])
             except KeyError:
-                self.results[as_results.results[name_server].entry.as_number] = dict()
-                self.results[as_results.results[name_server].entry.as_number][name_server] = ASResolverValueForROVPageScraping.construct_from(as_results.results[name_server])
+                self.results[as_results.results[ip_address].entry.as_number] = dict()
+                self.results[as_results.results[ip_address].entry.as_number][ip_address] = ASResolverValueForROVPageScraping.construct_from(as_results.results[ip_address])
 

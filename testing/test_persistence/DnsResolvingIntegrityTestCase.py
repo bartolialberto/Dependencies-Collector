@@ -5,7 +5,6 @@ from peewee import DoesNotExist
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.TLDPageScraper import TLDPageScraper
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
@@ -69,7 +68,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         if not cls.consider_tld:
             try:
                 headless_browser = FirefoxHeadlessWebDriver(PRD)
-            except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+            except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
                 print(f"!!! {str(e)} !!!")
                 cls.fail(str(e))
             cls.headless_browser_is_instantiated = True

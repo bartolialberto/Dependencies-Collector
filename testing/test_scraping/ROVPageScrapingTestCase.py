@@ -4,7 +4,7 @@ from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.ROVPageScraper import ROVPageScraper
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
@@ -28,7 +28,7 @@ class ROVPageScrapingTestCase(unittest.TestCase):
         PRD = ROVPageScrapingTestCase.get_project_root_folder()
         try:
             cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
-        except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+        except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             raise Exception
         cls.rov_page_scraper = ROVPageScraper(cls.headless_browser)

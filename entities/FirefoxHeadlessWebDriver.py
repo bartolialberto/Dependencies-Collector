@@ -3,7 +3,7 @@ import selenium
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from seleniumwire import webdriver
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from utils import file_utils
 
 
@@ -38,14 +38,14 @@ class FirefoxHeadlessWebDriver:
 
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
-        :raise FileWithExtensionNotFoundError: If the geckodriver executable is not found.
+        :raise FilenameNotFoundError: If the geckodriver executable is not found.
         :raise selenium.common.exceptions.WebDriverException: If there's a problem initializing the service object or
         the webdriver object.
         """
         try:
             # TODO: ma se è linux o mac ... ?
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".exe", project_root_directory)
-        except FileWithExtensionNotFoundError:
+            result = file_utils.search_for_filename_in_subdirectory('input', 'geckodriver.exe', project_root_directory)
+        except FilenameNotFoundError:
             raise
         gecko_driver_file = result[0]
         self.gecko_driver_path = str(gecko_driver_file)     # abs path

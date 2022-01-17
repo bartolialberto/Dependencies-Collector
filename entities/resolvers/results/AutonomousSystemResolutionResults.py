@@ -4,22 +4,22 @@ from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 
 class AutonomousSystemResolutionValues:
     """
-    This class represents a collection of infos associated to a name server.
+    This class represents a collection of infos associated to an IP address.
     It main purpose is to serve as 'wrapper'.
 
     ...
 
      Attributes
      ----------
-     ip_address : ipaddress.IPv4Address or None
-        An IP address or None.
+     name_server : str or None
+        A name server.
      entry : EntryIpAsDatabase
         An entry of the IpAsDatabase.
      belonging_network : ipaddress.IPv4Network or None
         An IP network or None.
     """
     def __init__(self):
-        self.ip_address = ipaddress.IPv4Address
+        self.name_server = str or None
         self.entry = None or EntryIpAsDatabase
         self.belonging_network = None or ipaddress.IPv4Network
 
@@ -27,7 +27,7 @@ class AutonomousSystemResolutionValues:
 class AutonomousSystemResolutionResults:
     """
     This class represents the result from the IpAsDatabase resolving after an IP address input.
-    In short words consists in a dictionary that uses name servers as keys and a collection of info related with it as
+    In short words consists in a dictionary that uses IP addresses as keys and a collection of info related with it as
     values, those collection of infos is represented by an AutonomousSystemResolutionValues object.
 
     ...
@@ -45,24 +45,12 @@ class AutonomousSystemResolutionResults:
         """
         self.results = dict()
 
-    def add_name_server(self, name_server: str):
-        """
-        This method adds (initialize) a new key to the dictionary.
-
-        :param name_server: A name server.
-        :type name_server: str
-        """
-        try:
-            self.results[name_server]
-        except KeyError:
-            self.results[name_server] = AutonomousSystemResolutionValues()
-
     def add_ip_address(self, ip_address_parameter: str or ipaddress.IPv4Address):
         """
         This method adds (initialize) a new key to the dictionary.
 
-        :param name_server: A name server.
-        :type name_server: str
+        :param ip_address_parameter: An IP address.
+        :type ip_address_parameter: str or ipaddress.IPv4Address
         """
         ip_address_exploded = None
         if isinstance(ip_address_parameter, ipaddress.IPv4Address):
@@ -74,47 +62,67 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.results[ip_address_exploded] = AutonomousSystemResolutionValues()
 
-    def set_name_server_to_none(self, for_name_server: str):
+    def set_ip_address_to_none(self, for_ip_address_parameter: str or ipaddress.IPv4Address):
         """
-        This method sets the value of the name server key to None.
+        This method sets the value of the IP address key to None.
 
-        :param for_name_server: A name server.
-        :type for_name_server: str
+        :param for_ip_address_parameter: An IP address.
+        :type for_ip_address_parameter: str or ipaddress.IPv4Address
         """
-        self.results[for_name_server] = None
+        for_ip_address_exploded = None
+        if isinstance(for_ip_address_parameter, ipaddress.IPv4Address):
+            for_ip_address_exploded = for_ip_address_parameter.exploded
+        else:
+            for_ip_address_exploded = for_ip_address_parameter
+        self.results[for_ip_address_exploded] = None
 
-    def insert_ip_address(self, for_name_server: str, ip_address: ipaddress.IPv4Address):
+    def insert_name_server(self, for_ip_address_parameter: str or ipaddress.IPv4Address, name_server: str or None):
         """
-        This method sets the ip address attribute of the value associated to the name server key parameter.
+        This method sets the name server attribute of the value associated to the IP address key parameter.
 
-        :param for_name_server: A name server.
-        :type for_name_server: str
-        :param ip_address: An IP address.
-        :type ip_address: ipaddress.IPv4Address
+        :param for_ip_address_parameter: An IP address.
+        :type for_ip_address_parameter: str or ipaddress.IPv4Address
+        :param name_server: A name server.
+        :type name_server: str or None
         """
-        self.results[for_name_server].ip_address = ip_address
+        for_ip_address_exploded = None
+        if isinstance(for_ip_address_parameter, ipaddress.IPv4Address):
+            for_ip_address_exploded = for_ip_address_parameter.exploded
+        else:
+            for_ip_address_exploded = for_ip_address_parameter
+        self.results[for_ip_address_exploded].name_server = name_server
 
-    def insert_ip_as_entry(self, for_name_server: str, entry: EntryIpAsDatabase or None):
+    def insert_ip_as_entry(self, for_ip_address_parameter: str or ipaddress.IPv4Address, entry: EntryIpAsDatabase or None):
         """
-        This method sets the entry attribute of the value associated to the name server key parameter.
+        This method sets the entry attribute of the value associated to the IP address key parameter.
 
-        :param for_name_server: A name server.
-        :type for_name_server: str
+        :param for_ip_address_parameter: An IP address.
+        :type for_ip_address_parameter: str or ipaddress.IPv4Address
         :param entry: A valid entry or None.
         :type entry: EntryIpAsDatabase or None
         """
-        self.results[for_name_server].entry = entry
+        for_ip_address_exploded = None
+        if isinstance(for_ip_address_parameter, ipaddress.IPv4Address):
+            for_ip_address_exploded = for_ip_address_parameter.exploded
+        else:
+            for_ip_address_exploded = for_ip_address_parameter
+        self.results[for_ip_address_exploded].entry = entry
 
-    def insert_belonging_network(self, for_name_server: str, network: ipaddress.IPv4Network or None):
+    def insert_belonging_network(self, for_ip_address_parameter: str or ipaddress.IPv4Address, network: ipaddress.IPv4Network or None):
         """
-        This method sets the network attribute of the value associated to the name server key parameter.
+        This method sets the network attribute of the value associated to the IP address key parameter.
 
-        :param for_name_server: A name server.
-        :type for_name_server: str
+        :param for_ip_address_parameter: An IP address.
+        :type for_ip_address_parameter: str or ipaddress.IPv4Address
         :param network: A IP network or None.
         :type network: ipaddress.IPv4Network or None
         """
-        self.results[for_name_server].belonging_network = network
+        for_ip_address_exploded = None
+        if isinstance(for_ip_address_parameter, ipaddress.IPv4Address):
+            for_ip_address_exploded = for_ip_address_parameter.exploded
+        else:
+            for_ip_address_exploded = for_ip_address_parameter
+        self.results[for_ip_address_exploded].belonging_network = network
 
     def merge(self, other: 'AutonomousSystemResolutionResults'):        # FORWARD DECLARATIONS (REFERENCES)
         """
@@ -124,5 +132,5 @@ class AutonomousSystemResolutionResults:
         :param other: Another AutonomousSystemResolutionResults object.
         :type other: AutonomousSystemResolutionResults
         """
-        for name_server in other.results.keys():
-            self.results[name_server] = other.results[name_server]
+        for ip_address in other.results.keys():
+            self.results[ip_address] = other.results[ip_address]

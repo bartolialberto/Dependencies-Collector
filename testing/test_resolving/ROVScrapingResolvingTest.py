@@ -10,7 +10,7 @@ from entities.resolvers.results.AutonomousSystemResolutionResults import Autonom
 from entities.scrapers.ROVPageScraper import ROVPageScraper
 from exceptions import TableEmptyError
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
-from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
@@ -74,7 +74,7 @@ class ROVScrapingResolvingTestCase(unittest.TestCase):
 
         try:
             headless_browser = FirefoxHeadlessWebDriver(PRD)
-        except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
+        except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             return
         rov_page_scraper = ROVPageScraper(headless_browser)
