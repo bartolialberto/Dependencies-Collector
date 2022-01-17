@@ -64,3 +64,21 @@ def is_in_network(ip: ipaddress.IPv4Address, network: ipaddress.IPv4Network) -> 
         return True
     else:
         return False
+
+
+def get_predefined_network(ip_parameter: ipaddress.IPv4Address or str) -> ipaddress.IPv4Network:
+    """
+    Given an IP address returns the associated network that changes the last number to zero and then (using compressed
+    notation) taking 24 bits as mask length.
+
+    :param ip_parameter: An IP address.
+    :type ip_parameter: ipaddress.IPv4Address or str
+    :return: The predefined network.
+    :rtype: ipaddress.IPv4Network
+    """
+    if isinstance(ip_parameter, ipaddress.IPv4Address):
+        ip = ip_parameter.exploded
+    else:
+        ip = ip_parameter
+    split = ip.split('.')
+    return ipaddress.IPv4Network(split[0]+'.'+split[1]+'.'+split[2]+'.0/24')

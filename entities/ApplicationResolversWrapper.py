@@ -378,7 +378,6 @@ class ApplicationResolversWrapper:
                     http_scripts = self.script_resolver.search_script_application_dependencies(http_landing_page)
                     for i, script in enumerate(http_scripts):
                         print(f"script[{i+1}/{len(http_scripts)}]: integrity={script.integrity}, src={script.src}")
-                    # script_dependencies_result[website] = (None, http_scripts)
                     script_dependencies_result[website] = ScriptDependenciesResult(None, http_scripts)
                 except selenium.common.exceptions.WebDriverException as e:
                     print(f"!!! {str(e)} !!!")
@@ -395,14 +394,11 @@ class ApplicationResolversWrapper:
                     https_scripts = self.script_resolver.search_script_application_dependencies(https_landing_page)
                     for i, script in enumerate(https_scripts):
                         print(f"script[{i+1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
-                    # script_dependencies_result[website] = (https_scripts, None)
                     script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, None)
                 except selenium.common.exceptions.WebDriverException as e:
                     print(f"!!! {str(e)} !!!")
                     https_scripts = None
                     self.error_logger.add_entry(ErrorLog(e, https_landing_page, str(e)))
-                except Exception:
-                    print('')
             else:
                 # HTTPS
                 print(f"******* via HTTPS *******")
@@ -427,7 +423,6 @@ class ApplicationResolversWrapper:
                     print(f"!!! {str(e)} !!!")
                     http_scripts = None
                     self.error_logger.add_entry(ErrorLog(e, http_landing_page, str(e)))
-                # script_dependencies_result[website] = (https_scripts, http_scripts)
                 script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, http_scripts)
             print('')
         print("END SCRIPT DEPENDENCIES RESOLVER")
@@ -462,7 +457,7 @@ class ApplicationResolversWrapper:
             for ip_address in reformat.results[as_number].keys():
                 name_server = reformat.results[as_number][ip_address].name_server
                 entry_ip_as_db = reformat.results[as_number][ip_address].entry_as_database
-                belonging_network_ip_as_db = reformat.results[as_number][ip_address].belonging_network
+                belonging_network_ip_as_db = reformat.results[as_number][ip_address].ip_range_tsv
                 try:
                     row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_address))  # non gestisco ValueError perché non può accadere qua
                     reformat.results[as_number][ip_address].insert_rov_entry(row)
@@ -487,10 +482,12 @@ class ApplicationResolversWrapper:
         domain_names = list()
         # adding domain names from webservers
         for website in self.landing_web_sites_results.keys():
-            https_webserver = self.landing_web_sites_results[website].https.server
-            http_webserver = self.landing_web_sites_results[website].http.server
-            list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(https_webserver))
-            list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(http_webserver))
+            https_result = self.landing_web_sites_results[website].https
+            http_result = self.landing_web_sites_results[website].http
+            if https_result is not None:
+                list_utils.append_with_no_duplicates(domain_names, https_result.server)
+            if http_result is not None:
+                list_utils.append_with_no_duplicates(domain_names, http_result.server)
         # adding domain names from mail_domains
         for mail_domain in mail_domains:
             list_utils.append_with_no_duplicates(domain_names, mail_domain)

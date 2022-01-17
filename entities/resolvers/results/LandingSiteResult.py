@@ -1,7 +1,7 @@
 from ipaddress import IPv4Address
 from typing import List
 from entities.error_log.ErrorLog import ErrorLog
-from utils import url_utils
+from utils import domain_name_utils
 
 
 class InnerLandingSiteSingleSchemeResult:
@@ -29,7 +29,7 @@ class InnerLandingSiteSingleSchemeResult:
         self.redirection_path = redirection_path
         self.hsts = hsts
         self.ip = ip
-        self.server = url_utils.deduct_second_component(url)
+        self.server = domain_name_utils.deduct_domain_name(url)
 
 
 class LandingSiteResult:

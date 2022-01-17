@@ -56,7 +56,7 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
             for j, dep in enumerate(self.dependencies):
                 if done:
                     break
-                if dep.url == script.src:
+                if dep.name == script.src:
                     print(f" IS ALREADY PRESENT")
                     present_scripts.append(True)
                     done = True

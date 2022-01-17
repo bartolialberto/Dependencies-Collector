@@ -25,7 +25,7 @@ class LandingTestCase(unittest.TestCase):
             print(f"**** via HTTPS *****")
             https_result = results[0]
             if https_result is not None:
-                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS Landing url: {https_result.name}")
                 print(f"HTTPS WebServer: {https_result.server}")
                 print(f"HTTPS IP: {https_result.ip}")
                 print(f"Strict Transport Security: {https_result.hsts}")
@@ -39,7 +39,7 @@ class LandingTestCase(unittest.TestCase):
             print(f"***** via HTTP *****")
             http_result = results[1]
             if http_result is not None:
-                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP Landing url: {http_result.name}")
                 print(f"HTTP WebServer: {http_result.server}")
                 print(f"HTTP IP: {http_result.ip}")
                 print(f"Strict Transport Security: {http_result.hsts}")
@@ -62,7 +62,7 @@ class LandingTestCase(unittest.TestCase):
             print(f"**** via HTTPS *****")
             https_result = results[0]
             if https_result is not None:
-                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS Landing url: {https_result.name}")
                 print(f"HTTPS ScriptServer: {https_result.server}")
                 print(f"HTTPS IP: {https_result.ip}")
                 print(f"Strict Transport Security: {https_result.hsts}")
@@ -76,7 +76,7 @@ class LandingTestCase(unittest.TestCase):
             print(f"***** via HTTP *****")
             http_result = results[1]
             if http_result is not None:
-                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP Landing url: {http_result.name}")
                 print(f"HTTP ScriptServer: {http_result.server}")
                 print(f"HTTP IP: {http_result.ip}")
                 print(f"Strict Transport Security: {http_result.hsts}")

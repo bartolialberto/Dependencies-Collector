@@ -30,7 +30,6 @@ def handle_tables_creation():       # execute at the end of the file
             AliasAssociation,
             WebSiteEntity,
             WebServerEntity,
-            WebServerDomainNameAssociation,
             WebSiteLandsAssociation,
             ZoneEntity,
             NameServerEntity,
@@ -46,14 +45,16 @@ def handle_tables_creation():       # execute at the end of the file
             ScriptHostedOnAssociation,
             ScriptServerEntity,
             ScriptSiteLandsAssociation,
-            ScriptServerDomainNameAssociation,
             IpAddressEntity,
             AccessAssociation,
             IpNetworkEntity,
+            IpRangeTSVEntity,
+            IpRangeROVEntity,
             IpAddressDependsAssociation,
             AutonomousSystemEntity,
             ROVEntity,
-            PrefixesTableAssociation],    # 29 entities and associations
+            PrefixesTableAssociation,
+            NetworkNumbersAssociation],    # 31 entities and associations
             safe=True)
 
 
@@ -86,18 +87,6 @@ class UrlEntity(BaseModel):
         db_table = 'url'
 
 
-class AliasAssociation(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
-    alias = ForeignKeyField(DomainNameEntity)
-
-    def __str__(self):
-        return f"<{self.name}, {self.alias}>"
-
-    class Meta:
-        primary_key = CompositeKey('name', 'alias')
-        db_table = 'alias'
-
-
 class IpAddressEntity(BaseModel):
     exploded_notation = CharField(primary_key=True)
 
@@ -119,39 +108,13 @@ class WebSiteEntity(BaseModel):
 
 
 class WebServerEntity(BaseModel):
-    url = ForeignKeyField(UrlEntity)
+    name = ForeignKeyField(DomainNameEntity)
 
     def __str__(self):
-        return f"<{self.url}>"
+        return f"<{self.name}>"
 
     class Meta:
         db_table = 'web_server'
-
-
-class WebServerDomainNameAssociation(BaseModel):
-    web_server = ForeignKeyField(WebServerEntity)
-    domain_name = ForeignKeyField(DomainNameEntity)
-
-    def __str__(self):
-        return f"<{self.web_server}, {self.domain_name}>"
-
-    class Meta:
-        primary_key = CompositeKey('web_server', 'domain_name')
-        db_table = 'web_server_domain_name'
-
-
-class WebSiteLandsAssociation(BaseModel):
-    web_site = ForeignKeyField(WebSiteEntity)
-    web_server = ForeignKeyField(WebServerEntity, null=True)
-    ip_address = ForeignKeyField(IpAddressEntity, null=True)
-    https = BooleanField(null=False)
-
-    def __str__(self):
-        return f"<{self.web_site}, {self.web_server}, {self.ip_address}, {self.https}>"
-
-    class Meta:
-        db_table = 'web_site_lands'
-        primary_key = CompositeKey('web_site', 'web_server', 'https', 'ip_address')
 
 
 class ZoneEntity(BaseModel):
@@ -172,6 +135,133 @@ class NameServerEntity(BaseModel):
 
     class Meta:
         db_table = 'name_server'
+
+
+class MailDomainEntity(BaseModel):
+    name = ForeignKeyField(DomainNameEntity)
+
+    def __str__(self):
+        return f"<{self.name}>"
+
+    class Meta:
+        db_table = 'mail_domain'
+
+
+class MailServerEntity(BaseModel):
+    name = ForeignKeyField(DomainNameEntity)
+
+    def __str__(self):
+        return f"<{self.name}>"
+
+    class Meta:
+        db_table = 'mail_server'
+
+
+class ScriptEntity(BaseModel):
+    src = CharField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.src}>"
+
+    class Meta:
+        db_table = 'script'
+
+
+class ScriptSiteEntity(BaseModel):
+    url = ForeignKeyField(UrlEntity)
+
+    def __str__(self):
+        return f"<{self.url}>"
+
+    class Meta:
+        db_table = 'script_site'
+
+
+class ScriptServerEntity(BaseModel):
+    name = ForeignKeyField(DomainNameEntity)
+
+    def __str__(self):
+        return f"<{self.name}>"
+
+    class Meta:
+        db_table = 'script_server'
+
+
+class IpNetworkEntity(BaseModel):
+    compressed_notation = CharField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.compressed_notation}>"
+
+    class Meta:
+        db_table = 'ip_network'
+
+
+class IpRangeTSVEntity(BaseModel):
+    compressed_notation = CharField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.compressed_notation}>"
+
+    class Meta:
+        db_table = 'ip_range_tsv'
+
+
+class IpRangeROVEntity(BaseModel):
+    compressed_notation = CharField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.compressed_notation}>"
+
+    class Meta:
+        db_table = 'ip_range_rov'
+
+
+class AutonomousSystemEntity(BaseModel):
+    number = IntegerField(primary_key=True)
+
+    def __str__(self):
+        return f"<{self.number}>"
+
+    class Meta:
+        db_table = 'autonomous_system'
+
+
+class ROVEntity(BaseModel):
+    state = CharField(null=False)
+    visibility = IntegerField(null=False)
+
+    def __str__(self):
+        return f"<{self.state}, {self.visibility}>"
+
+    class Meta:
+        db_table = 'rov'
+
+
+class AliasAssociation(BaseModel):
+    name = ForeignKeyField(DomainNameEntity)
+    alias = ForeignKeyField(DomainNameEntity)
+
+    def __str__(self):
+        return f"<{self.name}, {self.alias}>"
+
+    class Meta:
+        primary_key = CompositeKey('name', 'alias')
+        db_table = 'alias'
+
+
+class WebSiteLandsAssociation(BaseModel):
+    web_site = ForeignKeyField(WebSiteEntity)
+    web_server = ForeignKeyField(WebServerEntity, null=True)
+    ip_address = ForeignKeyField(IpAddressEntity, null=True)
+    https = BooleanField(null=False)
+
+    def __str__(self):
+        return f"<{self.web_site}, {self.web_server}, {self.ip_address}, {self.https}>"
+
+    class Meta:
+        db_table = 'web_site_lands'
+        primary_key = CompositeKey('web_site', 'web_server', 'https', 'ip_address')
 
 
 class ZoneComposedAssociation(BaseModel):
@@ -210,26 +300,6 @@ class DomainNameDependenciesAssociation(BaseModel):
         primary_key = CompositeKey('domain_name', 'zone')
 
 
-class MailDomainEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
-
-    def __str__(self):
-        return f"<{self.name}>"
-
-    class Meta:
-        db_table = 'mail_domain'
-
-
-class MailServerEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
-
-    def __str__(self):
-        return f"<{self.name}>"
-
-    class Meta:
-        db_table = 'mail_server'
-
-
 class MailDomainComposedAssociation(BaseModel):
     mail_domain = ForeignKeyField(MailDomainEntity)
     mail_server = ForeignKeyField(MailServerEntity)
@@ -240,16 +310,6 @@ class MailDomainComposedAssociation(BaseModel):
     class Meta:
         db_table = 'mail_domain_composed'
         primary_key = CompositeKey('mail_domain', 'mail_server')
-
-
-class ScriptEntity(BaseModel):
-    src = CharField(primary_key=True)
-
-    def __str__(self):
-        return f"<{self.src}>"
-
-    class Meta:
-        db_table = 'script'
 
 
 class ScriptWithdrawAssociation(BaseModel):
@@ -266,16 +326,6 @@ class ScriptWithdrawAssociation(BaseModel):
         primary_key = CompositeKey('script', 'web_site', 'https')
 
 
-class ScriptSiteEntity(BaseModel):
-    url = ForeignKeyField(UrlEntity)
-
-    def __str__(self):
-        return f"<{self.url}>"
-
-    class Meta:
-        db_table = 'script_site'
-
-
 class ScriptHostedOnAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
     script = ForeignKeyField(ScriptEntity)
@@ -286,16 +336,6 @@ class ScriptHostedOnAssociation(BaseModel):
     class Meta:
         db_table = 'script_hosted_on'
         primary_key = CompositeKey('script_site', 'script')
-
-
-class ScriptServerEntity(BaseModel):
-    url = ForeignKeyField(UrlEntity)
-
-    def __str__(self):
-        return f"<{self.url}>"
-
-    class Meta:
-        db_table = 'script_server'
 
 
 class ScriptSiteLandsAssociation(BaseModel):
@@ -312,18 +352,6 @@ class ScriptSiteLandsAssociation(BaseModel):
         primary_key = CompositeKey('script_site', 'script_server', 'https', 'ip_address')
 
 
-class ScriptServerDomainNameAssociation(BaseModel):
-    script_server = ForeignKeyField(ScriptServerEntity)
-    domain_name = ForeignKeyField(DomainNameEntity)
-
-    def __str__(self):
-        return f"<{self.script_server}, {self.domain_name}>"
-
-    class Meta:
-        primary_key = CompositeKey('script_server', 'domain_name')
-        db_table = 'web_site_domain_name'
-
-
 class AccessAssociation(BaseModel):
     domain_name = ForeignKeyField(DomainNameEntity, null=True)
     ip_address = ForeignKeyField(IpAddressEntity, null=True)
@@ -335,50 +363,22 @@ class AccessAssociation(BaseModel):
         db_table = 'access'
 
 
-class IpNetworkEntity(BaseModel):
-    compressed_notation = CharField(primary_key=True)
-
-    def __str__(self):
-        return f"<{self.compressed_notation}>"
-
-    class Meta:
-        db_table = 'ip_network'
-
-
 class IpAddressDependsAssociation(BaseModel):
     ip_address = ForeignKeyField(IpAddressEntity)
     ip_network = ForeignKeyField(IpNetworkEntity, null=True)
+    ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, null=True)
+    ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
 
     def __str__(self):
-        return f"<{self.ip_address}, {self.ip_network}>"
+        return f"<{self.ip_address}, {self.ip_network}, {self.ip_range_tsv}, {self.ip_range_rov}>"
 
     class Meta:
-        db_table = 'address_dependency'
-
-
-class AutonomousSystemEntity(BaseModel):
-    number = IntegerField(primary_key=True)
-
-    def __str__(self):
-        return f"<{self.number}>"
-
-    class Meta:
-        db_table = 'autonomous_system'
-
-
-class ROVEntity(BaseModel):
-    state = CharField(null=False)
-    visibility = IntegerField(null=False)
-
-    def __str__(self):
-        return f"<{self.state}, {self.visibility}>"
-
-    class Meta:
-        db_table = 'rov'
+        db_table = 'ip_address_depends'
+        primary_key = CompositeKey('ip_address', 'ip_network', 'ip_range_tsv', 'ip_range_rov')
 
 
 class PrefixesTableAssociation(BaseModel):
-    ip_network = ForeignKeyField(IpNetworkEntity)
+    ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
     rov = ForeignKeyField(ROVEntity, null=True)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
@@ -387,7 +387,18 @@ class PrefixesTableAssociation(BaseModel):
 
     class Meta:
         db_table = 'prefixes_table'
-        primary_key = CompositeKey('ip_network', 'rov', 'autonomous_system')
+        primary_key = CompositeKey('ip_range_rov', 'rov', 'autonomous_system')
+
+
+class NetworkNumbersAssociation(BaseModel):
+    ip_range_rov = ForeignKeyField(IpRangeROVEntity)
+    autonomous_system = ForeignKeyField(AutonomousSystemEntity, null=True)
+
+    def __str__(self):
+        return f"<{self.ip_range_rov}, {self.autonomous_system}>"
+
+    class Meta:
+        db_table = 'network_numbers'
 
 
 handle_tables_creation()

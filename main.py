@@ -9,7 +9,7 @@ from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
 
 
-def get_input_websites(default_websites=('https://google.it/doodles', 'https://www.youtube.it/feed/explore')) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
     They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is
@@ -87,18 +87,18 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(default_persist_errors=True, default_consider_tld=True) -> Tuple[bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=True) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
 
-    1- persist_errors: a flag that set the will to save the explicit lack of results in database between entities (where
-    it is possible)
+    1- complete_unresolved_database: a flag that set the will to detect unresolved entities in the database from the
+    'output' and try to resolve them.
 
     2- consider_tld: a flag that will consider or remove the Top-Level Domains when computing zone dependencies
 
-    :param default_persist_errors: The default value of the flag.
-    :type default_persist_errors: bool
+    :param default_complete_unresolved_database: The default value of the flag.
+    :type default_complete_unresolved_database: bool
     :param default_consider_tld: The default value of the flag.
     :type default_consider_tld: bool
     :return: A tuple of booleans for each flag.
@@ -108,15 +108,14 @@ def get_input_application_flags(default_persist_errors=True, default_consider_tl
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
         if arg == 'qualcosa_da_definire':
-            default_persist_errors = True
+            default_complete_unresolved_database = True
         if arg == 'qualcosa_da_definire':
             default_consider_tld = True
-    print(f"> PERSIST_ERRORS flag: {str(default_persist_errors)}")
+    print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")
-    return default_persist_errors, default_consider_tld
+    return default_complete_unresolved_database, default_consider_tld
 
 
-# TODO: controllare il file readme.md
 if __name__ == "__main__":
     print("********** START APPLICATION **********")
     headless_browser_is_instantiated = False
@@ -126,21 +125,21 @@ if __name__ == "__main__":
         # application input
         input_websites = get_input_websites()
         input_mail_domains = get_input_mail_domains()
-        persist_errors, consider_tld = get_input_application_flags()
+        complete_unresolved_database, consider_tld = get_input_application_flags()
         # entities
         print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld=consider_tld)
         headless_browser_is_instantiated = True
         # auxiliary elaborations
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
-        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, persist_errors, consider_tld)    # for future error reproducibility
+        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld)    # for future error reproducibility
         # actual elaboration of all resolvers
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database
         print("\nInsertion into database started... ")
-        helper_application_results.insert_all_application_results(resolvers, persist_errors)
+        helper_application_results.insert_all_application_results(resolvers)
         print("Insertion into database finished.")
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()

@@ -304,5 +304,5 @@ END ROV PAGE SCRAPING
 ```
 
 The database result ER schema is:
-![alt text](res/schema_er.jpg)
+![alt text](res/schema_er_OLD.jpg)
  

@@ -20,7 +20,7 @@ class ASResolverValueForROVPageScraping:
         An entry of the IpAsDatabase.
      entry_rov_page : RowPrefixesTable or None
         A row of the prefixes table of the ROVPageScraper or None.
-     belonging_network : ipaddress.IPv4Network or None
+     ip_range_rtsv : ipaddress.IPv4Network or None
         An IP network or None.
     """
     def __init__(self, name_server: str or None, entry_as_database: EntryIpAsDatabase or None, network: ipaddress.IPv4Network or None):
@@ -38,7 +38,7 @@ class ASResolverValueForROVPageScraping:
         self.name_server = name_server
         self.entry_as_database = entry_as_database
         self.entry_rov_page = None
-        self.belonging_network = network
+        self.ip_range_tsv = network
 
     def insert_rov_entry(self, entry: RowPrefixesTable or None):
         """

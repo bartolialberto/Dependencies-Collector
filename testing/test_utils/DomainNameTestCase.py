@@ -26,6 +26,7 @@ class DomainNameTestCase(unittest.TestCase):
         print(f"\n------- [2] START DEDUCTING URL TEST -------")
         # PARAMETERS
         url = 'https://idp-cineca.units.it/idp/profile/SAML2/Redirect/SSO?execution=e1s2'
+        url = 'https://www.youtube.it/feed/explore/'
         # ELABORATION
         result = domain_name_utils.deduct_domain_name(url)
         is_right = domain_name_utils.is_grammatically_correct(result)

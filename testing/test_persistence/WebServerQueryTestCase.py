@@ -33,7 +33,7 @@ class WebServerQueryTestCase(unittest.TestCase):
             print(f"NO WEBSERVER FOR WEBSITE: {self.website} ...")
             return
         for i, wse in enumerate(wses):
-            print(f"[{i+1}/{len(wses)}]: https={wse}, url={wse.url}")
+            print(f"[{i+1}/{len(wses)}]: https={wse}, url={wse.name}")
             # print(f"[{i+1}/{len(wses)}]: https={wse[1]}, url={wse[0].url}")   # and the https flag?
 
 

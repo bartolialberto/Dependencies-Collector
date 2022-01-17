@@ -1,15 +1,22 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
-from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation
+from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity
+from utils import network_utils
 
 
-def insert(network: str or ipaddress.IPv4Network) -> IpNetworkEntity:
+def insert(network_parameter: str or ipaddress.IPv4Network) -> IpNetworkEntity:
     ip_network = None
-    if isinstance(network, str):
-        ip_network = ipaddress.IPv4Network(network)
+    if isinstance(network_parameter, str):
+        ip_network = ipaddress.IPv4Network(network_parameter)
     else:
-        ip_network = network
+        ip_network = network_parameter
+    ine, created = IpNetworkEntity.get_or_create(compressed_notation=ip_network.compressed)
+    return ine
+
+
+def insert_from_address_entity(iae: IpAddressEntity) -> IpNetworkEntity:
+    ip_network = network_utils.get_predefined_network(iae.exploded_notation)
     ine, created = IpNetworkEntity.get_or_create(compressed_notation=ip_network.compressed)
     return ine
 

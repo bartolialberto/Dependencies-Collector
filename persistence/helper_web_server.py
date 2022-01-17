@@ -1,8 +1,8 @@
 from typing import List, Tuple
 from peewee import DoesNotExist
-from persistence import helper_url, helper_web_site, helper_web_site_lands
+from persistence import helper_url, helper_web_site, helper_web_site_lands, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation
-from utils import url_utils
+from utils import url_utils, domain_name_utils
 
 """
 def insert(lpe: LandingPageEntity) -> WebServerEntity:
@@ -14,20 +14,21 @@ def insert(lpe: LandingPageEntity) -> WebServerEntity:
 """
 
 
-def insert(url: str) -> WebServerEntity:
-    ue = helper_url.insert(url)
-    we, created = WebServerEntity.get_or_create(url=ue)
+def insert(name: str) -> WebServerEntity:
+    dn = domain_name_utils.insert_trailing_point(name)
+    dne = helper_domain_name.insert(dn)
+    we, created = WebServerEntity.get_or_create(name=dne)
     return we
 
 
-def get(url: str) -> WebServerEntity:
-    temp = url_utils.deduct_second_component(url)
+def get(name: str) -> WebServerEntity:
+    dn = domain_name_utils.insert_trailing_point(name)
     try:
-        ue = helper_url.get(temp)
+        dne = helper_domain_name.get(dn)
     except DoesNotExist:
         raise
     try:
-        return WebServerEntity.get(WebServerEntity.url == ue)
+        return WebServerEntity.get(WebServerEntity.name == dne)
     except DoesNotExist:
         raise
 
