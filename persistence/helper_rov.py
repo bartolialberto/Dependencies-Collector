@@ -15,12 +15,12 @@ def get_from_network(ip_network_parameter: IpNetworkEntity or ipaddress.IPv4Netw
         ine = ip_network_parameter
     elif isinstance(ip_network_parameter, ipaddress.IPv4Network):
         try:
-            ine = helper_ip_network.get_first_of(ip_network_parameter.compressed)
+            ine = helper_ip_network.get(ip_network_parameter.compressed)
         except DoesNotExist:
             raise
     else:
         try:
-            ine = helper_ip_network.get_first_of(ip_network_parameter)
+            ine = helper_ip_network.get(ip_network_parameter)
         except DoesNotExist:
             raise
 

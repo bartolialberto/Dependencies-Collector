@@ -7,8 +7,8 @@ from persistence.BaseModel import DomainNameEntity, IpAddressEntity
 from utils import domain_name_utils
 
 
-def insert(string: str) -> DomainNameEntity:
-    dn = domain_name_utils.insert_trailing_point(string)
+def insert(name: str) -> DomainNameEntity:
+    dn = domain_name_utils.insert_trailing_point(name)
     """
     try:
         domain_name_utils.grammatically_correct(dn)

@@ -1,12 +1,13 @@
 import unittest
 from pathlib import Path
 import selenium
-from entities.ContentDependenciesResolver import ContentDependenciesResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 
 
 class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
+    headless_browser = None
     browser = None
     PRD = None
 
@@ -26,20 +27,17 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
         # ELABORATION
         PRD = ScrapeScriptAndIFrameTestCase.get_project_root_folder()
         try:
-            headless_browser = FirefoxHeadlessWebDriver(PRD)
+            cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
-            exit(1)
-        content_resolver = ContentDependenciesResolver(headless_browser)
+            return
+        script_resolver = ScriptDependenciesResolver(cls.headless_browser)
         try:
-            result = content_resolver.search_script_application_dependencies(url, ['javascript', 'application/'])
+            result = script_resolver.search_script_application_dependencies(url)
             cls.dependencies = result[0]
             cls.scripts = result[1]
         except selenium.common.exceptions.WebDriverException as exc:
             print(f"!!! type={type(exc)}, str={str(exc)} !!!")
-        except KeyboardInterrupt:
-            headless_browser.close()
-        headless_browser.close()
 
     def test_1_print_debugs(self):
         print(f"\n------- [1] START PRINTING TEST -------")
@@ -66,6 +64,10 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
                     print(f" IS NOT PRESENT")
         self.assertEqual(len(self.scripts), len(present_scripts))
         print(f"------- [2] END SCRIPT PRESENCE TEST -------")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.headless_browser.close()
 
 
 if __name__ == '__main__':

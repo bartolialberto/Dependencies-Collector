@@ -1,6 +1,5 @@
 import ipaddress
 from typing import Set
-
 from peewee import DoesNotExist
 from persistence import helper_access, helper_domain_name
 from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation

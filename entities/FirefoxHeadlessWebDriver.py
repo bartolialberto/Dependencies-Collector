@@ -69,5 +69,5 @@ class FirefoxHeadlessWebDriver:
         Shutdown seleniumwire and then quit the webdriver.
 
         """
-        self.driver.close()     # close the current window
+        # self.driver.close()     # close the current window
         self.driver.quit()      # shutdown selenium-wire and then quit the webdriver

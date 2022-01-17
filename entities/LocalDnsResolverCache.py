@@ -502,7 +502,7 @@ class LocalDnsResolverCache:
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_cache.csv", project_root_directory=project_root_directory)
+        file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_dns_cache.csv", project_root_directory=project_root_directory)
         if not file.exists():
             pass
         with file.open('w', encoding='utf-8', newline='') as f:

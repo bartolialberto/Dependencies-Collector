@@ -434,8 +434,7 @@ class ApplicationResolversWrapper:
     def _extract_domain_names_from_preamble(self, mail_domains: List[str]) -> List[str]:
         """
         This method extract domain names from the PREAMBLE execution: this means it extract them from the landing web
-        sites resolution results (saved in this object), and from the mail servers resolution results (saved in this
-        object).
+        sites resolution results (saved in this object), and from the input mail domains.
 
         :param mail_domains: The input mail domains.
         :type mail_domains: List[str]
@@ -449,11 +448,9 @@ class ApplicationResolversWrapper:
             http_webserver = self.landing_web_sites_results[website].http.server
             list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(https_webserver))
             list_utils.append_with_no_duplicates(domain_names, domain_name_utils.deduct_domain_name(http_webserver))
-        # adding domain names from mail_domains and mailservers
+        # adding domain names from mail_domains
         for mail_domain in mail_domains:
             list_utils.append_with_no_duplicates(domain_names, mail_domain)
-            for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers:
-                list_utils.append_with_no_duplicates(domain_names, mail_server)
         return domain_names
 
     def _extract_domain_names_from_landing_script_sites_results(self) -> List[str]:

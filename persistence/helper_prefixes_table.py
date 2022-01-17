@@ -1,5 +1,5 @@
 import ipaddress
-from typing import Set
+from typing import Set, Tuple
 from peewee import DoesNotExist
 from persistence import helper_ip_network
 from persistence.BaseModel import PrefixesTableAssociation, IpNetworkEntity, ROVEntity, AutonomousSystemEntity
@@ -29,4 +29,15 @@ def get_all_of(ip_network_parameter: IpNetworkEntity or ipaddress.IPv4Network or
         .where(PrefixesTableAssociation.ip_network == ine)
     for row in query:
         result.add(row)
+    return result
+
+
+def get_all_from(ase: AutonomousSystemEntity) -> Set[Tuple[IpNetworkEntity, ROVEntity]]:
+    query = PrefixesTableAssociation.select()\
+        .join_from(PrefixesTableAssociation, ROVEntity)\
+        .join_from(PrefixesTableAssociation, IpNetworkEntity)\
+        .where(PrefixesTableAssociation.autonomous_system == ase)
+    result = set()
+    for row in query:
+        result.add((row.ip_network, row.rov))
     return result

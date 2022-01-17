@@ -7,7 +7,6 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_application_results
 from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils
-from utils import domain_name_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
@@ -19,53 +18,12 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     Such websites are: google.it/doodles, www.youtube.it/feed/explore.
 
     :param default_websites: The default websites to use when no one is set by the user.
-    :type default_websites: List[str]
+    :type default_websites: Tuple[str]
     :return: The list of computed websites.
     :rtype: List[str]
     """
-    input_filename = 'websites.txt'
-    websites = list()
-    if len(sys.argv) == 1:
-        print(f"> No domain names found in command line.")
-        result = None
-        try:
-            result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
-        except FilenameNotFoundError:
-            print(f"> No 'websites.txt' file found in input folder found.")
-            print(f"> Starting application with default websites as sample:")
-            websites = list(default_websites)
-            for index, website in enumerate(websites):
-                print(f"> [{index + 1}/{len(websites)}]: {website}")
-            return websites
-        file = result[0]
-        abs_filepath = str(file)
-        with open(abs_filepath, 'r') as f:  # 'w' or 'x'
-            print(f"> Found '{input_filename}' file in 'input' folder.")
-            lines = f.readlines()
-            for i, line in enumerate(lines):
-                candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
-                print(f"> [{i+1}/{len(lines)}]: {lines}")
-                websites.append(candidate)
-            f.close()
-            if len(websites) == 0:
-                print(f"> The .txt file in input folder doesn't contain any valid website.")
-                exit(0)
-    else:
-        print('> Argument List:', str(sys.argv))
-        for arg in sys.argv[1:]:
-            if domain_name_utils.is_grammatically_correct(arg):
-                pass
-            else:
-                print(f"!!! {arg} is not a well-formatted domain name. !!!")
-        if len(websites) == 0:
-            print(f"!!! Command line arguments are not well-formatted websites. !!!")
-            exit(1)
-        else:
-            print(f"> Parsed {len(websites)} well-formatted domain names:")
-            for index, website in enumerate(websites):
-                print(f"> [{index + 1}/{len(websites)}]: {website}")
-    list_utils.remove_duplicates(websites)
-    return websites
+    print(f"******* COMPUTING INPUT WEB SITES *******")
+    return get_input_generic_file('web_sites.txt', default_websites)
 
 
 def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) -> List[str]:
@@ -77,56 +35,64 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
     Such mail domains are: gmail.com, outlook.com.
 
     :param default_mail_domains: The default mail domains to use when no one is set by the user.
-    :type default_mail_domains: List[str]
+    :type default_mail_domains: Tuple[str]
     :return: The list of computed mail domains.
     :rtype: List[str]
     """
-    input_filename = 'mail_domains.txt'
-    mail_domains = list()
+    print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
+    return get_input_generic_file('mail_domains.txt', default_mail_domains)
+
+
+def get_input_generic_file(input_filename: str, default_values: tuple) -> List[str]:
+    """
+    Auxiliary method that parses input from the filename parameter in the 'input' folder of the application.
+    Also it can be set a default collection of values if the file is not not present.
+
+    :param input_filename: The input filename with the extension.
+    :type input_filename: str
+    :param default_values: The default values.
+    :type default_values: tuple
+    :return: The list of computed mail values.
+    :rtype: List[str]
+    """
+    result_list = list()
     if len(sys.argv) == 1:
-        print(f"> No mail domains found in command line.")
-        result = None
+        print(f"> No values found in command line.")
+        search_result = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
+            search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
         except FilenameNotFoundError:
-            print(f"> No 'mail_domains.txt' file found in input folder found.")
-            print(f"> Starting application with default mail domains as sample:")
-            mail_domains = list(default_mail_domains)
-            for index, mail_domain in enumerate(mail_domains):
-                print(f"> [{index + 1}/{len(mail_domains)}]: {mail_domain}")
-            return mail_domains
-        file = result[0]
+            print(f"> No '{input_filename}' file found in 'input' folder found.")
+            print(f"> Starting application with default values as sample:")
+            result_list = list(default_values)
+            for index, mail_domain in enumerate(result_list):
+                print(f"> [{index + 1}/{len(result_list)}]: {mail_domain}")
+            return result_list
+        file = search_result[0]
         abs_filepath = str(file)
         with open(abs_filepath, 'r') as f:  # 'w' or 'x'
             print(f"> Found '{input_filename}' file in 'input' folder.")
             lines = f.readlines()
             for i, line in enumerate(lines):
                 candidate = line.rstrip()  # strip from whitespaces and EOL (End Of Line)
-                print(f"> [{i + 1}/{len(lines)}]: {lines}")
-                mail_domains.append(candidate)
+                print(f"> [{i + 1}/{len(lines)}]: {line}")
+                result_list.append(candidate)
             f.close()
-            if len(mail_domains) == 0:
-                print(f"> The .txt file in input folder doesn't contain any valid mail domain.")
+            if len(result_list) == 0:
+                print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
                 exit(0)
     else:
         print('> Argument List:', str(sys.argv))
         for arg in sys.argv[1:]:
-            if domain_name_utils.is_grammatically_correct(arg):
-                pass
-            else:
-                print(f"!!! {arg} is not a well-formatted domain name. !!!")
-        if len(mail_domains) == 0:
-            print(f"!!! Command line arguments are not well-formatted domain names. !!!")
-            exit(1)
-        else:
-            print(f"> Parsed {len(mail_domains)} well-formatted mail domains:")
-            for index, mail_domain in enumerate(mail_domains):
-                print(f"> [{index + 1}/{len(mail_domains)}]: {mail_domain}")
-    list_utils.remove_duplicates(mail_domains)
-    return mail_domains
+            result_list.append(arg)
+        print(f"> Parsed {len(result_list)} well-formatted inputs:")
+        for index, value in enumerate(result_list):
+            print(f"> [{index + 1}/{len(result_list)}]: {value}")
+    result_list = list_utils.remove_duplicates(result_list)
+    return result_list
 
 
-def get_input_application_flags(default_persist_errors=False, default_consider_tld=False) -> Tuple[bool, bool]:
+def get_input_application_flags(persist_errors=False, consider_tld=False) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -136,20 +102,23 @@ def get_input_application_flags(default_persist_errors=False, default_consider_t
 
     2- consider_tld: a flag that will consider or remove the Top-Level Domains when computing zone dependencies
 
-    :param default_persist_errors: The default value of the flag.
-    :type default_persist_errors: bool
-    :param default_consider_tld: The default value of the flag.
-    :type default_consider_tld: bool
+    :param persist_errors: The default value of the flag.
+    :type persist_errors: bool
+    :param consider_tld: The default value of the flag.
+    :type consider_tld: bool
     :return: A tuple of booleans for each flag.
     :rtype: Tuple[bool]
     """
+    print(f"******* COMPUTING INPUT FLAGS *******")
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
         if arg == 'qualcosa_da_definire':
-            default_persist_errors = True
+            persist_errors = True
         if arg == 'qualcosa_da_definire':
-            default_consider_tld = True
-    return default_persist_errors, default_consider_tld
+            consider_tld = True
+    print(f"> PERSIST_ERRORS flag: {str(persist_errors)}")
+    print(f"> CONSIDER_TLDs flag: {str(consider_tld)}")
+    return persist_errors, consider_tld
 
 
 if __name__ == "__main__":
@@ -163,11 +132,12 @@ if __name__ == "__main__":
         input_mail_domains = get_input_mail_domains()
         persist_errors, consider_tld = get_input_application_flags()
         # entities
+        print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld)
         headless_browser_is_instantiated = True
         # auxiliary elaborations
+        resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
         snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, persist_errors, consider_tld)    # for future error reproducibility
-        resolvers.dns_resolver.cache.take_temp_snapshot()        # for future error reproducibility
         # actual elaboration of all resolvers
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)

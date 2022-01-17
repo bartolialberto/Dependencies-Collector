@@ -242,7 +242,8 @@ class IpAsDatabase:
         for entry in self.entries:
             if int(entry.as_number) == as_number:
                 try:
-                    return EntryIpAsDatabase(entry)
+                    # return EntryIpAsDatabase(entry.as_number)
+                    return entry
                 except ValueError:
                     raise
         raise AutonomousSystemNotFoundError(as_number)

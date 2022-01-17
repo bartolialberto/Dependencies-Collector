@@ -22,7 +22,7 @@ def take_snapshot(exception: Exception):
 
     # load starting cache
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_cache.csv")
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_dns_cache.csv")
         file = result[0]
         shutil.copy(file, starting_cache_file)
     except FilenameNotFoundError:
@@ -31,16 +31,16 @@ def take_snapshot(exception: Exception):
 
     # load web sites
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_domain_names.csv")
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_web_sites.txt")
         file = result[0]
         shutil.copy(file, web_sites_file)
     except FilenameNotFoundError:
         # means that there's no web sites. So we create an empty file
         web_sites_file.touch()
 
-    # load web sites
+    # load mail domains
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_domain_names.csv")
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_mail_domains.txt")
         file = result[0]
         shutil.copy(file, mail_domains_file)
     except FilenameNotFoundError:
@@ -49,7 +49,7 @@ def take_snapshot(exception: Exception):
 
     # load flags
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_flags.csv")
+        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_flags.txt")
         file = result[0]
         shutil.copy(file, flags_file)
     except FilenameNotFoundError:

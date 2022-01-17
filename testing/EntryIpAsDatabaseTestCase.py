@@ -11,14 +11,14 @@ class EntryIpAsDatabaseTestCase(unittest.TestCase):
         cls.db = IpAsDatabase(project_root_directory=Path.cwd().parent)
 
     def test_from_ip_addresses(self):
+        print(f"\n------- [1] START GETTING NETWORK FROM ENTRY TEST -------")
         # PARAMETERS
         params = ['150.145.1.4']
         # Actual test
         ip_params = list()
         for param in params:
             ip_params.append(ipaddress.ip_address(param))
-        print(f"test_from_ip_addresses ****************************************************************")
-        print(f"ips: {str(ip_params)}")
+        print(f"ips: {str(list(map(lambda ip: ip.exploded, ip_params)))}")
         for ip in ip_params:
             try:
                 entry = self.db.resolve_range(ip)
@@ -33,12 +33,13 @@ class EntryIpAsDatabaseTestCase(unittest.TestCase):
                     print(f"!!! {str(f)} !!!")
             except (ValueError, AutonomousSystemNotFoundError) as e:
                 print(f"!!! {str(e)} !!!")
+        print(f"------- [1] END GETTING NETWORK FROM ENTRY TEST -------")
 
     def test_from_as_number(self):
+        print(f"\n------- [2] START GETTING ENTRY FROM AS NUMBER TEST -------")
         # PARAMETERS
         params = [31034]
         # Actual test
-        print(f"\ntest_from_as_number ****************************************************************")
         print(f"AS numbers: {str(params)}")
         for param in params:
             try:
@@ -46,6 +47,7 @@ class EntryIpAsDatabaseTestCase(unittest.TestCase):
                 print(f"--> for AS{str(param)}: {str(temp)}")
             except (ValueError, AutonomousSystemNotFoundError) as e:
                 print(f"--> for AS{str(param)}: !!! {str(e)} !!!")
+        print(f"------- [2] END GETTING ENTRY FROM AS NUMBER TEST -------")
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import unittest
 from peewee import DoesNotExist
-from persistence import helper_zone, helper_domain_name, helper_alias, helper_ip_network
+from persistence import helper_zone, helper_domain_name, helper_alias, helper_ip_network, helper_rov
 
 
 class DomainNameAndAliasQueryTestCase(unittest.TestCase):

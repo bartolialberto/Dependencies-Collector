@@ -336,36 +336,6 @@ class DnsResolvingTestCase(unittest.TestCase):
         logger.write_to_csv_in_output_folder(filename=self.error_logs_filename, project_root_directory=self.PRD)
         print(f"\n**** error_logs written in 'output' folder: file is named 'error_logs_from_test.csv'\n")
 
-    """
-    def test_7_check_with_old_resolver(self):
-        print(f"\nSTART CHECK BETWEEN OLDvsNEW RESULTS TEST")
-        old_resolver = Resolver()
-        old_results = dict()
-        for domain_name in self.domain_names:
-            l = old_resolver.findDNSInfo(domain_name)
-            for elem in l:
-                try:
-                    old_results[domain_name]
-                    old_results[domain_name].append(elem["Zone"])
-                except KeyError:
-                    old_results[domain_name] = list()
-        new_results = dict()
-        for dn in self.dns_results:
-            for z in self.dns_results[dn]:
-                try:
-                    new_results[dn]
-                    new_results[dn].append(z.name)
-                except KeyError:
-                    new_results[dn] = list()
-                    new_results[dn].append(z.name)
-        for key in new_results.keys():
-            print(f"for domain name '{key}' --> {len(new_results[key])} zones")
-        for key in old_results.keys():
-            print(f"for domain name '{key}' --> {len(old_results[key])} zones")
-        self.assertDictEqual(new_results, old_results)
-        print(f"END CHECK BETWEEN OLDvsNEW RESULTS TEST")
-    """
-
 
 if __name__ == '__main__':
     unittest.main()
