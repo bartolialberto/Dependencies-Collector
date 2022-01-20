@@ -1,8 +1,8 @@
-class ReachedDOMRootError(Exception):
+class EmptyResultError(Exception):
     message: str
 
     def __init__(self):
-        temp = "Reached DOM root."
+        temp = "Empty result retrieved."
         self.message = temp
         BaseException.__init__(self, temp)
 

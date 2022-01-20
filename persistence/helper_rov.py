@@ -1,7 +1,10 @@
 import ipaddress
+from typing import List, Tuple
 from peewee import DoesNotExist
-from persistence import helper_ip_network
-from persistence.BaseModel import ROVEntity, IpNetworkEntity, PrefixesTableAssociation
+from exceptions.EmptyResultError import EmptyResultError
+from persistence import helper_ip_network, helper_ip_address
+from persistence.BaseModel import ROVEntity, IpNetworkEntity, PrefixesTableAssociation, IpAddressDependsAssociation, \
+    IpRangeROVEntity, db
 
 
 def insert(state_string: str, visibility_int: int) -> ROVEntity:
@@ -9,24 +12,29 @@ def insert(state_string: str, visibility_int: int) -> ROVEntity:
     return re
 
 
-def get_from_network(ip_network_parameter: IpNetworkEntity or ipaddress.IPv4Network or str) -> ROVEntity:
-    ine = None
-    if isinstance(ip_network_parameter, IpNetworkEntity):
-        ine = ip_network_parameter
-    elif isinstance(ip_network_parameter, ipaddress.IPv4Network):
-        try:
-            ine = helper_ip_network.get(ip_network_parameter.compressed)
-        except DoesNotExist:
-            raise
+def get_all_from(address: str, with_ip_range_rov_string: bool) -> List[ROVEntity] or List[Tuple[ROVEntity, str]]:
+    """ Query probably useful only for tests. """
+    try:
+        iae = helper_ip_address.get(address)
+    except DoesNotExist:
+        raise
+    query = ROVEntity.select(ROVEntity, IpRangeROVEntity)\
+        .join(PrefixesTableAssociation)\
+        .join(IpRangeROVEntity)\
+        .join(IpAddressDependsAssociation) \
+        .where(IpAddressDependsAssociation.ip_address == iae)
+    result = list()
+    if with_ip_range_rov_string:
+        for row in query.objects():
+            result.append((row, row.compressed_notation))
+        if len(result) == 0:
+            raise EmptyResultError
+        else:
+            return result
     else:
-        try:
-            ine = helper_ip_network.get(ip_network_parameter)
-        except DoesNotExist:
-            raise
-
-    query = PrefixesTableAssociation.select()\
-        .join_from(PrefixesTableAssociation, ROVEntity)\
-        .where(PrefixesTableAssociation.ip_network == ine)
-    for row in query:
-        return row.rov
-    raise DoesNotExist
+        for row in query:
+            result.append(row)
+        if len(result) == 0:
+            raise EmptyResultError
+        else:
+            return result

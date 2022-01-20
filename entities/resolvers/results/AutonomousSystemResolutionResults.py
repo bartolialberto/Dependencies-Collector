@@ -15,13 +15,13 @@ class AutonomousSystemResolutionValues:
         A name server.
      entry : EntryIpAsDatabase
         An entry of the IpAsDatabase.
-     belonging_network : ipaddress.IPv4Network or None
+     ip_range_tsv : ipaddress.IPv4Network or None
         An IP network or None.
     """
     def __init__(self):
         self.name_server = str or None
         self.entry = None or EntryIpAsDatabase
-        self.belonging_network = None or ipaddress.IPv4Network
+        self.ip_range_tsv = None or ipaddress.IPv4Network
 
 
 class AutonomousSystemResolutionResults:
@@ -36,7 +36,6 @@ class AutonomousSystemResolutionResults:
     ----------
     results : Dict[str, AutonomousSystemResolutionValues]
         The dictionary that associate a name server with an AutonomousSystemResolutionValues object.
-
     """
     def __init__(self):
         """
@@ -108,7 +107,7 @@ class AutonomousSystemResolutionResults:
             for_ip_address_exploded = for_ip_address_parameter
         self.results[for_ip_address_exploded].entry = entry
 
-    def insert_belonging_network(self, for_ip_address_parameter: str or ipaddress.IPv4Address, network: ipaddress.IPv4Network or None):
+    def insert_ip_range_tsv(self, for_ip_address_parameter: str or ipaddress.IPv4Address, network: ipaddress.IPv4Network or None):
         """
         This method sets the network attribute of the value associated to the IP address key parameter.
 
@@ -122,7 +121,7 @@ class AutonomousSystemResolutionResults:
             for_ip_address_exploded = for_ip_address_parameter.exploded
         else:
             for_ip_address_exploded = for_ip_address_parameter
-        self.results[for_ip_address_exploded].belonging_network = network
+        self.results[for_ip_address_exploded].ip_range_tsv = network
 
     def merge(self, other: 'AutonomousSystemResolutionResults'):        # FORWARD DECLARATIONS (REFERENCES)
         """

@@ -1,3 +1,4 @@
+import copy
 from typing import Set
 from peewee import DoesNotExist
 from entities.RRecord import RRecord
@@ -23,22 +24,28 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
     else:
         return ze       # scorciatoia?
 
+    nsdne_dict = dict()
     for nameserver in zone.nameservers:
         nse, nsdne = helper_name_server.insert(nameserver)
         helper_zone_composed.insert(ze, nse)
-        try:
-            rr = zone.resolve_nameserver(nameserver)
-            for value in rr.values:
-                iae = helper_ip_address.insert(value)
-                helper_access.insert(nsdne, iae)            # TODO: controllare che www.youtube.com abbia più IP collegati
-        except NoAvailablePathError:
-            raise
+        nsdne_dict[nameserver] = nsdne  # to avoid get again entities from database
 
     for rr_alias in zone.aliases:
-        dne, ne = helper_name_server.insert(rr_alias.name)
+        dne = helper_domain_name.insert(rr_alias.name)
         for alias in rr_alias.values:
             ane = helper_domain_name.insert(alias)
-            helper_alias.insert(ne, ane)
+            helper_alias.insert(dne, ane)
+
+    name_server_unresolved = set(copy.deepcopy(zone.nameservers))
+    for rr in zone.addresses:
+        dne = helper_domain_name.insert(rr.name)
+        name_server_unresolved.remove(rr.name)
+        for value in rr.values:
+            iae = helper_ip_address.insert(value)
+            helper_access.insert(dne, iae)
+
+    for name_server in name_server_unresolved:
+        helper_access.insert(nsdne_dict[name_server], None)
 
     return ze
 

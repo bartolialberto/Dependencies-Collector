@@ -1,5 +1,6 @@
 import sys
 from typing import List, Tuple
+from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
@@ -87,7 +88,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=True) -> Tuple[bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -127,10 +128,17 @@ if __name__ == "__main__":
         input_mail_domains = get_input_mail_domains()
         complete_unresolved_database, consider_tld = get_input_application_flags()
         # entities
-        print("********** START ACTUAL APPLICATION ELABORATION **********")
+        print("********** START APPLICATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld=consider_tld)
         headless_browser_is_instantiated = True
+        # complete unresolved database is flag is set to
+        if complete_unresolved_database:
+            print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
+            completer = DatabaseEntitiesCompleter(resolvers)
+            unresolved_entities = helper_application_results.dump_unresolved_entities()
+            completer.do_complete_unresolved_entities(unresolved_entities)
         # auxiliary elaborations
+        print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
         snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld)    # for future error reproducibility
         # actual elaboration of all resolvers

@@ -1,16 +1,35 @@
 import unittest
-
-from persistence import helper_prefixes_table
+from peewee import DoesNotExist
+from exceptions.EmptyResultError import EmptyResultError
+from persistence import helper_ip_range_tsv, helper_rov
 
 
 class ASAndROVRelationQueryTestCase(unittest.TestCase):
-    def test_1_get_all_from_as(self):
-        print(f"\n------- [1] START GETTING ALL NETWORKS FORM AS NUMBER -------")
+    def test_1_get_ip_range_tsv_from_ip_address(self):
+        print(f"\n------- [1] START GETTING IP RANGE TSV FROM IP ADDRESS QUERY -------")
         # PARAMETER
-        as_number = '137'
+        ip_address_string = '193.0.14.129'
         # QUERY
-        # helper_prefixes_table.get_all_from()
-        print(f"------- [1] END GETTING ALL NETWORKS FORM AS NUMBER -------")
+        try:
+            irtes = helper_ip_range_tsv.get_all_from(ip_address_string)
+        except (DoesNotExist, EmptyResultError) as e:
+            self.fail(f"!!! {str(e)} !!!")
+        for i, irte in enumerate(irtes):
+            print(f"ip_range_tsv[{i+1}]: {str(irte)}")
+        print(f"------- [1] END GETTING IP RANGE TSV FROM IP ADDRESS QUERY -------")
+
+    def test_2_get_rov_from_ip_address(self):
+        print(f"\n------- [2] START GETTING ROV FROM IP ADDRESS QUERY -------")
+        # PARAMETER
+        ip_address_string = '193.0.14.129'
+        # QUERY
+        try:
+            results = helper_rov.get_all_from(ip_address_string, with_ip_range_rov_string=True)
+        except (DoesNotExist, EmptyResultError) as e:
+            self.fail(f"!!! {str(e)} !!!")
+        for i, tupl in enumerate(results):
+            print(f"rov[{i+1}]: {str(tupl[0])} through ip_range_rov: {tupl[1]}")
+        print(f"------- [2] END GETTING ROV FROM IP ADDRESS QUERY -------")
 
 
 if __name__ == '__main__':

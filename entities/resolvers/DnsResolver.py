@@ -235,7 +235,7 @@ class DnsResolver:
                         zone_list.append(zone)
                         print(f"Depends on zone: {zone.name}\t\t\t[NON-AUTHORITATIVE]")
                         for nm in zone.nameservers:
-                            self._split_domain_name_and_add_to_list(elaboration_domains, nm.name, False)
+                            self._split_domain_name_and_add_to_list(elaboration_domains, nm, False)
             except (NoRecordInCacheError, NoAvailablePathError):
                 try:
                     rr_cname_answer, rr_cname_aliases = self.do_query(current_domain, TypesRR.CNAME)
@@ -307,7 +307,6 @@ class DnsResolver:
                     # corrente è solo un alias di uno di quei nameserver che ha già (appunto) rr di tipo A nella cache,
                     # quindi in verità è già risolto (==> non server metterlo in cache, sennò ho doppioni)
                     try:
-                        # rr_a_cache = self.cache.resolve_path_also_from_alias(nameserver)
                         rr_a, rr_cnames = self.cache.resolve_path(nameserver, as_string=False)
                         list_utils.append_with_no_duplicates(current_zone_nameservers, nameserver)  # ma se il RR ha solo il campo values diverso?
                         for rr_cname in rr_cnames:

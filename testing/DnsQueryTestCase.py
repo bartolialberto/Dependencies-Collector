@@ -29,6 +29,7 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'c.ns.c10r.facebook.com.'
+        cls.domain_name = 'dns.unipd.it'
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION

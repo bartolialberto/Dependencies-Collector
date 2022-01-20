@@ -47,13 +47,3 @@ def deduct_http_url(url: str, as_https=True) -> str:
             return 'https://' + url + trailing_slash
         else:
             return 'http://' + url + trailing_slash
-
-    """
-    if grammatically_correct(url):
-        if as_https:
-            return 'https://' + url +'/'
-        else:
-            return 'http://' + url + '/'
-    else:
-        raise InvalidUrlError(url)
-    """

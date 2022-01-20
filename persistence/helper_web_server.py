@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from persistence import helper_url, helper_web_site, helper_web_site_lands, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation
@@ -60,9 +60,29 @@ def get_from_website_entity(wse: WebSiteEntity) -> List[WebServerEntity]:
     return result
 
 
-def get_first_from_string_website_and_https_flag(website: str, https: bool) -> WebServerEntity:
-    try:
-        wla = helper_web_site_lands.get_first_from_string_website_and_https_flag(website, https)
-    except DoesNotExist:
-        raise
-    return WebServerEntity.get_by_id(wla.web_server)
+def get_from(website_param: str or WebSiteEntity, https: bool, first_only: bool) -> List[WebServerEntity] or WebServerEntity:
+    wse = None
+    query = None
+    if isinstance(website_param, WebSiteEntity):
+        wse = website_param
+    else:
+        try:
+            wse = helper_web_site.get(website_param)
+        except DoesNotExist:
+            raise
+    if first_only:
+        query = WebSiteLandsAssociation.select() \
+            .join_from(WebSiteLandsAssociation, WebServerEntity) \
+            .where((WebSiteLandsAssociation.web_site == wse), (WebSiteLandsAssociation.https == https))\
+            .limit(1)
+        for row in query:
+            return row.web_server
+        raise DoesNotExist
+    else:
+        query = WebSiteLandsAssociation.select()\
+            .join_from(WebSiteLandsAssociation, WebServerEntity)\
+            .where((WebSiteLandsAssociation.web_site == wse), (WebSiteLandsAssociation.https == https))
+        result = list()
+        for row in query:
+            result.append(row.web_server)
+        return result

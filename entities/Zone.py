@@ -58,6 +58,7 @@ class Zone:
 
         :param nameserver: The name server.
         :type nameserver: str
+        :raise NoAvailablePathError: If name server has no access path.
         :return: The RR of type A.
         :rtype: RRecord
         """

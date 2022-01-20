@@ -60,7 +60,7 @@ class ASResolverValueForROVPageScraping:
         :return: An ASResolverValueForROVPageScraping object.
         :rtype: ASResolverValueForROVPageScraping
         """
-        return ASResolverValueForROVPageScraping(value.name_server, value.entry, value.belonging_network)
+        return ASResolverValueForROVPageScraping(value.name_server, value.entry, value.ip_range_tsv)
 
 
 class ASResolverResultForROVPageScraping:

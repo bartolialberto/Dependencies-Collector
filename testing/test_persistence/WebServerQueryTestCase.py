@@ -11,11 +11,10 @@ class WebServerQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.website = 'https://consent.google.de/ml?continue=https://www.google.de/&gl=IT&m=0&pc=shp&hl=it&src=1'
-        persist_errors = True
         # ELABORATION
         resolver = LandingResolver()
         try:
-            resolver_results = resolver.resolve_web_site(cls.website)
+            resolver_results = resolver.resolve_site(cls.website)
         except Exception as e:
             print(f"ERROR: {str(e)}")
             return

@@ -105,7 +105,7 @@ class ApplicationResolversWrapper:
             print(f"!!! {str(exc)} !!!")
         tsv_db_is_updated = file_utils.is_tsv_database_updated()
         if tsv_db_is_updated:
-            print("> .tsv database file is updated.")
+            print("> .tsv database file is up-to-date.")
         else:
             print("> Latest .tsv database (~25 MB) is downloading and extracting... ", end='')
             requests_utils.download_latest_tsv_database()
@@ -198,7 +198,7 @@ class ApplicationResolversWrapper:
         :rtype: Dict[str, LandingSiteResult]
         """
         print("\n\nSTART WEB SITE LANDING RESOLVER")
-        results = self.landing_resolver.resolve_web_sites(web_sites)
+        results = self.landing_resolver.resolve_sites(web_sites)
         for web_site in results.keys():
             self.error_logger.add_entries(results[web_site].error_logs)
         print("END WEB SITE LANDING RESOLVER")
@@ -214,7 +214,7 @@ class ApplicationResolversWrapper:
         :rtype: Dict[str, LandingSiteResult]
         """
         print("\n\nSTART SCRIPT SITE LANDING RESOLVER")
-        results = self.landing_resolver.resolve_script_sites(script_sites)
+        results = self.landing_resolver.resolve_sites(script_sites)
         for script_site in results.keys():
             self.error_logger.add_entries(results[script_site].error_logs)
         print("END SCRIPT SITE LANDING RESOLVER")
@@ -280,18 +280,18 @@ class ApplicationResolversWrapper:
                             entry = self.ip_as_database.resolve_range(ip)
                         except (AutonomousSystemNotFoundError, ValueError) as e:
                             results.insert_ip_as_entry(ip, None)
-                            results.insert_belonging_network(ip, None)
+                            results.insert_ip_range_tsv(ip, None)
                             print(f"!!! {str(e)} !!!")
                             continue
                         results.insert_ip_as_entry(ip_string, entry)
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(f"----> for {ip.compressed} ({nameserver}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            results.insert_belonging_network(ip_string, belonging_network_ip_as_db)
+                            results.insert_ip_range_tsv(ip_string, belonging_network_ip_as_db)
                         except ValueError as exc:
                             print(f"----> for {ip.compressed} ({nameserver}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.compressed, f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
-                            results.insert_belonging_network(ip_string, None)
+                            results.insert_ip_range_tsv(ip_string, None)
         print()
         for i, site in enumerate(landing_results.keys()):
             print(f"Handling site[{i+1}/{len(landing_results.keys())}]: {site}")
@@ -308,15 +308,15 @@ class ApplicationResolversWrapper:
                     try:
                         belonging_network, networks = entry.get_network_of_ip(https_result.ip)
                         print(f"----> belonging network: {belonging_network.compressed}")
-                        results.insert_belonging_network(https_result.ip.exploded, belonging_network)
+                        results.insert_ip_range_tsv(https_result.ip.exploded, belonging_network)
                     except ValueError as exc:
                         print(f"----> belonging network: NOT FOUND")
                         self.error_logger.add_entry(ErrorLog(exc, https_result.ip.exploded, str(exc)))
-                        results.insert_belonging_network(https_result.ip.exploded, None)
+                        results.insert_ip_range_tsv(https_result.ip.exploded, None)
                 except AutonomousSystemNotFoundError as e:
                     self.error_logger.add_entry(ErrorLog(e, https_result.ip.exploded, str(e)))
                     results.insert_ip_as_entry(https_result.ip.exploded, None)
-                    results.insert_belonging_network(https_result.ip.exploded, None)
+                    results.insert_ip_range_tsv(https_result.ip.exploded, None)
                     print(f"----> Not resolved.")
                     print(f"----> belonging network: NOT FOUND")
             else:
@@ -333,15 +333,15 @@ class ApplicationResolversWrapper:
                             try:
                                 belonging_network, networks = entry.get_network_of_ip(http_result.ip)
                                 print(f"----> belonging network: {belonging_network.compressed}")
-                                results.insert_belonging_network(http_result.ip.exploded, belonging_network)
+                                results.insert_ip_range_tsv(http_result.ip.exploded, belonging_network)
                             except ValueError as exc:
                                 print(f"----> belonging network: NOT FOUND")
                                 self.error_logger.add_entry(ErrorLog(exc, http_result.ip.exploded, str(exc)))
-                                results.insert_belonging_network(http_result.ip.exploded, None)
+                                results.insert_ip_range_tsv(http_result.ip.exploded, None)
                         except AutonomousSystemNotFoundError as e:
                             self.error_logger.add_entry(ErrorLog(e, http_result.ip.exploded, str(e)))
                             results.insert_ip_as_entry(http_result.ip.exploded, None)
-                            results.insert_belonging_network(http_result.ip.exploded, None)
+                            results.insert_ip_range_tsv(http_result.ip.exploded, None)
                             print(f"----> Not resolved.")
                             print(f"----> belonging network: NOT FOUND")
             else:

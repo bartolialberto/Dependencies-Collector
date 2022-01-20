@@ -26,7 +26,7 @@ def get(url: str) -> WebSiteEntity:
 def get_unresolved() -> Set[WebSiteEntity]:
     query = WebSiteLandsAssociation.select()\
         .join_from(WebSiteLandsAssociation, WebSiteEntity)\
-        .where(WebSiteLandsAssociation.web_server == None, WebSiteLandsAssociation.ip_address == None)
+        .where((WebSiteLandsAssociation.web_server == None) and (WebSiteLandsAssociation.ip_address == None))
     result = set()
     for row in query:
         result.add(row.web_site)

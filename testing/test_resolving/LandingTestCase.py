@@ -19,7 +19,7 @@ class LandingTestCase(unittest.TestCase):
         print(f"\n------- [1] START WEB SITE LANDING TEST -------")
         for i, web_site in enumerate(self.web_site_list):
             print(f"Trying to resolve landing of websites[{i+1}/{len(self.web_site_list)}]: {web_site}")
-            results = self.resolver.resolve_web_site(web_site)
+            results = self.resolver.resolve_site(web_site)
 
             # HTTPS
             print(f"**** via HTTPS *****")
@@ -56,7 +56,7 @@ class LandingTestCase(unittest.TestCase):
         print(f"\n------- [2] START SCRIPT SITE LANDING TEST -------")
         for i, script_site in enumerate(self.script_site_list):
             print(f"Trying to resolve landing of script site[{i+1}/{len(self.script_site_list)}]: {script_site}:")
-            results = self.resolver.resolve_web_site(script_site)
+            results = self.resolver.resolve_site(script_site)
 
             # HTTPS
             print(f"**** via HTTPS *****")

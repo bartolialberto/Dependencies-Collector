@@ -29,7 +29,8 @@ class InnerLandingSiteSingleSchemeResult:
         self.redirection_path = redirection_path
         self.hsts = hsts
         self.ip = ip
-        self.server = domain_name_utils.deduct_domain_name(url)
+        tmp = domain_name_utils.deduct_domain_name(url)
+        self.server = domain_name_utils.insert_trailing_point(tmp)
 
 
 class LandingSiteResult:

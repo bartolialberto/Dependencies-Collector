@@ -24,14 +24,13 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
     def test_02_query_aliases_from_domain_name(self):
         print(f"\n------- [2] QUERY ALIAS AND ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'www.youtube.com.'
+        domain_name = 'ipdunivx.unipd.it.'
         # QUERY
         print(f"Parameter: {domain_name}")
         try:
             dnes = helper_alias.get_all_aliases_from_name(domain_name)
-            print(f"All aliases of domain name: {domain_name}")
             for i, dne in enumerate(dnes):
-                print(f"alias[{i + 1}/{len(dne)}]: {dne.name}")
+                print(f"alias[{i + 1}/{len(dnes)}]: {dne.name}")
         except (DoesNotExist, NoAliasFoundError) as e:
             print(f"!!! {str(e)} !!!")
         print(f"------- [2] END QUERY ALIAS AND ACCESS PATH FROM DOMAIN NAME -------")
@@ -39,7 +38,7 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
     def test_03_query_access_path_from_domain_name(self):
         print(f"\n------- [3] QUERY ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'www.youtube.com.'
+        domain_name = 'dns.unipd.it.'
         # QUERY
         print(f"Parameter: {domain_name}")
         try:

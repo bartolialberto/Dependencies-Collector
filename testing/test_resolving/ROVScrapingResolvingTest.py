@@ -61,16 +61,16 @@ class ROVScrapingResolvingTestCase(unittest.TestCase):
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
                             print(
                                 f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            ip_as_results.insert_belonging_network(nameserver, belonging_network_ip_as_db)
+                            ip_as_results.insert_ip_range_tsv(nameserver, belonging_network_ip_as_db)
                         except ValueError:
                             print(
                                 f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
                             # ip_as_db_entries_result[rr.name] = (ip, entry, None)
-                            ip_as_results.insert_belonging_network(nameserver, None)
+                            ip_as_results.insert_ip_range_tsv(nameserver, None)
                     except AutonomousSystemNotFoundError:
                         print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
                         ip_as_results.insert_ip_as_entry(nameserver, None)
-                        ip_as_results.insert_belonging_network(nameserver, None)
+                        ip_as_results.insert_ip_range_tsv(nameserver, None)
 
         try:
             headless_browser = FirefoxHeadlessWebDriver(PRD)
@@ -97,7 +97,7 @@ class ROVScrapingResolvingTestCase(unittest.TestCase):
             for nameserver in reformat.results[as_number].keys():
                 ip_string = reformat.results[as_number][nameserver].ip_address
                 entry_ip_as_db = reformat.results[as_number][nameserver].entry_as_database
-                belonging_network_ip_as_db = reformat.results[as_number][nameserver].belonging_network
+                belonging_network_ip_as_db = reformat.results[as_number][nameserver].ip_range_tsv
                 try:
                     row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
                     reformat.results[as_number][nameserver].insert_rov_entry(row)

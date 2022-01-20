@@ -1,6 +1,8 @@
 from typing import Dict, Set
 from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
+from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
+from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult
 from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
@@ -40,7 +42,7 @@ def insert_all_application_results(resolvers: ApplicationResolversWrapper) -> No
 def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
     for web_site in result.keys():
         w_site_e = helper_web_site.insert(web_site)
-        helper_web_site_lands.delete_all_from_website_entity(w_site_e)
+        helper_web_site_lands.delete_all_from_entity_web_site(w_site_e)
 
         # HTTPS result
         is_https = True
@@ -181,8 +183,8 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
                         entry_ip_as_db = finals.results[as_number][ip_address].entry_as_database
                         ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
                         row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
-                        nse, dne = helper_name_server.insert(name_server)
-                        helper_access.insert(dne, iae)
+                        # nse, dne = helper_name_server.insert(name_server)
+                        # helper_access.insert(dne, iae)
                         if entry_ip_as_db is not None:
                             if ip_range_tsv is not None:
                                 irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
@@ -243,6 +245,32 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
             pass
 
 
-def dump_unresolved_entities():
+def dump_unresolved_entities() -> set:
+    print(f"> Start retrieving all unresolved entities... ", end='')
+    total_results = set()
     # getting web sites that didn't land
     wses = helper_web_site.get_unresolved()
+    uew_set = UnresolvedEntityWrapper.create_from_set(wses, ResolvingErrorCauses.NO_LANDING_FOR_WEB_SITE)
+    total_results = total_results.union(uew_set)
+
+    # getting IP ranges/network that didn't have a match from an IP address
+    iadas = helper_ip_address_depends.get_unresolved()
+    iadas_set = UnresolvedEntityWrapper.create_from_set(iadas, ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS)
+    total_results = total_results.union(iadas_set)
+
+    # getting script sites that didn't land
+    sses = helper_script_site_lands.get_unresolved()
+    sses_set = UnresolvedEntityWrapper.create_from_set(sses, ResolvingErrorCauses.NO_LANDING_FOR_SCRIPT_SITE)
+    total_results = total_results.union(sses_set)
+
+    # getting name servers with no access path
+    nses = helper_name_server.get_unresolved()
+    nses_set = UnresolvedEntityWrapper.create_from_set(nses, ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH)
+    total_results = total_results.union(nses_set)
+
+
+
+    # errori non gestiti??
+
+    print(f"DONE.")
+    return total_results

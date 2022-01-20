@@ -1,7 +1,11 @@
-from typing import Tuple, Set
+from typing import Tuple, Set, List
 from peewee import DoesNotExist
-from persistence import helper_domain_name, helper_zone
-from persistence.BaseModel import NameServerEntity, DomainNameEntity, ZoneComposedAssociation, ZoneEntity
+
+from exceptions.EmptyResultError import EmptyResultError
+from exceptions.NoAvailablePathError import NoAvailablePathError
+from persistence import helper_domain_name, helper_zone, helper_ip_address
+from persistence.BaseModel import NameServerEntity, DomainNameEntity, ZoneComposedAssociation, ZoneEntity, \
+    AccessAssociation, IpAddressEntity
 from utils import domain_name_utils
 
 
@@ -57,4 +61,55 @@ def get_every_zone_of(name_server_parameter: NameServerEntity or str) -> Set[Zon
         .where(ZoneComposedAssociation.name_server == nse)
     for row in query:
         result.add(row.zone)
+    return result
+
+
+def get_all_from_ip_address(address: str) -> List[NameServerEntity]:
+    try:
+        iae = helper_ip_address.get(address)
+    except DoesNotExist:
+        raise
+    query = AccessAssociation.select()\
+        .join_from(AccessAssociation, DomainNameEntity)\
+        .join_from(DomainNameEntity, NameServerEntity)\
+        .where(AccessAssociation.ip_address == iae)
+    result = list()
+    for row in query:
+        result.append(row.domain_name)
+    if len(result) == 0:
+        raise EmptyResultError
+    else:
+        return result
+
+
+def get_first_from_ip_address(address: str) -> NameServerEntity:
+    try:
+        iae = helper_ip_address.get(address)
+    except DoesNotExist:
+        raise
+    query = AccessAssociation.select()\
+        .join_from(AccessAssociation, DomainNameEntity)\
+        .join_from(DomainNameEntity, NameServerEntity)\
+        .where(AccessAssociation.ip_address == iae)\
+        .limit(1)
+    for row in query:
+        return row.domain_name
+    raise DoesNotExist
+
+
+def resolve_access_path(nse: NameServerEntity, get_only_first_address=False) -> Tuple[IpAddressEntity or Set[IpAddressEntity], List[DomainNameEntity]]:
+    try:
+        return helper_domain_name.resolve_access_path(nse.name, get_only_first_address=get_only_first_address)
+    except NoAvailablePathError:
+        raise
+
+
+def get_unresolved() -> Set[NameServerEntity]:
+    query = NameServerEntity.select()\
+        .join_from(NameServerEntity, DomainNameEntity)\
+        .join_from(DomainNameEntity, AccessAssociation)\
+        .where(AccessAssociation.ip_address == None)
+    result = set()
+    for row in query:
+        result.add(row)
     return result

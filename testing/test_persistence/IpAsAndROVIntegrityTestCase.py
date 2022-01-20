@@ -11,13 +11,15 @@ from entities.resolvers.results.AutonomousSystemResolutionResults import Autonom
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.scrapers.ROVPageScraper import ROVPageScraper
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
+from exceptions.EmptyResultError import EmptyResultError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
+from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
 from persistence import helper_application_results, helper_ip_address, helper_name_server, helper_ip_network, \
-    helper_autonomous_system, helper_rov, helper_prefixes_table
+    helper_autonomous_system, helper_rov, helper_prefixes_table, helper_ip_range_tsv, helper_ip_range_rov, helper_alias
 
 
 class IpAsAndROVIntegrityTestCase(unittest.TestCase):
@@ -43,43 +45,35 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
     def do_ip_as_database_resolving(ip_as_resolver: IpAsDatabase, dns_results: MultipleDnsZoneDependenciesResult) -> AutonomousSystemResolutionResults:
         print("\n\nSTART IP-AS RESOLVER")
         results = AutonomousSystemResolutionResults()
-        zone_obj_dict = dict()
-        for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
-            for zone in dns_results.zone_dependencies_per_domain_name[domain_name]:
-                try:
-                    zone_obj_dict[zone.name]
-                except KeyError:
-                    zone_obj_dict[zone.name] = zone
         for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
                 print(f"--> Handling zone[{index_zone}] '{zone.name}'")
                 for i, nameserver in enumerate(zone.nameservers):
-                    results.add_name_server(nameserver)
                     try:
-                        # TODO: gestire più indirizzi per nameserver
+                        rr_a = zone.resolve_nameserver(nameserver)
+                    except NoAvailablePathError:
+                        print(f"!!! NO RESOLVED IP ADDRESS FROM name server: {nameserver} !!!")
+                        continue
+                    for ip_string in rr_a.values:
+                        results.add_ip_address(ip_string)
+                        results.insert_name_server(ip_string, nameserver)
+                        ip = ipaddress.IPv4Address(ip_string)        # no exception catch needed
                         try:
-                            rr = zone.resolve_nameserver(nameserver)
-                        except NoAvailablePathError:
-                            results.set_name_server_to_none(nameserver)
+                            entry = ip_as_resolver.resolve_range(ip)
+                        except (AutonomousSystemNotFoundError, ValueError) as e:
+                            results.insert_ip_as_entry(ip, None)
+                            results.insert_ip_range_tsv(ip, None)
+                            print(f"!!! {str(e)} !!!")
                             continue
-                        ip = ipaddress.IPv4Address(rr.get_first_value())  # no exception catch needed
-                        results.insert_ip_address(nameserver, ip)
-                        entry = ip_as_resolver.resolve_range(ip)
-                        results.insert_ip_as_entry(nameserver, entry)
+                        results.insert_ip_as_entry(ip_string, entry)
                         try:
                             belonging_network_ip_as_db, networks = entry.get_network_of_ip(ip)
-                            print(
-                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
-                            results.insert_belonging_network(nameserver, belonging_network_ip_as_db)
+                            print(f"----> for {ip.compressed} ({nameserver}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. Belonging network: {belonging_network_ip_as_db.compressed}")
+                            results.insert_ip_range_tsv(ip_string, belonging_network_ip_as_db)
                         except ValueError as exc:
-                            print(
-                                f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) found AS record: [{entry}]")
-                            results.insert_belonging_network(nameserver, None)
-                    except AutonomousSystemNotFoundError as exc:
-                        print(f"----> for nameserver[{i}] '{nameserver}' ({ip.compressed}) no AS found.")
-                        results.insert_ip_as_entry(nameserver, None)
-                        results.insert_belonging_network(nameserver, None)
+                            print(f"----> for {ip.compressed} ({nameserver}) found AS record: [{str(entry)}]")
+                            results.insert_ip_range_tsv(ip_string, None)
         print("END IP-AS RESOLVER")
         return results
 
@@ -98,17 +92,17 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
                 print(f"!!! {str(exc)} !!!")
                 reformat.results[as_number] = None
                 continue
-            for nameserver in reformat.results[as_number].keys():
-                ip_string = reformat.results[as_number][nameserver].ip_address
-                entry_ip_as_db = reformat.results[as_number][nameserver].entry_as_database
-                belonging_network_ip_as_db = reformat.results[as_number][nameserver].belonging_network
+            for ip_address in reformat.results[as_number].keys():
+                name_server = reformat.results[as_number][ip_address].name_server
+                entry_ip_as_db = reformat.results[as_number][ip_address].entry_as_database
+                belonging_network_ip_as_db = reformat.results[as_number][ip_address].ip_range_tsv
                 try:
-                    row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_string))  # non gestisco ValueError perché non può accadere qua
-                    reformat.results[as_number][nameserver].insert_rov_entry(row)
-                    print(f"--> for '{nameserver}' ({ip_string}), found row: {str(row)}")
+                    row = rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_address))  # non gestisco ValueError perché non può accadere qua
+                    reformat.results[as_number][ip_address].insert_rov_entry(row)
+                    print(f"--> for {ip_address} ({name_server}) found row: {str(row)}")
                 except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {exc.message} !!!")
-                    reformat.results[as_number][nameserver].insert_rov_entry(None)
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)
         print("END ROV PAGE SCRAPING")
         return reformat
 
@@ -128,90 +122,102 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
         rov_scraper = ROVPageScraper(cls.headless_browser)
         cls.final_results = IpAsAndROVIntegrityTestCase.do_rov_page_scraping(rov_scraper, rov_scraper_pre_results)
         print("\nInsertion into database... ", end="")
-        for as_number in cls.final_results.results.keys():
-            if cls.final_results.results[as_number] is None:
-                print('')
-                pass
-            for name_server in cls.final_results.results[as_number].keys():
-                helper_name_server.insert(name_server)
-        helper_application_results.insert_ip_as_and_rov_resolving(cls.final_results, persist_errors=cls.persist_errors)
+        helper_application_results.insert_dns_result(cls.dns_results)
+        helper_application_results.insert_ip_as_and_rov_resolving(cls.final_results)
         print(f"DONE.")
 
     def test_1_integrity(self):
         print("\n------- [1] START INTEGRITY TEST -------")
         for as_number in self.final_results.results.keys():
             print(f"AS{as_number}:")
-            for name_server in self.final_results.results[as_number].keys():
-                print(f"--> nameserver: {name_server}")
-                res = self.final_results.results[as_number][name_server]
-                if res.ip_address is None:
-                    ip_address_elaboration = None
+            if self.final_results.results[as_number] is None:
+                print('')
+                continue
+            for ip_address in self.final_results.results[as_number].keys():
+                print(f"--> IP address: {ip_address}")
+                res = self.final_results.results[as_number][ip_address]
+                if res.name_server is None:
+                    name_server_elaboration = None
                 else:
-                    ip_address_elaboration = res.ip_address.exploded
-                if res.entry_as_database is None:
-                    as_elaboration_number = None
-                else:
-                    as_elaboration_number = res.entry_as_database.as_number
+                    name_server_elaboration = res.name_server
                 if res.entry_rov_page is None:
                     rov_elaboration_state = None
                 else:
                     rov_elaboration_state = res.entry_rov_page.rov_state.to_string()
-                if res.belonging_network is None:
-                    ip_network_elaboration = None
+                if res.entry_rov_page is None:
+                    ip_range_rov_elaboration = None
                 else:
-                    ip_network_elaboration = res.belonging_network.compressed
+                    ip_range_rov_elaboration = res.entry_rov_page.prefix.compressed
+                if res.ip_range_tsv is None:
+                    ip_range_tsv_elaboration = None
+                else:
+                    ip_range_tsv_elaboration = res.ip_range_tsv.compressed
                 print(f"----> Results from elaboration:")
-                print(f"------> ip: {ip_address_elaboration}")
-                print(f"------> entry_ip_as: {as_elaboration_number}")
-                print(f"------> entry_rov_page: {rov_elaboration_state}")
-                print(f"------> network: {ip_network_elaboration}")
-                print(f"----> Results from database:")
+                print(f"------> name_server: {name_server_elaboration}")
+                print(f"------> ip_range_tsv: {ip_range_tsv_elaboration}")
+                print(f"------> ip_range_rov: {ip_range_rov_elaboration}")
+                print(f"------> entry_rov_page_state: {rov_elaboration_state}")
+                # we can't get the name server from the IP address, because there is the case in which name server is an
+                # alias of the domain name that resolved such IP address
                 try:
-                    temp = helper_ip_address.get_first_of(name_server)
-                    ip_address_compressed = temp.exploded_notation
-                    print(f"------> ip: {ip_address_compressed}")
+                    nses = helper_name_server.get_all_from_ip_address(ip_address)
+                    if len(nses) > 1:
+                        self.fail(f"ERROR: address: {ip_address} has more than 1 name server associated")
+                    nse = nses[0]
+                    domain_name_that_resolves_in_address = nse.name
                     try:
-                        tmp = helper_ip_network.get(ip_address_compressed)
-                        ip_network_db = tmp.compressed_notation
-                        print(f"------> network: {ip_network_db}")
-                        try:
-                            as_db = helper_autonomous_system.get_first_of(ip_network_db)
-                            as_db_number = as_db.number
-                            print(f"------> as: AS{as_db_number}")
-                        except DoesNotExist:
-                            as_db_number = None
-                            print(f"------> as: NOT FOUND")
-                        try:
-                            rov_db = helper_rov.get_from_network(ip_network_db)
-                            rov_db_state = rov_db.state
-                            print(f"------> rov: AS{str(rov_db)}")
-                        except DoesNotExist:
-                            rov_db_state = None
-                            print(f"------> rov: NOT FOUND")
-                        self.assertEqual(as_elaboration_number, as_db_number)
-                        self.assertEqual(rov_elaboration_state, rov_db_state)
-                        self.assertEqual(ip_network_elaboration, ip_network_db)
-                    except DoesNotExist:
-                        ip_network_db = None
-                        print(f"------> network: NOT FOUND")
-                except DoesNotExist:
-                    ip_address_compressed = None
-                    print(f"------> ip: NOT FOUND")
-                self.assertEqual(ip_address_elaboration, ip_address_compressed)
-
-
+                        name_servers_db = helper_alias.get_all_aliases_from_name(domain_name_that_resolves_in_address)
+                    except (NoAliasFoundError, DoesNotExist):
+                        name_servers_db = set()
+                        name_servers_db.add(domain_name_that_resolves_in_address)
+                except (DoesNotExist, EmptyResultError):
+                    domain_name_that_resolves_in_address = None
+                    name_servers_db = set()
+                try:
+                    irtes = helper_ip_range_tsv.get_all_from(ip_address)
+                    if len(irtes) > 1:
+                        self.fail(f"ERROR: address: {ip_address} has more than 1 ip range tsv associated")
+                    irte = irtes[0]
+                    ip_range_tsv_db = irte.compressed_notation
+                except (DoesNotExist, EmptyResultError):
+                    ip_range_tsv_db = None
+                try:
+                    irres = helper_ip_range_rov.get_all_from(ip_address)
+                    if len(irres) > 1:
+                        self.fail(f"ERROR: address: {ip_address} has more than 1 ip range rov associated")
+                    irre = irres[0]
+                    ip_range_rov_db = irre.compressed_notation
+                except (DoesNotExist, EmptyResultError):
+                    ip_range_rov_db = None
+                try:
+                    res = helper_rov.get_all_from(ip_address, with_ip_range_rov_string=False)
+                    if len(res) > 1:
+                        self.fail(f"ERROR: address: {ip_address} has more than 1 ip range rov associated")
+                    re = res[0]
+                    rov_state_db = re.state
+                except (DoesNotExist, EmptyResultError):
+                    rov_state_db = None
+                print(f"----> Results from database:")
+                print(f"------> possible name_servers: {str(name_servers_db)}")
+                print(f"------> ip_range_tsv: {ip_range_tsv_db}")
+                print(f"------> ip_range_rov: {ip_range_rov_db}")
+                print(f"------> entry_rov_page_state: {rov_state_db}")
+                self.assertIn(name_server_elaboration, name_servers_db)     # TODO: fare un metodo che risale i backward aliases
+                self.assertEqual(ip_range_tsv_elaboration, ip_range_tsv_db)
+                self.assertEqual(ip_range_rov_elaboration, ip_range_rov_db)
+                self.assertEqual(rov_elaboration_state, rov_state_db)
         print("------- [1] END INTEGRITY TEST -------")
 
-    def test_2_no_more_than_1_association_for_network(self):
+    def test_2_no_more_than_one_association_for_network(self):
         print("\n------- [2] START NO DUPLICATES FOR EACH NETWORK TEST -------")
         ines = helper_ip_network.get_all()
-        for ine in ines:
-            ases = helper_autonomous_system.get_all_of(ine)
-            self.assertLess(len(ases), 2)
-            ptas = helper_prefixes_table.get_all_of(ine)
-            self.assertLess(len(ptas), 2)
+        pass
         print(f"Everything went well.")
         print("------- [2] END NO DUPLICATES FOR EACH NETWORK TEST -------")
+
+
+    def test_3_no_more_than_one_domain_name_for_ip_address(self):
+        pass
 
     @classmethod
     def tearDownClass(cls) -> None:
