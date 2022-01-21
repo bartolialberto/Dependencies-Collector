@@ -40,13 +40,3 @@ def delete_all_from_script_site_entity(sse: ScriptSiteEntity):
             relation.delete_instance()
     except DoesNotExist:
         pass
-
-
-def get_unresolved() -> Set[ScriptSiteEntity]:
-    query = ScriptSiteLandsAssociation.select()\
-        .join_from(ScriptSiteLandsAssociation, ScriptSiteEntity)\
-        .where((ScriptSiteLandsAssociation.script_server == None) and (ScriptSiteLandsAssociation.ip_address == None))
-    result = set()
-    for row in query:
-        result.add(row.script_site)
-    return result

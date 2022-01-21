@@ -245,13 +245,16 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
             pass
 
 
-def dump_unresolved_entities() -> set:
+def get_unresolved_entities() -> set:
     print(f"> Start retrieving all unresolved entities... ", end='')
     total_results = set()
     # getting web sites that didn't land
-    wses = helper_web_site.get_unresolved()
-    uew_set = UnresolvedEntityWrapper.create_from_set(wses, ResolvingErrorCauses.NO_LANDING_FOR_WEB_SITE)
-    total_results = total_results.union(uew_set)
+    https_wslas = helper_web_site_lands.get_unresolved(https=True)
+    uew_https_set = UnresolvedEntityWrapper.create_from_set(https_wslas, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_WEB_SITE)
+    total_results = total_results.union(uew_https_set)
+    http_wslas = helper_web_site_lands.get_unresolved(https=False)
+    uew_http_set = UnresolvedEntityWrapper.create_from_set(http_wslas, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_WEB_SITE)
+    total_results = total_results.union(uew_http_set)
 
     # getting IP ranges/network that didn't have a match from an IP address
     iadas = helper_ip_address_depends.get_unresolved()
@@ -259,9 +262,12 @@ def dump_unresolved_entities() -> set:
     total_results = total_results.union(iadas_set)
 
     # getting script sites that didn't land
-    sses = helper_script_site_lands.get_unresolved()
-    sses_set = UnresolvedEntityWrapper.create_from_set(sses, ResolvingErrorCauses.NO_LANDING_FOR_SCRIPT_SITE)
-    total_results = total_results.union(sses_set)
+    https_sses = helper_script_site.get_https_unresolved()
+    sses_https_set = UnresolvedEntityWrapper.create_from_set(https_sses, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE)
+    total_results = total_results.union(sses_https_set)
+    http_sses = helper_script_site.get_https_unresolved()
+    sses_http_set = UnresolvedEntityWrapper.create_from_set(http_sses, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE)
+    total_results = total_results.union(sses_http_set)
 
     # getting name servers with no access path
     nses = helper_name_server.get_unresolved()

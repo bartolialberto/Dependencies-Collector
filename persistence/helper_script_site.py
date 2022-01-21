@@ -19,11 +19,21 @@ def get(url: str) -> ScriptSiteEntity:
     return sse
 
 
-def get_unresolved() -> Set[ScriptSiteEntity]:
+def get_https_unresolved() -> Set[ScriptSiteEntity]:
     query = ScriptSiteLandsAssociation.select()\
         .join_from(ScriptSiteLandsAssociation, ScriptSiteEntity)\
-        .where(ScriptSiteLandsAssociation.script_server == None, ScriptSiteLandsAssociation.ip_address == None)
+        .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.ip_address.is_null(True)) & (ScriptSiteLandsAssociation.https == True))
     result = set()
     for row in query:
-        result.add(row.web_site)
+        result.add(row.script_site)
+    return result
+
+
+def get_http_unresolved() -> Set[ScriptSiteEntity]:
+    query = ScriptSiteLandsAssociation.select()\
+        .join_from(ScriptSiteLandsAssociation, ScriptSiteEntity)\
+        .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.ip_address.is_null(True)) & (ScriptSiteLandsAssociation.https == False))
+    result = set()
+    for row in query:
+        result.add(row.script_site)
     return result

@@ -9,14 +9,6 @@ def insert(dne: DomainNameEntity or None, iae: IpAddressEntity or None) -> Acces
     return aa
 
 
-def get_of_string_domain_name(domain_name: str) -> Set[AccessAssociation]:
-    try:
-        dne = helper_domain_name.get(domain_name)
-    except DoesNotExist:
-        raise
-    return get_of_entity_domain_name(dne)
-
-
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AccessAssociation]:
     result = set()
     query = AccessAssociation.select().where(AccessAssociation.domain_name == dne)

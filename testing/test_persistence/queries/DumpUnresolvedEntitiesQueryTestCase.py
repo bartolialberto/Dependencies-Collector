@@ -6,20 +6,12 @@ from persistence.BaseModel import IpAddressDependsAssociation, AutonomousSystemE
 
 class DumpUnresolvedEntitiesQueryTestCase(unittest.TestCase):
     def test_getting_unresolved_entities(self):
-        results = helper_application_results.dump_unresolved_entities()
+        results = helper_application_results.get_unresolved_entities()
         for i, res in enumerate(results):
-            if isinstance(res, IpAddressDependsAssociation):
-                print(f"[{i+1}/{len(results)}]: IpAddressDependsAssociation = {str(res)}")
-            elif isinstance(res, PrefixesTableAssociation):
-                print(f"[{i + 1}/{len(results)}]: PrefixesTableAssociation = {str(res)} from IpAddressEntity = {str(res)}")
-            elif isinstance(res, WebSiteEntity):
-                print(f"[{i + 1}/{len(results)}]: WebSiteEntity = {str(res)}")
-            elif isinstance(res, ScriptSiteEntity):
-                print(f"[{i + 1}/{len(results)}]: ScriptSiteEntity = {str(res)}")
-            elif isinstance(res, NameServerEntity):
-                print(f"[{i + 1}/{len(results)}]: NameServerEntity = {str(res)}")
-            else:
-                print(f"[{i + 1}/{len(results)}]: ??? = ???")
+            print(f"entity[{i+1}/{len(results)}]")
+            print(f"---> entity: type={type(res.entity)}, str={str(res.entity)}")
+            print(f"---> cause: str={str(res.cause)}")
+            print(f"---> entity_cause: type={type(res.entity_cause)}, str={str(res.entity_cause)}")
 
 
 if __name__ == '__main__':

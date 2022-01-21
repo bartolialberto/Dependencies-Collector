@@ -74,6 +74,24 @@ class LandingResolver:
         """
         error_logs = list()
         try:
+            https_result = self.do_single_request(site, True)
+        except requests.exceptions.ConnectionError as e:
+            https_result = None
+            error_logs.append(ErrorLog(e, site, str(e)))
+        except Exception as exc:
+            https_result = None
+            error_logs.append(ErrorLog(exc, site, str(exc)))
+        try:
+            http_result = self.do_single_request(site, False)
+        except requests.exceptions.ConnectionError as e:
+            http_result = None
+            error_logs.append(ErrorLog(e, site, str(e)))
+        except Exception as exc:
+            http_result = None
+            error_logs.append(ErrorLog(exc, site, str(exc)))
+        return LandingSiteResult(https_result, http_result, error_logs)
+        """
+        try:
             landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=True)
             https_result = InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
         except requests.exceptions.ConnectionError as e:
@@ -90,3 +108,12 @@ class LandingResolver:
             http_result = None
             error_logs.append(ErrorLog(exc, site, str(exc)))
         return LandingSiteResult(https_result, http_result, error_logs)
+        """
+
+    def do_single_request(self, site: str, https: bool) -> InnerLandingSiteSingleSchemeResult:
+        # TODO
+        try:
+            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=https)
+        except Exception:
+            raise
+        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))

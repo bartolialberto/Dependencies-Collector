@@ -1,8 +1,6 @@
-from typing import List
+from typing import List, Set
 from peewee import DoesNotExist
-from persistence import helper_web_site
-from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity, WebServerEntity, UrlEntity, \
-    IpAddressEntity
+from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity, IpAddressEntity
 
 
 def insert(wsitee: WebSiteEntity, wservere: WebServerEntity or None, https: bool, iae: IpAddressEntity or None) -> WebSiteLandsAssociation:
@@ -51,3 +49,20 @@ def delete_all_from_entity_web_site(wse: WebSiteEntity):
             relation.delete_instance()
     except DoesNotExist:
         pass
+
+
+def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity, new_ip_address: IpAddressEntity) -> None:
+    query = WebSiteLandsAssociation.update(web_server=new_w_server_e, ip_address=new_ip_address) \
+        .where((WebSiteLandsAssociation.web_site == wsla.web_site) &
+               (WebSiteLandsAssociation.https == wsla.https))
+    query.execute()
+
+
+def get_unresolved(https: bool) -> Set[WebSiteLandsAssociation]:
+    query = WebSiteLandsAssociation.select()\
+        .join_from(WebSiteLandsAssociation, WebSiteEntity)\
+        .where((WebSiteLandsAssociation.web_server.is_null(True)) & (WebSiteLandsAssociation.ip_address.is_null(True)) & (WebSiteLandsAssociation.https == https))
+    result = set()
+    for row in query:
+        result.add(row)
+    return result

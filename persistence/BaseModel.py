@@ -391,11 +391,11 @@ class PrefixesTableAssociation(BaseModel):
 
 
 class NetworkNumbersAssociation(BaseModel):
-    ip_range_rov = ForeignKeyField(IpRangeROVEntity)
+    ip_range_tsv = ForeignKeyField(IpRangeTSVEntity)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity, null=True)
 
     def __str__(self):
-        return f"<{self.ip_range_rov}, {self.autonomous_system}>"
+        return f"<{self.ip_range_tsv}, {self.autonomous_system}>"
 
     class Meta:
         db_table = 'network_numbers'

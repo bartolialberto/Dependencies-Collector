@@ -2,5 +2,5 @@ from persistence.BaseModel import NetworkNumbersAssociation, IpRangeTSVEntity, A
 
 
 def insert(irte: IpRangeTSVEntity, ase: AutonomousSystemEntity) -> NetworkNumbersAssociation:
-    nna, created = NetworkNumbersAssociation.get_or_create(ip_range_rov=irte, autonomous_system=ase)
+    nna, created = NetworkNumbersAssociation.get_or_create(ip_range_tsv=irte, autonomous_system=ase)
     return nna

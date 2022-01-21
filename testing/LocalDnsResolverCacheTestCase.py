@@ -16,6 +16,7 @@ from exceptions.NoRecordInCacheError import NoRecordInCacheError
 # e.dns.br. nameserver of 2 zones: br., dns.br.
 # a1-67.akam.net. nameserver of 1 zone: akam.net.
 class LocalDnsResolverCacheTestCase(unittest.TestCase):
+    cache_filename_in_output_folder = None
     domain_name = None
     cache = None
 
@@ -31,16 +32,18 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name = 'dns.unipd.it.'
+        cls.cache_filename_in_output_folder = 'dns_cache'
+        cls.domain_name = 'www.units.it.'
         cls.nameserver = 'nameserver.cnr.it.'
         cls.zone_name = 'dei.unipd.it'
         # ELABORATION
         PRD = LocalDnsResolverCacheTestCase.get_project_root_folder()
         cls.cache = LocalDnsResolverCache()
         try:
-            cls.cache.load_csv_from_output_folder('cache_from_dns_test.csv', PRD)
+            cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder+'.csv', PRD)
         except FilenameNotFoundError as e:
             print(f"!!! {str(e)} !!!")
+            exit(-1)
         print(f"STARTING CACHE WITH {len(cls.cache.cache)} RECORDS, PARAMETER: {cls.domain_name}")
 
     def test_1_resolving_path(self):

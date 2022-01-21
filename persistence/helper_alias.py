@@ -1,34 +1,13 @@
 from typing import Set
 from peewee import DoesNotExist
 from exceptions.NoAliasFoundError import NoAliasFoundError
-from persistence import helper_ip_address, helper_domain_name
-from persistence.BaseModel import DomainNameEntity, AliasAssociation, IpAddressEntity
-from utils import list_utils
+from persistence import helper_domain_name
+from persistence.BaseModel import DomainNameEntity, AliasAssociation
 
 
 def insert(dne: DomainNameEntity, adne: DomainNameEntity) -> AliasAssociation:
     aa, created = AliasAssociation.get_or_create(name=dne, alias=adne)
     return aa
-
-
-def get_alias_from_entity(dne: DomainNameEntity) -> DomainNameEntity:
-    query = AliasAssociation.select() \
-        .join(DomainNameEntity, on=(AliasAssociation.name == dne))
-    for row in query:
-        return row.alias
-    raise NoAliasFoundError(dne.name)
-
-
-def get_alias_from_name(domain_name: str) -> DomainNameEntity:
-    try:
-        dne = helper_domain_name.get(domain_name)
-    except DoesNotExist:
-        raise
-    query = AliasAssociation.select() \
-        .join(DomainNameEntity, on=(AliasAssociation.name == dne))
-    for row in query:
-        return row.alias
-    raise NoAliasFoundError(domain_name)
 
 
 def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:

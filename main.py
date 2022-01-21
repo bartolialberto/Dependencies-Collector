@@ -83,7 +83,6 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
         f.close()
         if len(result_list) == 0:
             print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
-            exit(0)
     result_list = list_utils.remove_duplicates(result_list)
     return result_list
 
@@ -135,7 +134,7 @@ if __name__ == "__main__":
         if complete_unresolved_database:
             print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
             completer = DatabaseEntitiesCompleter(resolvers)
-            unresolved_entities = helper_application_results.dump_unresolved_entities()
+            unresolved_entities = helper_application_results.get_unresolved_entities()
             completer.do_complete_unresolved_entities(unresolved_entities)
         # auxiliary elaborations
         print("********** START ACTUAL APPLICATION ELABORATION **********")

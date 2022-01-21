@@ -12,6 +12,16 @@ from exceptions.UnknownReasonError import UnknownReasonError
 
 
 class DnsQueryTestCase(unittest.TestCase):
+    """
+    Test class that doesn't assert any test, but simply prints all infos regarding a DNS query.
+    Prints are executed through 2 tests:
+
+    1- prints infos from the actual dnspython resolver object (RAW INFOS)
+
+    2- prints infos from the DnsResolver object designed in this application
+
+    They can be compared to see if the simplified DnsResolver object of this application is reliable.
+    """
     import_cache_from_output_folder = None
     domain_name = None
     dns_resolver = None

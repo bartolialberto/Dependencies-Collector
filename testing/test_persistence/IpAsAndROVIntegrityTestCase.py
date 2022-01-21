@@ -24,10 +24,12 @@ from persistence import helper_application_results, helper_ip_address, helper_na
 
 class IpAsAndROVIntegrityTestCase(unittest.TestCase):
     """
-    Test class
+    Test class that takes a list of domain names in input and executes: DNS resolving, IP-AS resolving and in the end
+    ROVPage scraping. Then tests are done to check data integrity of ROVPage scraping (which are linked to the IP-AS
+    resolution obviously).
+
     """
     final_results = None
-    persist_errors = None
     dns_results = None
     domain_name_list = None
     headless_browser = None
@@ -110,7 +112,6 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name_list = ['unipd.it', 'google.it', 'youtube.it']
-        cls.persist_errors = True
         # ELABORATION
         PRD = IpAsAndROVIntegrityTestCase.get_project_root_folder()
         dns_resolver = DnsResolver(None)

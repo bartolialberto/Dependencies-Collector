@@ -1,6 +1,7 @@
 import ipaddress
-from typing import List, Set, Tuple
+from typing import List, Set
 import selenium
+from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
@@ -14,36 +15,44 @@ from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
 from exceptions.UnknownReasonError import UnknownReasonError
-from persistence import helper_domain_name, helper_access, helper_alias, helper_ip_address, \
-    helper_application_results, helper_autonomous_system, helper_ip_range_tsv, helper_network_numbers,\
-    helper_ip_address_depends, helper_rov, helper_prefixes_table, helper_ip_range_rov
+from persistence import helper_domain_name, helper_access, helper_alias, helper_ip_address, helper_autonomous_system,\
+    helper_ip_range_tsv, helper_network_numbers, helper_rov, helper_prefixes_table, helper_ip_range_rov,\
+    helper_ip_address_depends, helper_web_server, helper_web_site_lands, helper_ip_network, helper_script_server,\
+    helper_script_site_lands
 from persistence.BaseModel import NameServerEntity, WebSiteEntity, ScriptSiteEntity, IpAddressDependsAssociation, \
-    AutonomousSystemEntity, IpAddressEntity
+    WebSiteLandsAssociation
+from utils import network_utils
 
 
-# TODO
 class DatabaseEntitiesCompleter:
     def __init__(self, resolvers_wrapper: ApplicationResolversWrapper):
         self.resolvers_wrapper = resolvers_wrapper
 
-    def do_complete_unresolved_entities(self, entities: Set[UnresolvedEntityWrapper]):
+    def do_complete_unresolved_entities(self, unresolved_entities: Set[UnresolvedEntityWrapper]):
         nse_list = list()
-        wse_list = list()
-        sse_list = list()
+        wsla_https_list = list()
+        wsla_http_list = list()
+        sse_https_list = list()
+        sse_http_list = list()
         iad_list = list()
-        for elem in entities:
-            if elem.cause == ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH:
-                nse_list.append(elem.entity)
-            elif elem.cause == ResolvingErrorCauses.NO_LANDING_FOR_WEB_SITE:
-                wse_list.append(elem.entity)
-            elif elem.cause == ResolvingErrorCauses.NO_LANDING_FOR_SCRIPT_SITE:
-                sse_list.append(elem.entity)
-            elif elem.cause == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
-                iad_list.append(elem.entity)
-
+        for entity in unresolved_entities:
+            if entity.cause == ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH:
+                nse_list.append(entity.entity)
+            elif entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_WEB_SITE:
+                wsla_https_list.append(entity.entity)
+            elif entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_WEB_SITE:
+                wsla_http_list.append(entity.entity)
+            elif entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE:
+                sse_https_list.append(entity.entity)
+            elif entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE:
+                sse_http_list.append(entity.entity)
+            elif entity.cause == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
+                iad_list.append(entity.entity)
         self.do_complete_unresolved_name_servers(nse_list)
-        self.do_complete_unresolved_web_sites_landing(wse_list)
-        self.do_complete_unresolved_script_sites_landing(sse_list)
+        self.do_complete_unresolved_web_sites_landing(wsla_https_list, is_https=True)
+        self.do_complete_unresolved_web_sites_landing(wsla_http_list, is_https=False)
+        self.do_complete_unresolved_script_sites_landing(sse_https_list, True)
+        self.do_complete_unresolved_script_sites_landing(sse_http_list, False)
         self.do_complete_unresolved_ip_address_depends_association(iad_list)
 
     def do_complete_unresolved_name_servers(self, nses: List[NameServerEntity]):
@@ -70,28 +79,63 @@ class DatabaseEntitiesCompleter:
                 helper_access.insert(dne, iae)
         print(f"END UNRESOLVED NAME SERVERS ACCESS PATH RESOLVING")
 
-    def do_complete_unresolved_web_sites_landing(self, wses: List[WebSiteEntity]):
+    def do_complete_unresolved_web_sites_landing(self, wslas: List[WebSiteLandsAssociation], is_https: bool):
         print(f"\n\nSTART UNRESOLVED WEB SITES LANDING RESOLUTION")
-        if len(wses) == 0:
+        if is_https:
+            print(f"SCHEME USED: HTTPS")
+        else:
+            print(f"SCHEME USED: HTTP")
+        if len(wslas) == 0:
             print(f"Nothing to do.\nEND UNRESOLVED WEB SITES LANDING RESOLUTION")
             return
-        web_sites = set(map(lambda wse: wse.url, wses))
-        results = self.resolvers_wrapper.landing_resolver.resolve_sites(web_sites)
-        for web_site in results.keys():
-            self.resolvers_wrapper.error_logger.add_entries(results[web_site].error_logs)
-        helper_application_results.insert_landing_web_sites_results(results)    # takes care of deleting previous ones and inserts the new ones: either if resolution went well or bad
+        wsla_dict = dict()
+        for wsla in wslas:
+            wsla_dict[wsla.web_site.url.string] = wsla
+        for web_site in wsla_dict.keys():
+            try:
+                inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(web_site, is_https)
+            except Exception:
+                continue
+            w_server_e = helper_web_server.insert(inner_result.server)
+            iae = helper_ip_address.insert(inner_result.ip)
+            predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
+            ine = helper_ip_network.insert(predefined_network)
+            try:
+                iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
+                helper_ip_address_depends.update_ip_network(iada, ine)
+            except DoesNotExist:
+                helper_ip_address_depends.insert(iae, ine, None, None)
+            helper_web_site_lands.update(wsla_dict[web_site], w_server_e, iae)
+            print(f"for site: {web_site} now landing is: server={w_server_e.name.name}, IP address={iae.exploded_notation}")
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
-    def do_complete_unresolved_script_sites_landing(self, sses: List[ScriptSiteEntity]):
+    def do_complete_unresolved_script_sites_landing(self, https_sses: List[ScriptSiteEntity], is_https: bool):
         print(f"\n\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
-        if len(sses) == 0:
+        if is_https:
+            print(f"SCHEME USED: HTTPS")
+        else:
+            print(f"SCHEME USED: HTTP")
+        if len(https_sses) == 0:
             print(f"Nothing to do.\nEND UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
             return
-        script_sites = set(map(lambda sse: sse.url, sses))
-        results = self.resolvers_wrapper.landing_resolver.resolve_sites(script_sites)
-        for script_site in results.keys():
-            self.resolvers_wrapper.error_logger.add_entries(results[script_site].error_logs)
-        helper_application_results.insert_landing_script_sites_results(results)    # takes care of deleting previous ones and inserts the new ones: either if resolution went well or bad
+        sse_dict = dict()
+        for sse in https_sses:
+            sse_dict[sse.url] = sse
+        for script_site in sse_dict.keys():
+            try:
+                inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(script_site, is_https)
+            except Exception:
+                continue
+            s_server_e = helper_script_server.insert(inner_result.server)
+            iae = helper_ip_address.insert(inner_result.ip)
+            predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
+            ine = helper_ip_network.insert(predefined_network)
+            try:
+                iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
+                helper_ip_address_depends.update_ip_network(iada, ine)
+            except DoesNotExist:
+                helper_ip_address_depends.insert(iae, ine, None, None)
+            helper_script_site_lands.insert(sse_dict[script_site], s_server_e, is_https, iae)
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
 
     def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]):
@@ -106,36 +150,43 @@ class DatabaseEntitiesCompleter:
             ine = iada.ip_network
             irte = iada.ip_range_tsv
             irre = iada.ip_range_rov
-            helper_ip_address_depends.delete_by_id(iada.get_id())
-            as_number = None
-            ase = None
-            if iada.ip_range_tsv is None:
+            tsv_modified = False
+
+            if irte is None:
                 try:
                     entry = self.resolvers_wrapper.ip_as_database.resolve_range(ip)
-                    as_number = entry.as_number
                     ase = helper_autonomous_system.insert(entry.as_number)
 
-                    belonging_network, networks = entry.get_network_of_ip(ip)     # it cannot happen that the entry is found but not the network ==> no exceptions are catched
+                    belonging_network, networks = entry.get_network_of_ip(ip)  # it cannot happen that the entry is found but not the network ==> no exceptions are catched
                     new_irte = helper_ip_range_tsv.insert(belonging_network.compressed)
                     helper_network_numbers.insert(new_irte, ase)
+                    helper_ip_address_depends.update_ip_range_tsv(iada, new_irte)
+                    print(f"--> for {ip.exploded}: ip_range_tsv is now resolved to {new_irte.compressed_notation}", end="")
+                    tsv_modified = True
                 except (ValueError, TypeError, AutonomousSystemNotFoundError):
-                    new_irte = None
+                    ase = None
             else:
-                new_irte = irte
-
-            if iada.ip_range_rov is None and as_number is not None:
                 try:
-                    self.resolvers_wrapper.rov_page_scraper.load_as_page(as_number)
+                    ase = helper_autonomous_system.get_of_entity_ip_range_tsv(irte)
+                except DoesNotExist:
+                    ase = None
+
+            if irre is None and ase is not None:
+                try:
+                    self.resolvers_wrapper.rov_page_scraper.load_as_page(ase.number)
                     row = self.resolvers_wrapper.rov_page_scraper.get_network_if_present(ip)
                     new_irre = helper_ip_range_rov.insert(row.prefix.compressed)
                     re = helper_rov.insert(row.rov_state.to_string(), row.visibility)
                     helper_prefixes_table.insert(irre, re, ase)
+                    helper_ip_address_depends.update_ip_range_rov(iada, new_irre)
+                    if tsv_modified:
+                        print(f", ip_range_tsv is now resolved to {new_irre.compressed_notation}")
+                    else:
+                        print(f"--> for {ip.exploded}: ip_range_rov is now resolved to {new_irre.compressed_notation}")
                 except (ValueError, TableNotPresentError, TableEmptyError, NotROVStateTypeError, NetworkNotFoundError, selenium.common.exceptions.WebDriverException):
-                    new_irre = None
+                    if tsv_modified:
+                        print("")
             else:
-                new_irre = irre
-
-            print(f"--> for: {ip.exploded} resolved ip_range_tsv={new_irte} and ip_range_rov={new_irre}")
-            helper_ip_address_depends.insert(iae, ine, new_irte, new_irre)
+                print("")
         print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
 

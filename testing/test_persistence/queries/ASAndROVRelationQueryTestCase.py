@@ -6,6 +6,13 @@ from persistence import helper_ip_range_tsv, helper_rov
 
 class ASAndROVRelationQueryTestCase(unittest.TestCase):
     def test_1_get_ip_range_tsv_from_ip_address(self):
+        """
+        For each IP address the database should always have only one association (IpAddressDependsAssociation) with the
+        other 3 entities: IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity.
+        This test performs a query that implicitly takes such constraint NOT for granted. So this test executes a query
+        and at the same time checks for more than 1 IpAddressDependsAssociation for an IP address.
+
+        """
         print(f"\n------- [1] START GETTING IP RANGE TSV FROM IP ADDRESS QUERY -------")
         # PARAMETER
         ip_address_string = '193.0.14.129'
@@ -19,6 +26,13 @@ class ASAndROVRelationQueryTestCase(unittest.TestCase):
         print(f"------- [1] END GETTING IP RANGE TSV FROM IP ADDRESS QUERY -------")
 
     def test_2_get_rov_from_ip_address(self):
+        """
+        For each IP address the database should always have only one association with the other 3 entities:
+        IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity.
+        This test performs a query that implicitly takes such constraint NOT for granted. So this test executes a query
+        and at the same time checks for more than 1 IpAddressDependsAssociation for an IP address.
+
+        """
         print(f"\n------- [2] START GETTING ROV FROM IP ADDRESS QUERY -------")
         # PARAMETER
         ip_address_string = '193.0.14.129'

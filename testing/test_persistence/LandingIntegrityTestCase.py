@@ -8,7 +8,7 @@ from utils import url_utils, domain_name_utils
 
 class LandingIntegrityTestCase(unittest.TestCase):
     """
-    Test class
+    Test class that checks data integrity of web sites and script sites landing.
 
     """
     script_sites_results = None
@@ -42,7 +42,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
         print(f"END WEB SITE LANDING")
         print(f"START SCRIPT SITE LANDING")
         resolver = LandingResolver()
-        cls.script_sites_results = resolver.resolve_script_sites(script_site_list)
+        cls.script_sites_results = resolver.resolve_sites(script_site_list)
         print(f"END SCRIPT SITE LANDING")
         print(f"\nSTART DB INSERTION INTO DATABASE... ", end='')
         helper_application_results.insert_landing_web_sites_results(cls.web_sites_results)
