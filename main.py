@@ -5,6 +5,7 @@ from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
 from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
@@ -25,7 +26,12 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
     lines = get_input_generic_file('web_pages.txt', default_websites)
-    values = list(map(lambda line: url_utils.deduct_second_component(line), lines))
+    values = list()
+    for line in lines:
+        try:
+            values.append(url_utils.deduct_second_component(line))
+        except InvalidUrlError:
+            pass
     for i, value in enumerate(values):
         print(f"> [{i+1}/{len(lines)}]: {value}")
     return values

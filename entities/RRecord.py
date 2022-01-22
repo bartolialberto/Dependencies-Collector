@@ -102,8 +102,8 @@ class RRecord:
 
     @staticmethod
     def parse_mail_server_from_value(value: str) -> str:
-        split_value = value.split(' ')      # TODO: se è un IP? Da gestire
-        return split_value[1]
+        split_value = value.split(' ')
+        return split_value[1]       # TODO: se è un IP? Da gestire
 
     def __str__(self):
         """

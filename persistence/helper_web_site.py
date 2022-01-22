@@ -1,4 +1,5 @@
 from peewee import DoesNotExist
+from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_url
 from persistence.BaseModel import WebSiteEntity
 from utils import url_utils
@@ -11,7 +12,10 @@ def insert(url: str) -> WebSiteEntity:
 
 
 def get(url: str) -> WebSiteEntity:
-    temp = url_utils.deduct_second_component(url)
+    try:
+        temp = url_utils.deduct_second_component(url)
+    except InvalidUrlError:
+        raise
     try:
         ue = helper_url.get(temp)
     except DoesNotExist:

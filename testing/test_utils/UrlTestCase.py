@@ -1,4 +1,6 @@
 import unittest
+
+from exceptions.InvalidUrlError import InvalidUrlError
 from utils import url_utils
 
 
@@ -19,7 +21,10 @@ class UrlTestCase(unittest.TestCase):
         url = 'https://consent.google.de/ml?continue=https://www.google.de/&gl=IT&m=0&pc=shp&hl=it&src=1'
         url = 'https://consent.google.de/ml?continue=https://www.google.de/&gl=IT&m=0&pc=shp&hl=it&src=1'
         # ELABORATION
-        second_component = url_utils.deduct_second_component(url)
+        try:
+            second_component = url_utils.deduct_second_component(url)
+        except InvalidUrlError as e:
+            self.fail(f"!!! {str(e)} !!!")
         print(f"URL: {url}")
         print(f"Second component: {second_component}")
 

@@ -90,30 +90,56 @@ class LandingResolver:
             http_result = None
             error_logs.append(ErrorLog(exc, site, str(exc)))
         return LandingSiteResult(https_result, http_result, error_logs)
-        """
-        try:
-            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=True)
-            https_result = InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
-        except requests.exceptions.ConnectionError as e:
-            # probably the server doesn't support HTTPS
-            https_result = None
-            error_logs.append(ErrorLog(e, site, str(e)))
-        except Exception as exc:
-            https_result = None
-            error_logs.append(ErrorLog(exc, site, str(exc)))
-        try:
-            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=False)
-            http_result = InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
-        except Exception as exc:
-            http_result = None
-            error_logs.append(ErrorLog(exc, site, str(exc)))
-        return LandingSiteResult(https_result, http_result, error_logs)
-        """
 
     def do_single_request(self, site: str, https: bool) -> InnerLandingSiteSingleSchemeResult:
-        # TODO
+        """
+        This methods actually executes a HTTP GET request; it constructs a HTTP URL from the site parameter using HTTPS
+        or HTTP scheme according to the https parameter.
+
+        :param site: A site string.
+        :type site: str
+        :param https: A flag to set the scheme used: HTTPS or HTTP.
+        :type https: bool
+        :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.
+        Requests that produced this error are safe to retry.
+        :raise requests.exceptions.ConnectionError: A Connection error occurred. This occurs if https is not supported
+        by the server.
+        :raise requests.exceptions.URLRequired: A valid URL is required to make a request.
+        :raise requests.exceptions.TooManyRedirects: Too many redirects.
+        :raise requests.exceptions.ReadTimeout: The server did not send any data in the allotted amount of time.
+        :raise requests.exceptions.Timeout: The request timed out. Catching this error will catch both ConnectTimeout
+        and ReadTimeout errors.
+        :raise requests.exceptions.RequestException: There was an ambiguous exception that occurred while handling your
+        :return: A InnerLandingSiteSingleSchemeResult object.
+        :rtype: InnerLandingSiteSingleSchemeResult
+        """
         try:
             landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=https)
-        except Exception:
+        except requests.exceptions.ConnectTimeout:
+            # The request timed out while trying to connect to the remote server.
+            # Requests that produced this error are safe to retry.
+            raise
+        except requests.exceptions.ConnectionError:
+            # A Connection error occurred. This occurs if https is not supported by the server
+            raise
+        except requests.exceptions.HTTPError:
+            # An HTTP error occurred.
+            raise
+        except requests.exceptions.URLRequired:
+            # A valid URL is required to make a request.
+            raise
+        except requests.exceptions.InvalidURL:
+            raise
+        except requests.exceptions.TooManyRedirects:
+            # Too many redirects.
+            raise
+        except requests.exceptions.ReadTimeout:
+            # The server did not send any data in the allotted amount of time.
+            raise
+        except requests.exceptions.Timeout:
+            # The request timed out. Catching this error will catch both ConnectTimeout and ReadTimeout errors.
+            raise
+        except requests.exceptions.RequestException:
+            # There was an ambiguous exception that occurred while handling your request.
             raise
         return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))

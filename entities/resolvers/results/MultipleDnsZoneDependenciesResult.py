@@ -48,7 +48,7 @@ class MultipleDnsZoneDependenciesResult:
         """
         self.zone_dependencies_per_domain_name[domain_name] = resolver_result.zone_dependencies
         self.zone_name_dependencies_per_zone.update(resolver_result.zone_name_dependencies_per_zone)
-        self.zone_name_dependencies_per_name_server.update(resolver_result.zone_name_dependencies_per_name_server)  # TODO: o questo? self.merge_zone_dependencies_per_nameserver_result(total_zone_dependencies_per_nameserver, temp_zone_dep_per_nameserver)
+        self.zone_name_dependencies_per_name_server.update(resolver_result.zone_name_dependencies_per_name_server)
         for log in resolver_result.error_logs:
             self.error_logs.append(log)
 

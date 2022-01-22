@@ -92,5 +92,9 @@ The execution flow can be described as follows:
 
 
 The database result ER schema is:
-![alt text](res/schema_er_OLD.jpg)
+![alt text](res/schema_er.jpg)
+
+
+Unresolved entities "recover" system:
+![alt text](res/tabella_errori.jpg)
  

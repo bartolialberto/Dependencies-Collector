@@ -11,14 +11,12 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-# TODO: modify doc
 def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bool, ipaddress.IPv4Address]:
     """
-    This method returns the landing page, the redirection path, the Strict Transport Security validity from and the ip
-    address of a domain name. In particular it creates an url from the domain name and then tries a GET HTTP method
-    with it.
+    This method returns the landing page, the redirection path, the Strict Transport Security validity from an HTTP URL.
+    In particular it creates an url from the string parameter and then tries a GET HTTP method with it.
 
-    :param string: A domain name.
+    :param string: A string.
     :type string: str
     :param as_https: A boolean setting if the url constructed from the domain name parameter uses HTTPS or HTTP.
     :type as_https: bool

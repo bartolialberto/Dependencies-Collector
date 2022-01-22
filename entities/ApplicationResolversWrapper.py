@@ -20,6 +20,7 @@ from entities.error_log.ErrorLogger import ErrorLogger
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from exceptions.InvalidUrlError import InvalidUrlError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
@@ -529,7 +530,11 @@ class ApplicationResolversWrapper:
                 pass
             else:
                 for script in https_scripts:
-                    script_site = url_utils.deduct_second_component(script.src)
+                    try:
+                        script_site = url_utils.deduct_second_component(script.src)
+                    except InvalidUrlError:
+                        continue
+
 
                     # for script_sites set result
                     script_sites.add(script_site)
@@ -546,7 +551,10 @@ class ApplicationResolversWrapper:
                 pass
             else:
                 for script in http_scripts:
-                    script_site = url_utils.deduct_second_component(script.src)
+                    try:
+                        script_site = url_utils.deduct_second_component(script.src)
+                    except InvalidUrlError:
+                        continue
 
                     # for script_sites set result
                     script_sites.add(script_site)
