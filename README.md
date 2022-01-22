@@ -88,13 +88,13 @@ object print
 ## DA METTERE ANCORA A PUNTO
 
 The execution flow can be described as follows:
-![alt text](res/schema_flusso.jpg)
+![alt text](res/flow_diagram.png)
 
 
 The database result ER schema is:
-![alt text](res/schema_er.jpg)
+![alt text](res/er_schema.png)
 
 
 Unresolved entities "recover" system:
-![alt text](res/tabella_errori.jpg)
+![alt text](res/error_table.png)
  

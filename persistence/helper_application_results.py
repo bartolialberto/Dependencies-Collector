@@ -274,7 +274,10 @@ def get_unresolved_entities() -> set:
     nses_set = UnresolvedEntityWrapper.create_from_set(nses, ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH)
     total_results = total_results.union(nses_set)
 
-
+    # getting script that were not possible to withdraw
+    swas = helper_script_withdraw.get_unresolved()
+    swas_set = UnresolvedEntityWrapper.create_from_set(swas, ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT)
+    total_results = total_results.union(swas_set)
 
     # errori non gestiti??
 

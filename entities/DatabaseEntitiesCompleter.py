@@ -15,47 +15,76 @@ from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
 from exceptions.UnknownReasonError import UnknownReasonError
-from persistence import helper_domain_name, helper_access, helper_alias, helper_ip_address, helper_autonomous_system,\
-    helper_ip_range_tsv, helper_network_numbers, helper_rov, helper_prefixes_table, helper_ip_range_rov,\
-    helper_ip_address_depends, helper_web_server, helper_web_site_lands, helper_ip_network, helper_script_server,\
-    helper_script_site_lands
-from persistence.BaseModel import NameServerEntity, WebSiteEntity, ScriptSiteEntity, IpAddressDependsAssociation, \
-    WebSiteLandsAssociation
-from utils import network_utils
+from persistence import helper_domain_name, helper_access, helper_alias, helper_ip_address, helper_autonomous_system, \
+    helper_ip_range_tsv, helper_network_numbers, helper_rov, helper_prefixes_table, helper_ip_range_rov, \
+    helper_ip_address_depends, helper_web_server, helper_web_site_lands, helper_ip_network, helper_script_server, \
+    helper_script_site_lands, helper_script_withdraw, helper_script, helper_script_site
+from persistence.BaseModel import NameServerEntity, ScriptSiteEntity, IpAddressDependsAssociation, \
+    WebSiteLandsAssociation, ScriptWithdrawAssociation
+from utils import network_utils, url_utils
 
 
 class DatabaseEntitiesCompleter:
+    """
+    This class represents the tool which concern is to recover all unresolved entities from database used as input.
+    It needs all the resolvers of the application, so the only attribute is an instance of the application resolvers
+    wrapper.
+
+    ...
+
+    Attributes
+    ----------
+    resolvers_wrapper : ApplicationResolversWrapper
+        An in stance of the wrapper of all application resolvers.
+    """
     def __init__(self, resolvers_wrapper: ApplicationResolversWrapper):
+        """
+        Instantiate the object.
+
+        :param resolvers_wrapper: The wrapper of all the application resolvers.
+        :type resolvers_wrapper: ApplicationResolversWrapper
+        """
         self.resolvers_wrapper = resolvers_wrapper
 
-    def do_complete_unresolved_entities(self, unresolved_entities: Set[UnresolvedEntityWrapper]):
+    def do_complete_unresolved_entities(self, unresolved_entities: Set[UnresolvedEntityWrapper]) -> None:
+        """
+        This method is actually the one that executes (tries to execute) the completion of all unresolved entities.
+        It also deals with the insertion in the database if the new data resolved.
+
+        :param unresolved_entities: All the unresolved entities.
+        :type unresolved_entities: Set[UnresolvedEntityWrapper]
+        """
         nse_list = list()
         wsla_https_list = list()
         wsla_http_list = list()
         sse_https_list = list()
         sse_http_list = list()
         iad_list = list()
-        for entity in unresolved_entities:
-            if entity.cause == ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH:
-                nse_list.append(entity.entity)
-            elif entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_WEB_SITE:
-                wsla_https_list.append(entity.entity)
-            elif entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_WEB_SITE:
-                wsla_http_list.append(entity.entity)
-            elif entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE:
-                sse_https_list.append(entity.entity)
-            elif entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE:
-                sse_http_list.append(entity.entity)
-            elif entity.cause == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
-                iad_list.append(entity.entity)
+        swas_list = list()
+        for unresolved_entity in unresolved_entities:
+            if unresolved_entity.cause == ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH:
+                nse_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_WEB_SITE:
+                wsla_https_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_WEB_SITE:
+                wsla_http_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE:
+                sse_https_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE:
+                sse_http_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
+                iad_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT:
+                swas_list.append(unresolved_entity.entity)
         self.do_complete_unresolved_name_servers(nse_list)
         self.do_complete_unresolved_web_sites_landing(wsla_https_list, is_https=True)
         self.do_complete_unresolved_web_sites_landing(wsla_http_list, is_https=False)
         self.do_complete_unresolved_script_sites_landing(sse_https_list, True)
         self.do_complete_unresolved_script_sites_landing(sse_http_list, False)
         self.do_complete_unresolved_ip_address_depends_association(iad_list)
+        self.do_complete_not_withdrawn_scripts(swas_list)
 
-    def do_complete_unresolved_name_servers(self, nses: List[NameServerEntity]):
+    def do_complete_unresolved_name_servers(self, nses: List[NameServerEntity]) -> None:
         print(f"\nSTART UNRESOLVED NAME SERVERS ACCESS PATH RESOLVING")
         if len(nses) == 0:
             print(f"Nothing to do.\nEND UNRESOLVED NAME SERVERS ACCESS PATH RESOLVING")
@@ -109,17 +138,17 @@ class DatabaseEntitiesCompleter:
             print(f"for site: {web_site} now landing is: server={w_server_e.name.name}, IP address={iae.exploded_notation}")
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
-    def do_complete_unresolved_script_sites_landing(self, https_sses: List[ScriptSiteEntity], is_https: bool):
+    def do_complete_unresolved_script_sites_landing(self, sses: List[ScriptSiteEntity], is_https: bool):
         print(f"\n\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
         if is_https:
             print(f"SCHEME USED: HTTPS")
         else:
             print(f"SCHEME USED: HTTP")
-        if len(https_sses) == 0:
+        if len(sses) == 0:
             print(f"Nothing to do.\nEND UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
             return
         sse_dict = dict()
-        for sse in https_sses:
+        for sse in sses:
             sse_dict[sse.url] = sse
         for script_site in sse_dict.keys():
             try:
@@ -189,4 +218,36 @@ class DatabaseEntitiesCompleter:
             else:
                 print("")
         print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
+
+    def do_complete_not_withdrawn_scripts(self, swas: List[ScriptWithdrawAssociation]):
+        print(f"\n\nSTART UNRESOLVED SCRIPT RESOLUTION")
+        if len(swas) == 0:
+            print(f"Nothing to do.\nEND UNRESOLVED SCRIPT RESOLUTION")
+            return
+        for swa in swas:
+            if swa.https == True:
+                url = url_utils.deduct_http_url(swa.web_site.url.string, as_https=True)
+            else:
+                url = url_utils.deduct_http_url(swa.web_site.url.string, as_https=False)
+            try:
+                scripts = self.resolvers_wrapper.script_resolver.search_script_application_dependencies(url)
+                print(f"for: {swa.web_site.url.string} on https={swa.https} resolved {len(scripts)} scripts")
+                for i, script in enumerate(scripts):
+                    print(f"script[{i+1}]: integrity={script.integrity}, src={script.src}")
+                    swa.delete_instance()
+                    se = helper_script.insert(script.src)
+                    helper_script_withdraw.insert(swa.web_site, se, swa.https, script.integrity)
+                    s_site_e = helper_script_site.insert(url_utils.deduct_second_component(se.src))
+                    try:
+                        inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(se.src, swa.https)
+                    except Exception:
+                        print(f"--> for script: src={script.src} it is impossible to resolve landing...")
+                        helper_script_site_lands.insert(s_site_e, None, swa.https, None)
+                        continue
+                    s_server_e = helper_script_server.insert(inner_result.server)
+                    helper_script_site_lands.insert(s_site_e, s_server_e, swa.https, inner_result.ip)
+                    print(f"--> for script: src={script.src} script server = {s_server_e.name.name}")
+            except selenium.common.exceptions.WebDriverException:
+                continue
+        print(f"END UNRESOLVED SCRIPT RESOLUTION")
 

@@ -3,8 +3,8 @@ from peewee import DoesNotExist
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_ip_address, helper_alias
-from persistence.BaseModel import DomainNameEntity, IpAddressEntity
+from persistence import helper_ip_address, helper_alias, helper_zone
+from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity
 from utils import domain_name_utils
 
 
@@ -70,4 +70,12 @@ def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[
                 pass
         raise DoesNotExist
 
+
+def get_all_that_depends_on_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
+    query = DomainNameDependenciesAssociation.select()\
+        .where(DomainNameDependenciesAssociation.zone == ze)
+    result = set()
+    for row in query:
+        result.add(row.domain_name)
+    return result
 

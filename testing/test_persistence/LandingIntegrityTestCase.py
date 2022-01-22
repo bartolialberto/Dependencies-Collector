@@ -158,7 +158,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
 
             print(f"Result for: {script_site} through database:")
             try:
-                wse_https_s = helper_script_server.get_from(script_site, True, first_only=False)
+                wse_https_s = helper_script_server.get_from_string_script_site(script_site, True, first_only=False)
                 if len(wse_https_s) > 1:
                     self.fail(f"ERROR: more than 1 script server found for script site: {script_site}, on https? {True}")
                 else:
@@ -166,7 +166,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
             except DoesNotExist:
                 wse_https = None
             try:
-                wse_http_s = helper_script_server.get_from(script_site, False, first_only=False)
+                wse_http_s = helper_script_server.get_from_string_script_site(script_site, False, first_only=False)
                 if len(wse_http_s) > 1:
                     self.fail(f"ERROR: more than 1 script server found for script site: {script_site}, on https? {False}")
                 else:

@@ -9,7 +9,7 @@ def insert(dne: DomainNameEntity, ze: ZoneEntity) -> DomainNameDependenciesAssoc
     return nda
 
 
-def get_all_of(domain_name: str) -> Set[DomainNameDependenciesAssociation]:
+def get_all_of(domain_name: str) -> Set[ZoneEntity]:
     try:
         dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
@@ -17,5 +17,5 @@ def get_all_of(domain_name: str) -> Set[DomainNameDependenciesAssociation]:
     result = set()
     query = DomainNameDependenciesAssociation.select().where(DomainNameDependenciesAssociation.domain_name == dne)
     for row in query:
-        result.add(row)
+        result.add(row.zone)
     return result

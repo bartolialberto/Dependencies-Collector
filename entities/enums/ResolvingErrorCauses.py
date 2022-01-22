@@ -13,6 +13,7 @@ class ResolvingErrorCauses(Enum):
     NO_HTTPS_LANDING_FOR_SCRIPT_SITE = 4,
     NO_HTTP_LANDING_FOR_SCRIPT_SITE = 5,
     INCOMPLETE_DEPENDENCIES_FOR_ADDRESS = 6,
+    IMPOSSIBLE_TO_WITHDRAW_SCRIPT = 7,      # TODO
     # TODO: altri errori
 
     def __str__(self):
