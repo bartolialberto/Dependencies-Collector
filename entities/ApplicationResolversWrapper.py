@@ -322,16 +322,16 @@ class ApplicationResolversWrapper:
                         entry = self.ip_as_database.resolve_range(ip)
                         try:
                             ip_range_tsv, networks = entry.get_network_of_ip(ip)
-                            print(f"----> for {ip.compressed} [HTTP] ({https_result.server}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
+                            print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
                             results.add_complete_result(ip, http_result.server, landing_site_type, entry, ip_range_tsv)
                         except ValueError as exc:
-                            print(f"----> for {ip.compressed} [HTTP] ({https_result.server}) found AS record: [{str(entry)}]")
+                            print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.exploded, str(exc)))
                             results.add_no_ip_range_tsv_result(ip, http_result.server, landing_site_type, entry)
                     except AutonomousSystemNotFoundError as e:
                         self.error_logger.add_entry(ErrorLog(e, ip.exploded, str(e)))
                         results.add_no_as_result(ip, http_result.server, landing_site_type)
-                        print(f"----> for {ip.compressed} [HTTP] ({https_result.server}) no AS found")
+                        print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) no AS found")
             else:
                 print(f"--> [HTTP] didn't land anywhere.")
         print("END IP-AS RESOLVER")

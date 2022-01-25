@@ -1,5 +1,5 @@
 from pathlib import Path
-from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField
+from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField, TextField
 from peewee import SqliteDatabase
 from utils import file_utils
 
@@ -221,9 +221,10 @@ class IpRangeROVEntity(BaseModel):
 
 class AutonomousSystemEntity(BaseModel):
     number = IntegerField(primary_key=True)
+    description = TextField()
 
     def __str__(self):
-        return f"<number={self.number}>"
+        return f"<number={self.number}, description={self.description}>"
 
     class Meta:
         db_table = 'autonomous_system'

@@ -1,9 +1,7 @@
 import ipaddress
-
 from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
-from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults, \
-    AutonomousSystemResolutionValues
+from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
 from entities.scrapers.ROVPageScraper import RowPrefixesTable
 
 

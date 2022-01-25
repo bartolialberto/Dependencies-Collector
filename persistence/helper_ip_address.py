@@ -1,9 +1,8 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
-from persistence import helper_access, helper_domain_name, helper_name_server, helper_ip_range_rov
-from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation, IpRangeROVEntity, \
-    IpAddressDependsAssociation
+from persistence import helper_domain_name, helper_name_server
+from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation
 
 
 def insert(address_param: str or ipaddress.IPv4Address) -> IpAddressEntity:
@@ -37,7 +36,6 @@ def get_first_of(domain_name_parameter: DomainNameEntity or str) -> IpAddressEnt
         except DoesNotExist:
             raise
     query = AccessAssociation.select()\
-        .join_from(AccessAssociation, IpAddressEntity)\
         .where(AccessAssociation.domain_name == dne)\
         .limit(1)
     for row in query:
@@ -48,7 +46,6 @@ def get_first_of(domain_name_parameter: DomainNameEntity or str) -> IpAddressEnt
 def get_all_of(dne: DomainNameEntity) -> Set[IpAddressEntity]:
     result = set()
     query = AccessAssociation.select()\
-        .join_from(AccessAssociation, IpAddressEntity)\
         .where(AccessAssociation.domain_name == dne)
     for row in query:
         result.add(row.ip_address)
@@ -61,7 +58,6 @@ def get_all_from_name_server(name_server: str) -> Set[IpAddressEntity]:
     except DoesNotExist:
         raise
     query = AccessAssociation.select()\
-        .join_from(AccessAssociation, IpAddressEntity)\
         .where(AccessAssociation.domain_name == dne)
     result = set()
     for row in query:
@@ -75,7 +71,6 @@ def get_first_from_name_server(name_server: str) -> IpAddressEntity:
     except DoesNotExist:
         raise
     query = AccessAssociation.select()\
-        .join_from(AccessAssociation, IpAddressEntity)\
         .where(AccessAssociation.domain_name == dne)\
         .limit(1)
     for row in query:

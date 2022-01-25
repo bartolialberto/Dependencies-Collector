@@ -189,7 +189,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print("\n------- [4] START TLD PRESENCE CHECK -------")
         tld_in_database = set()
         if not self.consider_tld:
-            zes = helper_zone.get_all()
+            zes = helper_zone.get_everyone()
             for i, ze in enumerate(zes):
                 if ze.name in self.dns_resolver.tld_list:
                     print(f"[{i + 1}/{len(zes)}] = {str(ze)} is in database")

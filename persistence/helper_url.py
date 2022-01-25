@@ -18,4 +18,3 @@ def get(url: str) -> UrlEntity:
         return UrlEntity.get_by_id(url)
     except DoesNotExist:
         raise
-

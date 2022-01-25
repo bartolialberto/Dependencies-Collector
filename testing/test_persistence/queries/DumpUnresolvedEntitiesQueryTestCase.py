@@ -1,7 +1,5 @@
 import unittest
 from persistence import helper_application_results
-from persistence.BaseModel import IpAddressDependsAssociation, AutonomousSystemEntity, WebSiteEntity, ScriptSiteEntity, \
-    NameServerEntity, PrefixesTableAssociation
 
 
 class DumpUnresolvedEntitiesQueryTestCase(unittest.TestCase):

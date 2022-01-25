@@ -23,8 +23,8 @@ def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
     # from web landing
     https_w_server_e = helper_web_server.get_from(real_web_site, https=True, first_only=True)
     http_w_server_e = helper_web_server.get_from(real_web_site, https=False, first_only=True)
-    https_zes = helper_domain_name_dependencies.get_all_of(https_w_server_e.name.name)
-    http_zes = helper_domain_name_dependencies.get_all_of(http_w_server_e.name.name)
+    https_zes = helper_zone.get_all_of(https_w_server_e.name.name)
+    http_zes = helper_zone.get_all_of(http_w_server_e.name.name)
     for ze in https_zes:
         if ze not in zone_dependencies:
             zone_dependencies.add(ze)
@@ -35,7 +35,7 @@ def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
     # from scripts
     s_server_es = helper_script_server.get_from_string_web_site(real_web_site)
     for sse in s_server_es:
-        zes = helper_domain_name_dependencies.get_all_of(sse.name.name)
+        zes = helper_zone.get_all_of(sse.name.name)
         for ze in zone_dependencies:
             if ze not in zone_dependencies:
                 zone_dependencies.add(ze)

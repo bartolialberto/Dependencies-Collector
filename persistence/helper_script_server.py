@@ -48,7 +48,6 @@ def get_from_string_script_site(script_site_param: str, https: bool, first_only:
         raise
     if first_only:
         query = ScriptSiteLandsAssociation.select() \
-            .join_from(ScriptSiteLandsAssociation, ScriptServerEntity) \
             .where((ScriptSiteLandsAssociation.script_site == sse), (ScriptSiteLandsAssociation.https == https))\
             .limit(1)
         for row in query:
@@ -56,7 +55,6 @@ def get_from_string_script_site(script_site_param: str, https: bool, first_only:
         raise DoesNotExist
     else:
         query = ScriptSiteLandsAssociation.select()\
-            .join_from(ScriptSiteLandsAssociation, ScriptServerEntity)\
             .where((ScriptSiteLandsAssociation.script_site == sse), (ScriptSiteLandsAssociation.https == https))
         result = list()
         for row in query:

@@ -22,7 +22,7 @@ class ASAndROVRelationQueryTestCase(unittest.TestCase):
         except (DoesNotExist, EmptyResultError) as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, irte in enumerate(irtes):
-            print(f"ip_range_tsv[{i+1}]: {str(irte)}")
+            print(f"ip_range_tsv[{i+1}]: {str(irte.compressed_notation)}")
         print(f"------- [1] END GETTING IP RANGE TSV FROM IP ADDRESS QUERY -------")
 
     def test_2_get_rov_from_ip_address(self):

@@ -1,10 +1,8 @@
-import ipaddress
 from typing import List, Tuple
 from peewee import DoesNotExist
 from exceptions.EmptyResultError import EmptyResultError
-from persistence import helper_ip_network, helper_ip_address
-from persistence.BaseModel import ROVEntity, IpNetworkEntity, PrefixesTableAssociation, IpAddressDependsAssociation, \
-    IpRangeROVEntity, db
+from persistence import helper_ip_address
+from persistence.BaseModel import ROVEntity, PrefixesTableAssociation, IpAddressDependsAssociation, IpRangeROVEntity
 
 
 def insert(state_string: str, visibility_int: int) -> ROVEntity:

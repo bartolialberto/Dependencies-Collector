@@ -7,6 +7,17 @@ def insert(wse: WebSiteEntity, se: ScriptEntity or None, https: bool, integrity:
     return swa
 
 
+def get_all_of(wse: WebSiteEntity, https: bool) -> Set[ScriptWithdrawAssociation]:
+    """ Query probably useful only for tests. """
+    query = ScriptWithdrawAssociation.select()\
+        .where((ScriptWithdrawAssociation.web_site == wse) &
+               (ScriptWithdrawAssociation.https == https))
+    result = set()
+    for row in query:
+        result.add(row)
+    return result
+
+
 def get_unresolved() -> Set[ScriptWithdrawAssociation]:
     query = ScriptWithdrawAssociation.select()\
         .where(ScriptWithdrawAssociation.script.is_null(True))

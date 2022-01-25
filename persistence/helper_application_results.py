@@ -210,9 +210,14 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
 
 
 def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
-    # TODO: rivederlo completamente
     for as_number in finals.results.keys(): # case in which we have IP address, server, AS number, entry IP-AS, but maybe ip_range_tsv and ip_range_rov
-        ase = helper_autonomous_system.insert(as_number)
+        # START: ugly way to retrieve the AS description..
+        entry_as_database = None
+        for ip_address in finals.results[as_number].keys():
+            entry_as_database = finals.results[as_number][ip_address].entry_as_database
+            break
+        # END: ugly way to retrieve the AS description..
+        ase = helper_autonomous_system.insert(as_number, entry_as_database.as_description)
         for ip_address in finals.results[as_number].keys():
             try:
                 iae = helper_ip_address.get(ip_address)     # TODO: insert?
@@ -297,10 +302,10 @@ def get_unresolved_entities() -> set:
     total_results = total_results.union(iadas_set)
 
     # getting script sites that didn't land
-    https_sses = helper_script_site.get_https_unresolved()
+    https_sses = helper_script_site_lands.get_https_unresolved()
     sses_https_set = UnresolvedEntityWrapper.create_from_set(https_sses, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE)
     total_results = total_results.union(sses_https_set)
-    http_sses = helper_script_site.get_https_unresolved()
+    http_sses = helper_script_site_lands.get_https_unresolved()
     sses_http_set = UnresolvedEntityWrapper.create_from_set(http_sses, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE)
     total_results = total_results.union(sses_http_set)
 

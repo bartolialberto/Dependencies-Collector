@@ -1,29 +1,6 @@
 import ipaddress
-
 from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
-
-
-class AutonomousSystemResolutionValues:
-    """
-    This class represents a collection of infos associated to an IP address.
-    It main purpose is to serve as 'wrapper'.
-
-    ...
-
-     Attributes
-     ----------
-     name_server : str or None
-        A name server.
-     entry : EntryIpAsDatabase
-        An entry of the IpAsDatabase.
-     ip_range_tsv : ipaddress.IPv4Network or None
-        An IP network or None.
-    """
-    def __init__(self):
-        self.name_server = str or None
-        self.entry = None or EntryIpAsDatabase
-        self.ip_range_tsv = None or ipaddress.IPv4Network
 
 
 # TODO: docs

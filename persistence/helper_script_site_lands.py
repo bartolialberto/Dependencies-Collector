@@ -40,3 +40,21 @@ def delete_all_from_script_site_entity(sse: ScriptSiteEntity):
             relation.delete_instance()
     except DoesNotExist:
         pass
+
+
+def get_https_unresolved() -> Set[ScriptSiteEntity]:
+    query = ScriptSiteLandsAssociation.select()\
+        .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.https == True))
+    result = set()
+    for row in query:
+        result.add(row.script_site)
+    return result
+
+
+def get_http_unresolved() -> Set[ScriptSiteEntity]:
+    query = ScriptSiteLandsAssociation.select()\
+        .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.https == False))
+    result = set()
+    for row in query:
+        result.add(row.script_site)
+    return result

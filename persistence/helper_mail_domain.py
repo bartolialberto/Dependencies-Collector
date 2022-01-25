@@ -35,7 +35,6 @@ def get_every_of(mail_server_parameter: MailServerEntity or str) -> Set[MailDoma
         except DoesNotExist:
             raise
     query = MailDomainComposedAssociation.select()\
-        .join_from(MailDomainComposedAssociation, MailDomainEntity)\
         .where(MailDomainComposedAssociation.mail_server == mse)
     result = set()
     for row in query:

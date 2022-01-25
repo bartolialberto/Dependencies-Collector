@@ -51,11 +51,18 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
             raise
         name_server_unresolved.remove(name_server_to_be_removed)
 
-
-
     for name_server in name_server_unresolved:
         helper_access.insert(nsdne_dict[name_server], None)
 
+    return ze
+
+
+def get(zone_name: str) -> ZoneEntity:
+    zn = domain_name_utils.insert_trailing_point(zone_name)
+    try:
+        ze = ZoneEntity.get_by_id(zn)
+    except DoesNotExist:
+        raise
     return ze
 
 
@@ -88,16 +95,20 @@ def get_zone_object(zone_name: str) -> Zone:
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses)
 
 
-def get(zone_name: str) -> ZoneEntity:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
+def get_all_of(domain_name: str) -> Set[ZoneEntity]:
     try:
-        ze = ZoneEntity.get_by_id(zn)
+        dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
         raise
-    return ze
+    result = set()
+    query = DomainNameDependenciesAssociation.select()\
+        .where(DomainNameDependenciesAssociation.domain_name == dne)
+    for row in query:
+        result.add(row.zone)
+    return result
 
 
-def get_all() -> Set[ZoneEntity]:
+def get_everyone() -> Set[ZoneEntity]:
     result = set()
     query = ZoneEntity.select()
     for row in query:
@@ -113,7 +124,6 @@ def get_zone_dependencies_of_domain_name(domain_name: str) -> Set[ZoneEntity]:
         raise
     result = set()
     query = DomainNameDependenciesAssociation.select()\
-        .join_from(DomainNameDependenciesAssociation, ZoneEntity)\
         .where(DomainNameDependenciesAssociation.domain_name == dne)
     for row in query:
         result.add(row.zone)

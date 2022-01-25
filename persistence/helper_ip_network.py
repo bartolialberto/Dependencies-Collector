@@ -47,7 +47,6 @@ def get_all() -> Set[IpNetworkEntity]:
 
 def get_of(iae: ipaddress.IPv4Address) -> IpNetworkEntity:
     query = IpAddressDependsAssociation.select()\
-        .join_from(IpAddressDependsAssociation, IpNetworkEntity)\
         .where(IpAddressDependsAssociation.ip_address == iae)\
         .limit(1)
     for row in query:

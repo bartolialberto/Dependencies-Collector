@@ -12,7 +12,7 @@ def insert(name: str) -> DomainNameEntity:
     dn = domain_name_utils.insert_trailing_point(name)
     """
     try:
-        domain_name_utils.grammatically_correct(dn)
+        domain_name_utils.grammatically_correct(dn)     # TODO: una volta modificato il metodo s-commentare
     except InvalidDomainNameError:
         raise
     """

@@ -1,6 +1,5 @@
 from typing import Tuple, Set, List
 from peewee import DoesNotExist
-
 from exceptions.EmptyResultError import EmptyResultError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_domain_name, helper_zone, helper_ip_address
@@ -108,7 +107,7 @@ def get_unresolved() -> Set[NameServerEntity]:
     query = NameServerEntity.select()\
         .join_from(NameServerEntity, DomainNameEntity)\
         .join_from(DomainNameEntity, AccessAssociation)\
-        .where(AccessAssociation.ip_address == None)
+        .where(AccessAssociation.ip_address.is_null(True))
     result = set()
     for row in query:
         result.add(row)

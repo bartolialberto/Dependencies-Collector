@@ -11,7 +11,7 @@ from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
 
 
-def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explorer')) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
     They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is

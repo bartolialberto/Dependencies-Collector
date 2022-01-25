@@ -23,7 +23,6 @@ def get_all_from_string_website(website: str) -> List[WebSiteLandsAssociation]:
 def get_all_from_entity_web_site(wse: WebSiteEntity) -> List[WebSiteLandsAssociation]:
     result = list()
     query = WebSiteLandsAssociation.select()\
-        .join_from(WebSiteLandsAssociation, WebSiteEntity)\
         .where(WebSiteLandsAssociation.web_site == wse)
     for row in query:
         result.append(row)
@@ -60,7 +59,6 @@ def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity, new_i
 
 def get_unresolved(https: bool) -> Set[WebSiteLandsAssociation]:
     query = WebSiteLandsAssociation.select()\
-        .join_from(WebSiteLandsAssociation, WebSiteEntity)\
         .where((WebSiteLandsAssociation.web_server.is_null(True)) & (WebSiteLandsAssociation.https == https))
     result = set()
     for row in query:
