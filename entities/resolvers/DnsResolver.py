@@ -342,10 +342,34 @@ class DnsResolver:
                 zone_list.append(Zone(current_zone_name, current_zone_nameservers, current_zone_cnames, current_zone_addresses))
         print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
 
+        dn = domain_name_utils.insert_trailing_point(domain)
+        for_zone_name_subdomains = reversed(domain_name_utils.get_subdomains_name_list(dn, root_included=True))
+        zone_name_dependencies = list(map(lambda z: z.name, zone_list))
+        direct_zone_name = None
+        for current_domain in for_zone_name_subdomains:
+            if current_domain in zone_name_dependencies:
+                direct_zone_name = current_domain
+                break
+
         if not consider_tld:
             zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver)
-        return DnsZoneDependenciesResult(zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
+        return DnsZoneDependenciesResult(zone_list, direct_zone_name, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
+    def resolve_web_site_domain_name(self, web_site_domain_name: str) -> Tuple[RRecord, List[RRecord]]:
+        # TODO: docs
+        try:
+            rr_a, rr_cnames = self.cache.resolve_path(web_site_domain_name, as_string=False)
+        except NoAvailablePathError:
+            try:
+                rr_a, rr_cnames = self.do_query(web_site_domain_name, TypesRR.A)
+                self.cache.add_entry(rr_a)
+                for rr in rr_cnames:
+                    self.cache.add_entry(rr)
+            except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
+                raise        # TODO
+        return rr_a, rr_cnames
+
+    # TODO: refactor
     def resolve_zone_of_nameserver(self, nameserver: str):
         subdomains = domain_name_utils.get_subdomains_name_list(nameserver, False)
         for domain in reversed(subdomains):

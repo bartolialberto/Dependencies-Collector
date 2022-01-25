@@ -3,6 +3,7 @@ from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
+from persistence.BaseModel import project_root_directory_name
 
 
 class ScriptDependenciesResolvingTestCase(unittest.TestCase):
@@ -15,7 +16,7 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent

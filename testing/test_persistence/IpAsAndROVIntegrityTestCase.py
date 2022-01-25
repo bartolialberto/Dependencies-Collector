@@ -53,7 +53,7 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
                 print(f"--> Handling zone[{index_zone}] '{zone.name}'")
                 for i, nameserver in enumerate(zone.nameservers):
                     try:
-                        rr_a = zone.resolve_nameserver(nameserver)
+                        rr_a = zone.resolve_name_server_access_path(nameserver)
                     except NoAvailablePathError:
                         print(f"!!! NO RESOLVED IP ADDRESS FROM name server: {nameserver} !!!")
                         continue
@@ -95,7 +95,7 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
                 reformat.results[as_number] = None
                 continue
             for ip_address in reformat.results[as_number].keys():
-                name_server = reformat.results[as_number][ip_address].name_server
+                name_server = reformat.results[as_number][ip_address].server
                 entry_ip_as_db = reformat.results[as_number][ip_address].entry_as_database
                 belonging_network_ip_as_db = reformat.results[as_number][ip_address].ip_range_tsv
                 try:
@@ -137,10 +137,10 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
             for ip_address in self.final_results.results[as_number].keys():
                 print(f"--> IP address: {ip_address}")
                 res = self.final_results.results[as_number][ip_address]
-                if res.name_server is None:
+                if res.server is None:
                     name_server_elaboration = None
                 else:
-                    name_server_elaboration = res.name_server
+                    name_server_elaboration = res.server
                 if res.entry_rov_page is None:
                     rov_elaboration_state = None
                 else:

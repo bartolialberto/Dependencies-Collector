@@ -112,7 +112,7 @@ def set_file_in_folder(subdirectory_name: str, filename: str, project_root_direc
 
     :param subdirectory_name: The subdirectory name to find.
     :type subdirectory_name: str
-    :param filename: The filename of the file interested.
+    :param filename: The filename of the file interested with the extension.
     :type filename: str
     :param project_root_directory: The Path object pointing at the project root directory.
     :type project_root_directory: Path

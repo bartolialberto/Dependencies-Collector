@@ -1,4 +1,6 @@
+import csv
 import ipaddress
+from pathlib import Path
 from typing import List, Set
 import selenium
 from peewee import DoesNotExist
@@ -21,7 +23,7 @@ from persistence import helper_domain_name, helper_access, helper_alias, helper_
     helper_script_site_lands, helper_script_withdraw, helper_script, helper_script_site
 from persistence.BaseModel import NameServerEntity, ScriptSiteEntity, IpAddressDependsAssociation, \
     WebSiteLandsAssociation, ScriptWithdrawAssociation
-from utils import network_utils, url_utils
+from utils import network_utils, url_utils, file_utils, csv_utils
 
 
 class DatabaseEntitiesCompleter:
@@ -36,8 +38,10 @@ class DatabaseEntitiesCompleter:
     ----------
     resolvers_wrapper : ApplicationResolversWrapper
         An in stance of the wrapper of all application resolvers.
+    separator : str
+        The string to use when dump the '.csv' file in the 'output' folder.
     """
-    def __init__(self, resolvers_wrapper: ApplicationResolversWrapper):
+    def __init__(self, resolvers_wrapper: ApplicationResolversWrapper, separator=';'):
         """
         Instantiate the object.
 
@@ -45,6 +49,7 @@ class DatabaseEntitiesCompleter:
         :type resolvers_wrapper: ApplicationResolversWrapper
         """
         self.resolvers_wrapper = resolvers_wrapper
+        self.separator = separator
 
     def do_complete_unresolved_entities(self, unresolved_entities: Set[UnresolvedEntityWrapper]) -> None:
         """
@@ -125,7 +130,7 @@ class DatabaseEntitiesCompleter:
                 inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(web_site, is_https)
             except Exception:
                 continue
-            w_server_e = helper_web_server.insert(inner_result.server)
+            w_server_e, wse_dne = helper_web_server.insert(inner_result.server)
             iae = helper_ip_address.insert(inner_result.ip)
             predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
             ine = helper_ip_network.insert(predefined_network)
@@ -155,7 +160,7 @@ class DatabaseEntitiesCompleter:
                 inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(script_site, is_https)
             except Exception:
                 continue
-            s_server_e = helper_script_server.insert(inner_result.server)
+            s_server_e, s_server_e_dne = helper_script_server.insert(inner_result.server)
             iae = helper_ip_address.insert(inner_result.ip)
             predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
             ine = helper_ip_network.insert(predefined_network)
@@ -244,10 +249,24 @@ class DatabaseEntitiesCompleter:
                         print(f"--> for script: src={script.src} it is impossible to resolve landing...")
                         helper_script_site_lands.insert(s_site_e, None, swa.https, None)
                         continue
-                    s_server_e = helper_script_server.insert(inner_result.server)
+                    s_server_e, s_server_e_dne = helper_script_server.insert(inner_result.server)
                     helper_script_site_lands.insert(s_site_e, s_server_e, swa.https, inner_result.ip)
                     print(f"--> for script: src={script.src} script server = {s_server_e.name.name}")
             except selenium.common.exceptions.WebDriverException:
                 continue
         print(f"END UNRESOLVED SCRIPT RESOLUTION")
+
+    @staticmethod
+    def dump_unresolved_entities(unresolved_entities: Set[UnresolvedEntityWrapper], separator: str, project_root_directory=Path.cwd()) -> None:
+        # TODO: docs
+        file = file_utils.set_file_in_folder('output', 'dump_unresolved_entities.csv', project_root_directory=project_root_directory)
+        with file.open('w', encoding='utf-8', newline='') as f:
+            write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{separator}"))
+            for unresolved_entity in unresolved_entities:
+                temp_list = list()
+                temp_list.append(str(unresolved_entity.cause))
+                temp_list.append(str(type(unresolved_entity.entity))+'='+str(unresolved_entity.entity))
+                temp_list.append(str(type(unresolved_entity.entity_cause))+'='+str(unresolved_entity.entity_cause))
+                write.writerow(temp_list)
+            f.close()
 

@@ -180,13 +180,15 @@ def insert_trailing_point(domain_name: str) -> str:
         return domain_name+"."
 
 
-def deduct_domain_name(url: str) -> str:
+def deduct_domain_name(url: str, with_trailing_point=True) -> str:
     """
     Method that tries to isolate a valid domain name from the url string parameter given.
 
 
     :param url: The url.
     :type url: str
+    :param with_trailing_point: The flag to set if domain name should have trailing point.
+    :type with_trailing_point: bool
     :return: The deducted domain name.
     :rtype: str
     """
@@ -195,7 +197,10 @@ def deduct_domain_name(url: str) -> str:
     if domain_name == '':
         parser = urlparse(url_utils.deduct_http_url(url))
         domain_name = parser.netloc
-    return domain_name
+    if with_trailing_point:
+        return insert_trailing_point(domain_name)
+    else:
+        return domain_name
 
 
 def equals(domain_name1: str, domain_name2: str) -> bool:

@@ -1,4 +1,6 @@
 import ipaddress
+
+from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults, \
     AutonomousSystemResolutionValues
@@ -14,7 +16,7 @@ class ASResolverValueForROVPageScraping:
 
      Attributes
      ----------
-     name_server : str or None
+     server : str or None
         A name server.
      entry_as_database : EntryIpAsDatabase or None
         An entry of the IpAsDatabase.
@@ -23,19 +25,20 @@ class ASResolverValueForROVPageScraping:
      ip_range_rtsv : ipaddress.IPv4Network or None
         An IP network or None.
     """
-    def __init__(self, name_server: str or None, entry_as_database: EntryIpAsDatabase or None, network: ipaddress.IPv4Network or None):
+    def __init__(self, server: str or None, server_type: ServerTypes, entry_as_database: EntryIpAsDatabase, network: ipaddress.IPv4Network or None):
         """
         Initialize the object but sets the 'entry_rov_page' to None, because the idea is that ROVPageScraping it has yet
         to happen, so the object should updated later.
 
-        :param name_server: A name server.
-        :type name_server: str
+        :param server: A name server.
+        :type server: str
         :param entry_as_database: An entry of the IpAsDatabase.
         :type entry_as_database: EntryIpAsDatabase
         :param network: An IP network or None.
         :type network: ipaddress.IPv4Network or None
         """
-        self.name_server = name_server
+        self.server = server
+        self.server_type = server_type
         self.entry_as_database = entry_as_database
         self.entry_rov_page = None
         self.ip_range_tsv = network
@@ -48,19 +51,6 @@ class ASResolverValueForROVPageScraping:
         :type entry: RowPrefixesTable or None
         """
         self.entry_rov_page = entry
-
-    @staticmethod
-    def construct_from(value: AutonomousSystemResolutionValues) -> 'ASResolverValueForROVPageScraping':     # FORWARD DECLARATIONS (REFERENCES)
-        """
-        This static methods constructs an ASResolverValueForROVPageScraping object from an
-        AutonomousSystemResolutionValues object.
-
-        :param value: An AutonomousSystemResolutionValues object.
-        :type value: AutonomousSystemResolutionValues
-        :return: An ASResolverValueForROVPageScraping object.
-        :rtype: ASResolverValueForROVPageScraping
-        """
-        return ASResolverValueForROVPageScraping(value.name_server, value.entry, value.ip_range_tsv)
 
 
 class ASResolverResultForROVPageScraping:
@@ -79,6 +69,7 @@ class ASResolverResultForROVPageScraping:
         The reformatted dictionary.
 
     """
+    # TODO: docs
     def __init__(self, as_results: AutonomousSystemResolutionResults):
         """
         Initialize the object reformatting a AutonomousSystemResolutionResults object.
@@ -87,16 +78,42 @@ class ASResolverResultForROVPageScraping:
         :type as_results: AutonomousSystemResolutionResults
         """
         self.results = dict()
-        for ip_address in as_results.results.keys():
-            if as_results.results[ip_address].entry.as_number is None:
-                continue
-            try:
-                self.results[as_results.results[ip_address].entry.as_number]
-                try:
-                    self.results[as_results.results[ip_address].entry.as_number][ip_address]
-                except KeyError:
-                    self.results[as_results.results[ip_address].entry.as_number][ip_address] = ASResolverValueForROVPageScraping.construct_from(as_results.results[ip_address])
-            except KeyError:
-                self.results[as_results.results[ip_address].entry.as_number] = dict()
-                self.results[as_results.results[ip_address].entry.as_number][ip_address] = ASResolverValueForROVPageScraping.construct_from(as_results.results[ip_address])
+        self.no_as_results = dict()
+        self.unresolved_servers = dict()
 
+        for ip_address in as_results.complete_results.keys():
+            server = as_results.complete_results[ip_address][0]
+            server_type = as_results.complete_results[ip_address][1]
+            entry_ip_as_database = as_results.complete_results[ip_address][2]
+            ip_range_tsv = as_results.complete_results[ip_address][3]
+            try:
+                self.results[entry_ip_as_database.as_number]
+                try:
+                    # c'è già...
+                    self.results[entry_ip_as_database.as_number][ip_address].server_type = ServerTypes.WEB_AND_SCRIPT_SERVER
+                except KeyError:
+                    self.results[entry_ip_as_database.as_number][ip_address] = ASResolverValueForROVPageScraping(server, server_type, entry_ip_as_database, ip_range_tsv)
+            except KeyError:
+                self.results[entry_ip_as_database.as_number] = dict()
+                self.results[entry_ip_as_database.as_number][ip_address] = ASResolverValueForROVPageScraping(server, server_type, entry_ip_as_database, ip_range_tsv)
+
+        for ip_address in as_results.no_ip_range_tsv_results.keys():
+            server = as_results.complete_results[ip_address][0]
+            server_type = as_results.complete_results[ip_address][1]
+            entry_ip_as_database = as_results.complete_results[ip_address][2]
+            try:
+                self.results[entry_ip_as_database.as_number]
+                try:
+                    # c'è già...
+                    self.results[entry_ip_as_database.as_number][ip_address].server_type = ServerTypes.WEB_AND_SCRIPT_SERVER
+                except KeyError:
+                    self.results[entry_ip_as_database.as_number][ip_address] = ASResolverValueForROVPageScraping(server, server_type, entry_ip_as_database, None)
+            except KeyError:
+                self.results[entry_ip_as_database.as_number] = dict()
+                self.results[entry_ip_as_database.as_number][ip_address] = ASResolverValueForROVPageScraping(server, server_type, entry_ip_as_database, None)
+
+        # get IP from name server of a zone but can't resolve that in the .tsv database
+        self.no_as_results = as_results.no_as_results
+
+        # get name server from a zone but can't resolve the IP address
+        self.unresolved_servers = as_results.unresolved_servers

@@ -10,6 +10,7 @@ from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from persistence import helper_domain_name, helper_application_results, helper_name_server, helper_zone, helper_alias, \
     helper_zone_links
+from persistence.BaseModel import project_root_directory_name
 from utils import domain_name_utils
 
 
@@ -26,6 +27,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
+    headless_browser = None
     dns_results = None
     zone_dependencies_per_nameserver = None
     zone_dependencies_per_zone = None
@@ -42,7 +44,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent
@@ -51,10 +53,9 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        # cls.domain_names = ['dei.unipd.it']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
-        cls.consider_tld = False
+        cls.consider_tld = True
         # ELABORATION
         PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
         if cls.clear_cache_at_start:
@@ -64,15 +65,15 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=PRD)
             except FilenameNotFoundError as e:
                 print(f"!!! {str(e)} !!!")
-                cls.fail(str(e))
+                exit(-1)
         if not cls.consider_tld:
             try:
-                headless_browser = FirefoxHeadlessWebDriver(PRD)
+                cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
             except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
                 print(f"!!! {str(e)} !!!")
                 cls.fail(str(e))
             cls.headless_browser_is_instantiated = True
-            tld_scraper = TLDPageScraper(headless_browser)
+            tld_scraper = TLDPageScraper(cls.headless_browser)
             try:
                 tlds = tld_scraper.scrape_tld()
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
@@ -86,6 +87,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         cls.dns_results = results.zone_dependencies_per_domain_name
         cls.zone_dependencies_per_zone = results.zone_name_dependencies_per_zone
         cls.zone_dependencies_per_nameserver = results.zone_name_dependencies_per_name_server
+        cls.direct_zone_name_per_domain_name = results.direct_zone_name_per_domain_name
         cls.error_logs = results.error_logs
         print("END DNS DEPENDENCIES RESOLVER")
         print("INSERTION INTO DATABASE... ", end='')
@@ -95,8 +97,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
             print(f"!!! {str(e)} !!!")
             return
         print("DONE")
-        if cls.headless_browser_is_instantiated:
-            headless_browser.close()
 
     def test_1_domain_names_integrity(self):
         """
@@ -284,6 +284,26 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
             count_assertions = count_assertions + 1
         print(f"Reached this print means everything went well ({count_assertions} assertions)")
         print("------- [7] END ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
+
+    def test_8_getting_direct_zone_of_domain_name(self):
+        print("\n------- [8] START ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
+        count_assertions = 0
+        for domain_name in self.direct_zone_name_per_domain_name.keys():
+            try:
+                zo = helper_zone.get_direct_zone_object_of(domain_name)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+            print(f"Direct zone from elaboration: {self.direct_zone_name_per_domain_name[domain_name]}")
+            print(f"Direct zone from database: {zo.name}")
+            self.assertEqual(self.direct_zone_name_per_domain_name[domain_name], zo.name)
+            count_assertions = count_assertions + 1
+        print(f"Reached this print means everything went well ({count_assertions} assertions)")
+        print("------- [8] END ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls.headless_browser_is_instantiated:
+            cls.headless_browser.close()
 
 
 if __name__ == '__main__':

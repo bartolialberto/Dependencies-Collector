@@ -3,8 +3,8 @@ from peewee import DoesNotExist
 from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity, IpAddressEntity
 
 
-def insert(wsitee: WebSiteEntity, wservere: WebServerEntity or None, https: bool, iae: IpAddressEntity or None) -> WebSiteLandsAssociation:
-    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, web_server=wservere, https=https, ip_address=iae)
+def insert(wsitee: WebSiteEntity, wservere: WebServerEntity or None, https: bool) -> WebSiteLandsAssociation:
+    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, web_server=wservere, https=https)
     return wsla
 
 
@@ -61,7 +61,7 @@ def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity, new_i
 def get_unresolved(https: bool) -> Set[WebSiteLandsAssociation]:
     query = WebSiteLandsAssociation.select()\
         .join_from(WebSiteLandsAssociation, WebSiteEntity)\
-        .where((WebSiteLandsAssociation.web_server.is_null(True)) & (WebSiteLandsAssociation.ip_address.is_null(True)) & (WebSiteLandsAssociation.https == https))
+        .where((WebSiteLandsAssociation.web_server.is_null(True)) & (WebSiteLandsAssociation.https == https))
     result = set()
     for row in query:
         result.add(row)

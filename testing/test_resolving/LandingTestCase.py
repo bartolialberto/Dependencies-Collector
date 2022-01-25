@@ -1,10 +1,12 @@
 import unittest
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.LandingResolver import LandingResolver
 
 
 class LandingTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.resolver = LandingResolver()
+        dns_resolver = DnsResolver(None)
+        self.resolver = LandingResolver(dns_resolver)
         self.web_site_list = [
             'google.it/doodles',
             'www.youtube.it/feed/explore'
@@ -23,11 +25,10 @@ class LandingTestCase(unittest.TestCase):
 
             # HTTPS
             print(f"**** via HTTPS *****")
-            https_result = results[0]
+            https_result = results.https
             if https_result is not None:
-                print(f"HTTPS Landing url: {https_result.name}")
-                print(f"HTTPS WebServer: {https_result.server}")
-                print(f"HTTPS IP: {https_result.ip}")
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS Access Path: {https_result.stamp_access_path()}")
                 print(f"Strict Transport Security: {https_result.hsts}")
                 print(f"HTTPS Redirection path:")
                 for index, url in enumerate(https_result.redirection_path):
@@ -37,11 +38,10 @@ class LandingTestCase(unittest.TestCase):
 
             # HTTP
             print(f"***** via HTTP *****")
-            http_result = results[1]
+            http_result = results.http
             if http_result is not None:
-                print(f"HTTP Landing url: {http_result.name}")
-                print(f"HTTP WebServer: {http_result.server}")
-                print(f"HTTP IP: {http_result.ip}")
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP Access Path: {http_result.stamp_access_path()}")
                 print(f"Strict Transport Security: {http_result.hsts}")
                 print(f"HTTP Redirection path:")
                 for index, url in enumerate(http_result.redirection_path):
@@ -60,11 +60,10 @@ class LandingTestCase(unittest.TestCase):
 
             # HTTPS
             print(f"**** via HTTPS *****")
-            https_result = results[0]
+            https_result = results.https
             if https_result is not None:
-                print(f"HTTPS Landing url: {https_result.name}")
-                print(f"HTTPS ScriptServer: {https_result.server}")
-                print(f"HTTPS IP: {https_result.ip}")
+                print(f"HTTPS Landing url: {https_result.url}")
+                print(f"HTTPS Access Path: {https_result.stamp_access_path()}")
                 print(f"Strict Transport Security: {https_result.hsts}")
                 print(f"HTTPS Redirection path:")
                 for index, url in enumerate(https_result.redirection_path):
@@ -74,11 +73,10 @@ class LandingTestCase(unittest.TestCase):
 
             # HTTP
             print(f"***** via HTTP *****")
-            http_result = results[1]
+            http_result = results.http
             if http_result is not None:
-                print(f"HTTP Landing url: {http_result.name}")
-                print(f"HTTP ScriptServer: {http_result.server}")
-                print(f"HTTP IP: {http_result.ip}")
+                print(f"HTTP Landing url: {http_result.url}")
+                print(f"HTTP Access Path: {http_result.stamp_access_path()}")
                 print(f"Strict Transport Security: {http_result.hsts}")
                 print(f"HTTP Redirection path:")
                 for index, url in enumerate(http_result.redirection_path):

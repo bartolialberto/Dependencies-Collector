@@ -3,6 +3,7 @@ from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
+from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult
 from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult
@@ -15,7 +16,7 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
     helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server, helper_ip_range_tsv, \
-    helper_ip_range_rov, helper_network_numbers
+    helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_alias
 
 
 def insert_all_application_results(resolvers: ApplicationResolversWrapper) -> None:
@@ -47,32 +48,52 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
         # HTTPS result
         is_https = True
         if result[web_site].https is None:
-            helper_web_site_lands.insert(w_site_e, None, is_https, None)
+            helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
-            w_server_https = helper_web_server.insert(result[web_site].https.server)
-            iae = helper_ip_address.insert(result[web_site].https.ip)
+            w_server_https, wse_https_dne = helper_web_server.insert(result[web_site].https.server)
+            last = wse_https_dne.name
+            final_dne = wse_https_dne
+            for path in result[web_site].https.access_path[1:]:
+                last_dne = helper_domain_name.insert(last)
+                next_dne = helper_domain_name.insert(path)
+                final_dne = next_dne
+                helper_alias.insert(last_dne, next_dne)
+            for ip in result[web_site].https.ips:
+                iae = helper_ip_address.insert(ip)
+                helper_access.insert(final_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
-            helper_web_site_lands.insert(w_site_e, w_server_https, is_https, iae)
+            helper_web_site_lands.insert(w_site_e, w_server_https, is_https)
 
         # HTTP result
         is_https = False
         if result[web_site].http is None:
-            helper_web_site_lands.insert(w_site_e, None, is_https, None)
+            helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
-            w_server_http = helper_web_server.insert(result[web_site].http.server)
-            iae = helper_ip_address.insert(result[web_site].http.ip)
+            w_server_http, wse_http_dne = helper_web_server.insert(result[web_site].http.server)
+            last = wse_http_dne.name
+            final_dne = wse_http_dne
+            for path in result[web_site].http.access_path[1:]:
+                last_dne = helper_domain_name.insert(last)
+                next_dne = helper_domain_name.insert(path)
+                final_dne = next_dne
+                helper_alias.insert(last_dne, next_dne)
+            for ip in result[web_site].http.ips:
+                iae = helper_ip_address.insert(ip)
+                helper_access.insert(final_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
-            helper_web_site_lands.insert(w_site_e, w_server_http, is_https, iae)
+            helper_web_site_lands.insert(w_site_e, w_server_http, is_https)
 
 
 def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
-    ze_dict = dict()
+    ze_dict = dict()    # keep the entities in a dictionary so we don't have to search them from the DB later
+    dne_dict = dict()   # keep the entities in a dictionary so we don't have to search them from the DB later
 
     for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
         try:
             dne = helper_domain_name.insert(domain_name)
         except InvalidDomainNameError:
             raise
+        dne_dict[domain_name] = dne
         for zone in dns_results.zone_dependencies_per_domain_name[domain_name]:
             ze = helper_zone.insert_zone_object(zone)
             helper_domain_name_dependencies.insert(dne, ze)
@@ -101,6 +122,9 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
             except KeyError:
                 raise
             helper_domain_name_dependencies.insert(dne, ze)
+
+    for domain_name in dns_results.direct_zone_name_per_domain_name.keys():
+        helper_direct_zone.insert(dne_dict[domain_name], ze_dict[dns_results.direct_zone_name_per_domain_name[domain_name]])
 
 
 def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResult) -> None:
@@ -143,106 +167,117 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str,
 
 def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
     for script_site in result.keys():
-        sse = helper_script_site.insert(script_site)
-        helper_script_site_lands.delete_all_from_script_site_entity(sse)
+        s_site_e = helper_script_site.insert(script_site)
+        helper_script_site_lands.delete_all_from_script_site_entity(s_site_e)   # TODO: ???
 
         # HTTPS result
         is_https = True
         if result[script_site].https is None:
-            helper_script_site_lands.insert(sse, None, is_https, None)
+            helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
-            s_server_e_https = helper_script_server.insert(result[script_site].https.server)
-            iae = helper_ip_address.insert(result[script_site].https.ip)
+            s_server_https, sse_https_dne = helper_script_server.insert(result[script_site].https.server)
+            last = sse_https_dne.name
+            final_dne = sse_https_dne
+            for path in result[script_site].https.access_path[1:]:
+                last_dne = helper_domain_name.insert(last)
+                next_dne = helper_domain_name.insert(path)
+                final_dne = next_dne
+                helper_alias.insert(last_dne, next_dne)
+            for ip in result[script_site].https.ips:
+                iae = helper_ip_address.insert(ip)
+                helper_access.insert(final_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
-            helper_script_site_lands.insert(sse, s_server_e_https, is_https, iae)
+            helper_script_site_lands.insert(s_site_e, s_server_https, is_https)
 
         # HTTP result
         is_https = False
         if result[script_site].http is None:
-            helper_script_site_lands.insert(sse, None, is_https, None)
+            helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
-            s_server_e_http = helper_script_server.insert(result[script_site].http.server)
-            iae = helper_ip_address.insert(result[script_site].http.ip)
+            s_server_http, sse_http_dne = helper_script_server.insert(result[script_site].http.server)
+            last = sse_http_dne.name
+            final_dne = sse_http_dne
+            for path in result[script_site].http.access_path[1:]:
+                last_dne = helper_domain_name.insert(last)
+                next_dne = helper_domain_name.insert(path)
+                final_dne = next_dne
+                helper_alias.insert(last_dne, next_dne)
+            for ip in result[script_site].http.ips:
+                iae = helper_ip_address.insert(ip)
+                helper_access.insert(final_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
-            helper_script_site_lands.insert(sse, s_server_e_http, is_https, iae)
+            helper_script_site_lands.insert(s_site_e, s_server_http, is_https)
 
 
 def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
-    for as_number in finals.results.keys():
+    # TODO: rivederlo completamente
+    for as_number in finals.results.keys(): # case in which we have IP address, server, AS number, entry IP-AS, but maybe ip_range_tsv and ip_range_rov
         ase = helper_autonomous_system.insert(as_number)
-        if finals.results[as_number] is not None:
-            for ip_address in finals.results[as_number].keys():
-                try:
-                    iae = helper_ip_address.get(ip_address)
-                except DoesNotExist:
-                    raise
-                ine = helper_ip_network.insert_from_address_entity(iae)
-                if finals.results[as_number][ip_address] is not None:
-                    name_server = finals.results[as_number][ip_address].name_server
-                    if name_server is not None:
-                        entry_ip_as_db = finals.results[as_number][ip_address].entry_as_database
-                        ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
-                        row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
-                        # nse, dne = helper_name_server.insert(name_server)
-                        # helper_access.insert(dne, iae)
-                        if entry_ip_as_db is not None:
-                            if ip_range_tsv is not None:
-                                irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
-                                helper_network_numbers.insert(irte, ase)
-                                if row_prefixes_table is not None:
-                                    re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
-                                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
-                                    helper_ip_address_depends.insert(iae, ine, irte, irre)
-                                    helper_prefixes_table.insert(irre, re, ase)
-                                else:
-                                    helper_ip_address_depends.insert(iae, ine, irte, None)
-                                    helper_prefixes_table.insert(None, None, ase)
-                            else:
-                                if row_prefixes_table is not None:
-                                    re = helper_rov.insert(row_prefixes_table.rov_state.to_string(),
-                                                           row_prefixes_table.visibility)
-                                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
-                                    helper_ip_address_depends.insert(iae, ine, None, irre)
-                                    helper_prefixes_table.insert(irre, re, ase)
-                                else:
-                                    helper_ip_address_depends.insert(iae, ine, None, None)
-                                    helper_prefixes_table.insert(None, None, ase)
-                        else:
-                            pass        # caso impossibile poiché non dovrebbe esserci proprio l'AS come chiave del dizionario
-                    else:
-                        entry_ip_as_db = finals.results[as_number][ip_address].entry_as_database
-                        ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
-                        row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
-                        if entry_ip_as_db is not None:
-                            if ip_range_tsv is not None:
-                                irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
-                                helper_network_numbers.insert(irte, ase)
-                                if row_prefixes_table is not None:
-                                    re = helper_rov.insert(row_prefixes_table.rov_state.to_string(),
-                                                           row_prefixes_table.visibility)
-                                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
-                                    helper_ip_address_depends.insert(iae, ine, irte, irre)
-                                    helper_prefixes_table.insert(irre, re, ase)
-                                else:
-                                    helper_ip_address_depends.insert(iae, ine, irte, None)
-                                    helper_prefixes_table.insert(None, None, ase)
-                            else:
-                                if row_prefixes_table is not None:
-                                    re = helper_rov.insert(row_prefixes_table.rov_state.to_string(),
-                                                           row_prefixes_table.visibility)
-                                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
-                                    helper_ip_address_depends.insert(iae, ine, None, irre)
-                                    helper_prefixes_table.insert(irre, re, ase)
-                                else:
-                                    helper_ip_address_depends.insert(iae, ine, None, None)
-                                    helper_prefixes_table.insert(None, None, ase)
-                        else:
-                            pass  # caso impossibile poiché non dovrebbe esserci proprio l'AS come chiave del dizionario
+        for ip_address in finals.results[as_number].keys():
+            try:
+                iae = helper_ip_address.get(ip_address)     # TODO: insert?
+            except DoesNotExist:
+                raise
+            ine = helper_ip_network.insert_from_address_entity(iae)
+            server = finals.results[as_number][ip_address].server
+            server_type = finals.results[as_number][ip_address].server_type
+            ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
+            row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
+            if server_type == ServerTypes.NAMESERVER:
+                nse, dne = helper_name_server.insert(server)
+            elif server_type == ServerTypes.WEBSERVER:
+                wse, dne = helper_web_server.insert(server)
+            elif server_type == ServerTypes.SCRIPTSERVER:
+                sse, dne = helper_script_server.insert(server)
+            elif server_type == ServerTypes.WEB_AND_SCRIPT_SERVER:
+                wse, dne = helper_web_server.insert(server)
+                sse, dne = helper_script_server.insert(server)
+            else:
+                raise ValueError
+            helper_access.insert(dne, iae)
+            if row_prefixes_table is not None:
+                irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
+                re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
+                helper_prefixes_table.insert(irre, re, ase)
+                if ip_range_tsv is None:
+                    helper_ip_address_depends.insert(iae, ine, None, irre)      # should not be possible...
                 else:
-                    helper_access.insert(None, iae)
-                    helper_ip_address_depends.insert(iae, ine, None, None)
+                    irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
+                    helper_ip_address_depends.insert(iae, ine, irte, irre)
+                    helper_network_numbers.insert(irte, ase)
+            else:
+                if ip_range_tsv is None:
+                    helper_ip_address_depends.insert(iae, ine, None, None)      # should not be possible...
+                else:
+                    irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
+                    helper_ip_address_depends.insert(iae, ine, irte, None)
+                    helper_network_numbers.insert(irte, ase)
+    for ip_address in finals.no_as_results.keys():
+        try:
+            iae = helper_ip_address.get(ip_address)  # TODO: insert?
+        except DoesNotExist:
+            raise
+        server = finals.no_as_results[ip_address][0]
+        server_type = finals.no_as_results[ip_address][1]
+        if server_type == ServerTypes.NAMESERVER:
+            nse, dne = helper_name_server.insert(server)
+        elif server_type == ServerTypes.WEBSERVER:
+            wse, dne = helper_web_server.insert(server)
+        elif server_type == ServerTypes.SCRIPTSERVER:
+            sse, dne = helper_web_server.insert(server)
         else:
-            pass
+            raise ValueError
+        helper_access.insert(dne, iae)
+    for server in finals.unresolved_servers.keys():
+        server_type = finals.unresolved_servers[server]
+        if server_type == ServerTypes.NAMESERVER:
+            helper_name_server.insert(server)
+        elif server_type == ServerTypes.WEBSERVER:
+            helper_web_server.insert(server)
+        elif server_type == ServerTypes.SCRIPTSERVER:
+            helper_web_server.insert(server)
+        else:
+            raise ValueError
 
 
 def get_unresolved_entities() -> set:

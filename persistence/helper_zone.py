@@ -7,7 +7,8 @@ from entities.enums.TypesRR import TypesRR
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
     helper_domain_name
-from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation
+from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation, \
+    DirectZoneAssociation
 from utils import domain_name_utils
 
 
@@ -39,10 +40,18 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
     name_server_unresolved = set(copy.deepcopy(zone.nameservers))
     for rr in zone.addresses:
         dne = helper_domain_name.insert(rr.name)
-        name_server_unresolved.remove(rr.name)
+        last_ip_string = None
         for value in rr.values:
             iae = helper_ip_address.insert(value)
             helper_access.insert(dne, iae)
+            last_ip_string = value
+        try:
+            name_server_to_be_removed = zone.is_ip_of_name_servers(last_ip_string)
+        except ValueError:
+            raise
+        name_server_unresolved.remove(name_server_to_be_removed)
+
+
 
     for name_server in name_server_unresolved:
         helper_access.insert(nsdne_dict[name_server], None)
@@ -59,20 +68,23 @@ def get_zone_object(zone_name: str) -> Zone:
         nses = helper_name_server.get_all_from_zone_name(ze.name)
     except DoesNotExist:
         raise
-    zone_name_servers = list(map(lambda nse: nse.name, nses))
+    zone_name_servers = list(map(lambda nse: nse.name.name, nses))
     zone_name_aliases = list()
     zone_name_addresses = list()
     for nse in nses:
         try:
-            iae = helper_ip_address.get_first_of(nse.name)
-            zone_name_addresses.append(RRecord(nse.name, TypesRR.A, iae.exploded_notation))
+            iae = helper_ip_address.get_first_of(nse.name.name)
+            zone_name_addresses.append(RRecord(nse.name.name, TypesRR.A, iae.exploded_notation))
         except DoesNotExist:
-            iae, a_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=True)
-            prev = nse.name
+            try:
+                iae, a_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=True)
+            except NoAvailablePathError:
+                raise
+            prev = nse.name.name
             for a_dne in a_dnes:
                 zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.name))
                 prev = a_dne.name
-            zone_name_addresses.append(RRecord(nse.name, TypesRR.A, iae.exploded_notation))
+            zone_name_addresses.append(RRecord(nse.name.name, TypesRR.A, iae.exploded_notation))
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses)
 
 
@@ -120,3 +132,15 @@ def get_zone_dependencies_of_zone(zone_name: str) -> Set[ZoneEntity]:
     for row in query:
         result.add(row.zone)
     return result
+
+
+def get_direct_zone_object_of(domain_name: str) -> Zone:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    try:
+        dza = DirectZoneAssociation.get(DirectZoneAssociation.domain_name == dne)
+    except DoesNotExist:
+        raise
+    return get_zone_object(dza.zone.name)

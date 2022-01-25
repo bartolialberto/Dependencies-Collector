@@ -1,12 +1,12 @@
 from typing import Set
-
 from peewee import DoesNotExist
 
+from entities.Zone import Zone
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_web_server, helper_domain_name_dependencies, helper_script_server, helper_zone, \
     helper_domain_name, helper_web_site
 from persistence.BaseModel import ZoneEntity, WebSiteEntity
-from utils import url_utils
+from utils import url_utils, domain_name_utils
 
 
 def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
@@ -74,3 +74,17 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
                 web_sites.add(wse)
 
     return web_sites
+
+
+def get_direct_zone_from_web_site(web_site: str) -> Zone:
+    """
+    web_site parameter could be an HTTP URL.
+
+    """
+    domain_name = domain_name_utils.deduct_domain_name(web_site)
+    try:
+        zo = helper_zone.get_direct_zone_object_of(domain_name)
+    except DoesNotExist:
+        raise
+    return zo
+

@@ -48,7 +48,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
 
     def test_1_resolving_path(self):
         # ANOTHER PARAMETER
-        as_string = False
+        as_string = True
         # TEST
         print(f"\n------- [1] START PATH RESOLVING from domain name = {self.domain_name} -------")
         try:
@@ -82,7 +82,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         try:
             zone = self.cache.resolve_zone_from_zone_name(self.zone_name)
             for i, nameserver in enumerate(zone.nameservers):
-                rr = zone.resolve_nameserver(nameserver)
+                rr = zone.resolve_name_server_access_path(nameserver)
                 print(f"for nameserver[{i+1}]: {nameserver}\tresolved = {rr.values}")
         except (NoAvailablePathError, NoRecordInCacheError) as e:
             print(f"!!! {str(e)} !!!")

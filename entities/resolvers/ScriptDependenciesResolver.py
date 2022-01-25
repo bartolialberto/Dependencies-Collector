@@ -78,12 +78,14 @@ class ScriptDependenciesResolver:
         # TODO: trovare il modo definitivo per trovare il tipo di script voluto
         # TODO: trovare degli esempi per verificare tutto il funzionamento correttamente (siti con iframe che contengono script)
         main_page_scripts = set()
+
+        """
         awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
           lambda driver: driver.find_elements(By.TAG_NAME, 'script')
         )
-        for awaiter_script in awaiter_scripts:
-            src = awaiter_script.get_attribute('src')
-            integrity = awaiter_script.get_attribute('integrity')
+        for script in awaiter_scripts:
+            src = script.get_attribute('src')
+            integrity = script.get_attribute('integrity')
             if integrity == '':
                 integrity = None
             if src is None:
@@ -93,6 +95,23 @@ class ScriptDependenciesResolver:
             else:
                 main_page_scripts.add(MainPageScript(src, integrity))
         return main_page_scripts
+        """
+
+
+        awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
+            lambda driver: driver.find_elements(By.XPATH, '//script[not(ancestor::iframe)]')   # descendant::script
+        )
+        for script in awaiter_scripts:
+            src = script.get_attribute('src')
+            integrity = script.get_attribute('integrity')
+            if integrity == '':
+                integrity = None
+            if src == '' or src is None:
+                pass
+            else:
+                main_page_scripts.add(MainPageScript(src, integrity))
+        return main_page_scripts
+
 
     def close(self):
         self.headless_browser.driver.quit()

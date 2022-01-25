@@ -49,7 +49,7 @@ class ROVScrapingResolvingTestCase(unittest.TestCase):
                     try:
                         # TODO: gestire più indirizzi per nameserver
                         try:
-                            rr = zone.resolve_nameserver(nameserver)
+                            rr = zone.resolve_name_server_access_path(nameserver)
                         except NoAvailablePathError:
                             ip_as_results.set_name_server_to_none(nameserver)
                             continue

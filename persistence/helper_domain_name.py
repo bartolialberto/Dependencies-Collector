@@ -56,19 +56,21 @@ def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[
         pass
     chain_dne.append(dne)
     try:
-        iae = helper_ip_address.get_all_of(dne)
-        return iae, chain_dne
+        iaes = helper_ip_address.get_all_of(dne)
+        if len(iaes) != 0:
+            return iaes, chain_dne
     except DoesNotExist:
+        pass
+    try:
+        adnes = helper_alias.get_all_aliases_from_entity(dne)
+    except NoAliasFoundError:
+        raise NoAvailablePathError(dne.name)
+    for adne in adnes:
         try:
-            adnes = helper_alias.get_all_aliases_from_entity(dne)
-        except NoAliasFoundError:
-            raise NoAvailablePathError(dne.name)
-        for adne in adnes:
-            try:
-                return __inner_resolve_access_path(adne, chain_dne)
-            except NoAvailablePathError:
-                pass
-        raise DoesNotExist
+            return __inner_resolve_access_path(adne, chain_dne)
+        except NoAvailablePathError:
+            pass
+    raise DoesNotExist
 
 
 def get_all_that_depends_on_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:

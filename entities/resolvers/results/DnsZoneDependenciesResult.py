@@ -16,6 +16,8 @@ class DnsZoneDependenciesResult:
     ----------
     zone_dependencies : List[Zone]
         This list of Zone (the application-defined object) which a domain name depends upon.
+    direct_zone_name : str
+        Name of the direct zone of the domain name.
     zone_name_dependencies_per_zone : Dict[str, List[str]]
         This dictionary associates each zone NAME (key) to a list of zone NAMEs which the (key) zone depends upon.
     zone_name_dependencies_per_name_server : Dict[str, List[str]]
@@ -24,12 +26,14 @@ class DnsZoneDependenciesResult:
     error_logs : List[ErrorLog]
         A list of error logs occurred during resolving.
     """
-    def __init__(self, zone_dependencies: List[Zone], zone_name_dependencies_per_zone: Dict[str, List[str]], zone_name_dependencies_per_name_server: Dict[str, List[str]], error_logs: List[ErrorLog]):
+    def __init__(self, zone_dependencies: List[Zone], direct_zone_name: str or None, zone_name_dependencies_per_zone: Dict[str, List[str]], zone_name_dependencies_per_name_server: Dict[str, List[str]], error_logs: List[ErrorLog]):
         """
         Initialize the object.
 
         :param zone_dependencies: A list of Zone (the application-defined object).
         :type zone_dependencies: List[Zone]
+        :param direct_zone_name: A zone name.
+        :type direct_zone_name: str
         :param zone_name_dependencies_per_zone: A dictionary that associate a zone name to a list of zone names.
         :type zone_name_dependencies_per_zone: Dict[str, List[str]]
         :param zone_name_dependencies_per_name_server: A dictionary that associate a name server to a list of zone names.
@@ -38,6 +42,7 @@ class DnsZoneDependenciesResult:
         :type error_logs: List[ErrorLog]
         """
         self.zone_dependencies = zone_dependencies
+        self.direct_zone_name = direct_zone_name
         self.zone_name_dependencies_per_zone = zone_name_dependencies_per_zone
         self.zone_name_dependencies_per_name_server = zone_name_dependencies_per_name_server
         self.error_logs = error_logs

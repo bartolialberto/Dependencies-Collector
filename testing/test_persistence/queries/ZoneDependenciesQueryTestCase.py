@@ -46,7 +46,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
             self.fail(str(e))
         print(f"Resolved: {str(zo)}. More prints:")
         for i, name_server in enumerate(zo.nameservers):
-            print(f"nameserver[{i+1}/{len(zo.nameservers)}] = {name_server} ===ACCESS_PATH==> {str(zo.resolve_nameserver(name_server).values)}")
+            print(f"nameserver[{i+1}/{len(zo.nameservers)}] = {name_server} ===ACCESS_PATH==> {str(zo.resolve_name_server_access_path(name_server).values)}")
         for i, rr in enumerate(zo.aliases):
             print(f"alias[{i+1}/{len(zo.aliases)}] = (name={rr.name}, first_value={rr.get_first_value()})")
         for i, rr in enumerate(zo.addresses):

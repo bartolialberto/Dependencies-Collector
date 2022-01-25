@@ -1,16 +1,16 @@
-from typing import List
+from typing import List, Tuple
 from peewee import DoesNotExist
 from persistence import helper_domain_name, helper_script_site, helper_web_site
-from persistence.BaseModel import ScriptServerEntity, ScriptSiteLandsAssociation, ScriptHostedOnAssociation,\
-    ScriptWithdrawAssociation
+from persistence.BaseModel import ScriptServerEntity, ScriptSiteLandsAssociation, ScriptHostedOnAssociation, \
+    ScriptWithdrawAssociation, DomainNameEntity
 from utils import domain_name_utils
 
 
-def insert(name: str) -> ScriptServerEntity:
+def insert(name: str) -> Tuple[ScriptServerEntity, DomainNameEntity]:
     dn = domain_name_utils.insert_trailing_point(name)
     dne = helper_domain_name.insert(dn)
     sse, created = ScriptServerEntity.get_or_create(name=dne)
-    return sse
+    return sse, dne
 
 
 def get(web_server: str) -> ScriptServerEntity:

@@ -1,9 +1,9 @@
 import unittest
 from peewee import DoesNotExist
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.LandingResolver import LandingResolver
 from persistence import helper_application_results, helper_web_site_lands, helper_web_server, helper_script_site_lands, \
     helper_script_server
-from utils import url_utils, domain_name_utils
 
 
 class LandingIntegrityTestCase(unittest.TestCase):
@@ -37,11 +37,12 @@ class LandingIntegrityTestCase(unittest.TestCase):
         }
         # ELABORATION
         print(f"START WEB SITE LANDING")
-        resolver = LandingResolver()
+        dns_resolver = DnsResolver(None)
+        resolver = LandingResolver(dns_resolver)
         cls.web_sites_results = resolver.resolve_sites(web_site_list)
         print(f"END WEB SITE LANDING")
         print(f"START SCRIPT SITE LANDING")
-        resolver = LandingResolver()
+        resolver = LandingResolver(dns_resolver)
         cls.script_sites_results = resolver.resolve_sites(script_site_list)
         print(f"END SCRIPT SITE LANDING")
         print(f"\nSTART DB INSERTION INTO DATABASE... ", end='')

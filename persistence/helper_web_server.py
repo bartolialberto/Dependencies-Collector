@@ -1,7 +1,7 @@
 from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from persistence import helper_url, helper_web_site, helper_web_site_lands, helper_domain_name
-from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation
+from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
 from utils import url_utils, domain_name_utils
 
 """
@@ -14,11 +14,11 @@ def insert(lpe: LandingPageEntity) -> WebServerEntity:
 """
 
 
-def insert(name: str) -> WebServerEntity:
+def insert(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     dn = domain_name_utils.insert_trailing_point(name)
     dne = helper_domain_name.insert(dn)
-    we, created = WebServerEntity.get_or_create(name=dne)
-    return we
+    wse, created = WebServerEntity.get_or_create(name=dne)
+    return wse, dne
 
 
 def get(name: str) -> WebServerEntity:

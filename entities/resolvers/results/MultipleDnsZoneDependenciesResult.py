@@ -19,6 +19,8 @@ class MultipleDnsZoneDependenciesResult:
     zone_dependencies_per_domain_name : Dict[str, List[Zone]]
         This dictionary associates each domain name to a list of Zone (the application-defined object) which the domain
         name depends upon.
+    direct_zone_name_per_domain_name : Dict[str, str]
+        This dictionary associates each domain with its direct zone name.
     zone_name_dependencies_per_zone : Dict[str, List[str]]
         This dictionary associates each zone NAME (key) to a list of zone NAMEs which the (key) zone depends upon.
     zone_name_dependencies_per_name_server : Dict[str, List[str]]
@@ -33,6 +35,7 @@ class MultipleDnsZoneDependenciesResult:
 
         """
         self.zone_dependencies_per_domain_name = dict()
+        self.direct_zone_name_per_domain_name = dict()
         self.zone_name_dependencies_per_zone = dict()
         self.zone_name_dependencies_per_name_server = dict()
         self.error_logs = list()
@@ -47,6 +50,7 @@ class MultipleDnsZoneDependenciesResult:
         :type resolver_result: DnsZoneDependenciesResult
         """
         self.zone_dependencies_per_domain_name[domain_name] = resolver_result.zone_dependencies
+        self.direct_zone_name_per_domain_name[domain_name] = resolver_result.direct_zone_name
         self.zone_name_dependencies_per_zone.update(resolver_result.zone_name_dependencies_per_zone)
         self.zone_name_dependencies_per_name_server.update(resolver_result.zone_name_dependencies_per_name_server)
         for log in resolver_result.error_logs:
@@ -59,12 +63,27 @@ class MultipleDnsZoneDependenciesResult:
         :param other: Another MultipleDnsZoneDependenciesResult object.
         :type other: MultipleDnsZoneDependenciesResult
         """
-        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.zone_dependencies_per_domain_name, other.zone_dependencies_per_domain_name)
-        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.zone_name_dependencies_per_zone, other.zone_name_dependencies_per_zone)
-        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.zone_name_dependencies_per_name_server, other.zone_name_dependencies_per_name_server)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_dependencies_per_domain_name, other.zone_dependencies_per_domain_name)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.direct_zone_name_per_domain_name, other.direct_zone_name_per_domain_name)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_name_dependencies_per_zone, other.zone_name_dependencies_per_zone)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_name_dependencies_per_name_server, other.zone_name_dependencies_per_name_server)
 
     @staticmethod
     def merge_current_dict_to_total(total_results_dict: dict, current_results_dict: dict) -> None:
+        """
+        This static method merges a dictionary into another dictionary.
+        It is an auxiliary method.
+
+        :param total_results_dict: The dictionary that takes the infos of the other.
+        :type total_results_dict: dict
+        :param current_results_dict: The dictionary which all the infos are taken.
+        :type current_results_dict: dict
+        """
+        for key in current_results_dict.keys():
+            total_results_dict[key] = current_results_dict[key]
+
+    @staticmethod
+    def merge_current_dict_with_list_values_to_total(total_results_dict: dict, current_results_dict: dict) -> None:
         """
         This static method merges a dictionary into another dictionary following the structure of the
         MultipleDnsZoneDependenciesResult dictionaries attributes.
@@ -79,7 +98,6 @@ class MultipleDnsZoneDependenciesResult:
             try:
                 total_results_dict[key]
             except KeyError:
-                # total_results_dict[key] = current_results_dict[key]
                 total_results_dict[key] = list()
             finally:
                 for elem in current_results_dict[key]:

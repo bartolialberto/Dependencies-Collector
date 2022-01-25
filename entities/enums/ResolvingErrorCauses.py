@@ -35,5 +35,7 @@ class ResolvingErrorCauses(Enum):
             return 'NO_HTTP_LANDING_FOR_SCRIPT_SITE'
         elif self == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
             return 'INCOMPLETE_DEPENDENCIES_FOR_ADDRESS'
+        elif self == ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT:
+            return 'IMPOSSIBLE_TO_WITHDRAW_SCRIPT'
         else:
             raise ValueError

@@ -2,7 +2,7 @@ from typing import List
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from utils import list_utils
+from utils import list_utils, domain_name_utils
 
 
 class Zone:
@@ -52,7 +52,7 @@ class Zone:
         self.name = zone_name
         self.addresses = addresses
 
-    def resolve_nameserver(self, nameserver: str) -> RRecord:
+    def resolve_name_server_access_path(self, nameserver: str) -> RRecord:
         """
         This method resolves the nameserver into a valid IP address.
 
@@ -63,12 +63,30 @@ class Zone:
         :rtype: RRecord
         """
         for rr in self.aliases:
-            if rr.name == nameserver:
-                return self.resolve_nameserver(rr.get_first_value())
+            if domain_name_utils.equals(rr.name, nameserver):
+                return self.resolve_name_server_access_path(rr.get_first_value())
         for rr in self.addresses:
-            if rr.name == nameserver:
+            if domain_name_utils.equals(rr.name, nameserver):
                 return rr
         raise NoAvailablePathError(nameserver)
+
+    def is_ip_of_name_servers(self, ip_address: str) -> str:
+        # TODO: docs
+        for rr in self.addresses:
+            if ip_address in rr.values:
+                canonical_name = rr.name
+                return self.__resolve_name_server_from_ip_address(canonical_name)
+        raise ValueError
+
+    def __resolve_name_server_from_ip_address(self, canonical_name: str) -> str:
+        # TODO: docs
+        for rr in self.aliases:
+            if domain_name_utils.equals(rr.get_first_value(), canonical_name):
+                return self.__resolve_name_server_from_ip_address(rr.name)
+        for name_server in self.nameservers:
+            if domain_name_utils.equals(canonical_name, name_server):
+                return name_server
+        raise ValueError
 
     def __str__(self) -> str:
         """
@@ -90,7 +108,7 @@ class Zone:
         :rtype: bool
         """
         if isinstance(other, Zone):
-            return self.name == other.name
+            return domain_name_utils.equals(self.name, other.name)
         else:
             return False
 

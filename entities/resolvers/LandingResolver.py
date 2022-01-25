@@ -1,23 +1,29 @@
+import ipaddress
 from ipaddress import IPv4Address
 from typing import Dict, Set
 import requests
 from entities.error_log.ErrorLog import ErrorLog
+from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
-from utils import requests_utils
+from exceptions.DomainNonExistentError import DomainNonExistentError
+from exceptions.NoAnswerError import NoAnswerError
+from exceptions.UnknownReasonError import UnknownReasonError
+from utils import requests_utils, domain_name_utils, url_utils
 
 
+# TODO: docs
 class LandingResolver:
     """
     This class' concern is to provide tools to resolve URL landing.
 
     """
 
-    def __init__(self):
+    def __init__(self, dns_resolver: DnsResolver):
         """
         Instantiate the object.
 
         """
-        pass
+        self.dns_resolver = dns_resolver
 
     def resolve_sites(self, sites: Set[str]) -> Dict[str, LandingSiteResult]:
         """
@@ -38,8 +44,7 @@ class LandingResolver:
             print(f"***** via HTTPS *****")
             if resolver_result.https is not None:
                 print(f"HTTPS Landing url: {resolver_result.https.url}")
-                print(f"HTTPS Server: {resolver_result.https.server}")
-                print(f"HTTPS IP: {resolver_result.https.ip.compressed}")
+                print(f"HTTPS Access Path: {resolver_result.https.stamp_access_path()}")
                 print(f"Strict Transport Security: {resolver_result.https.hsts}")
                 print(f"HTTPS Redirection path:")
                 for index, url in enumerate(resolver_result.https.redirection_path):
@@ -51,8 +56,7 @@ class LandingResolver:
             print(f"***** via HTTP *****")
             if resolver_result.http is not None:
                 print(f"HTTP Landing url: {resolver_result.http.url}")
-                print(f"HTTP WebServer: {resolver_result.http.server}")
-                print(f"HTTP IP: {resolver_result.http.ip.compressed}")
+                print(f"HTTP Access Path: {resolver_result.http.stamp_access_path()}")
                 print(f"Strict Transport Security: {resolver_result.http.hsts}")
                 print(f"HTTP Redirection path:")
                 for index, url in enumerate(resolver_result.http.redirection_path):
@@ -75,6 +79,9 @@ class LandingResolver:
         error_logs = list()
         try:
             https_result = self.do_single_request(site, True)
+        except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
+            https_result = None
+            error_logs.append(ErrorLog(e, site, str(e)))
         except requests.exceptions.ConnectionError as e:
             https_result = None
             error_logs.append(ErrorLog(e, site, str(e)))
@@ -83,6 +90,9 @@ class LandingResolver:
             error_logs.append(ErrorLog(exc, site, str(exc)))
         try:
             http_result = self.do_single_request(site, False)
+        except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
+            http_result = None
+            error_logs.append(ErrorLog(e, site, str(e)))
         except requests.exceptions.ConnectionError as e:
             http_result = None
             error_logs.append(ErrorLog(e, site, str(e)))
@@ -142,4 +152,16 @@ class LandingResolver:
         except requests.exceptions.RequestException:
             # There was an ambiguous exception that occurred while handling your request.
             raise
-        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, IPv4Address(ip_string))
+        access_path = list()
+        ip_set = set()
+        web_server_domain_name = domain_name_utils.deduct_domain_name(landing_url, with_trailing_point=True)
+        try:
+            rr_a, rr_cnames = self.dns_resolver.resolve_web_site_domain_name(web_server_domain_name)
+        except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
+            raise
+        for rr in rr_cnames:
+            access_path.append(rr.name)
+        access_path.append(rr_a.name)
+        for value in rr_a.values:
+            ip_set.add(ipaddress.IPv4Address(value))
+        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, ip_set, access_path)

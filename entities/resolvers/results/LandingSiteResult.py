@@ -1,9 +1,10 @@
 from ipaddress import IPv4Address
-from typing import List
+from typing import List, Set
 from entities.error_log.ErrorLog import ErrorLog
 from utils import domain_name_utils
 
 
+# TODO: docs
 class InnerLandingSiteSingleSchemeResult:
     """
     This class represents the result of a single landing resolution using one scheme (generally HTTP or HTTPS).
@@ -22,15 +23,27 @@ class InnerLandingSiteSingleSchemeResult:
     ip : ipaddress.IPv4Address
         The IP address.
     server : str
-        The landing URL (without scheme).
+        Domain name of the url.
     """
-    def __init__(self, url: str, redirection_path: List[str], hsts: bool, ip: IPv4Address):
+    def __init__(self, url: str, redirection_path: List[str], hsts: bool, ips: Set[IPv4Address], access_path: List[str]):
         self.url = url
         self.redirection_path = redirection_path
         self.hsts = hsts
-        self.ip = ip
+        self.ips = ips
         tmp = domain_name_utils.deduct_domain_name(url)
         self.server = domain_name_utils.insert_trailing_point(tmp)
+        self.access_path = access_path
+
+    def stamp_access_path(self) -> str:
+        ip_string_set = list(map(lambda ip: ip.exploded, self.ips))
+        result = ''
+        for i, name in enumerate(self.access_path):
+            if i != len(self.access_path) - 1:
+                result = result + name + " ---> "
+            else:
+                result = result + name
+        result = result + " ==> " + str(ip_string_set)
+        return result
 
 
 class LandingSiteResult:

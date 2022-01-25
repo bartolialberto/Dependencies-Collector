@@ -11,7 +11,7 @@ from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
 
 
-def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explorer')) -> List[str]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
     They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is
@@ -93,7 +93,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False) -> Tuple[bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
