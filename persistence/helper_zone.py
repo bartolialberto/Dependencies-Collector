@@ -8,7 +8,7 @@ from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
     helper_domain_name
 from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation, \
-    DirectZoneAssociation
+    DirectZoneAssociation, NameServerEntity, ZoneComposedAssociation
 from utils import domain_name_utils
 
 
@@ -95,7 +95,7 @@ def get_zone_object(zone_name: str) -> Zone:
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses)
 
 
-def get_all_of(domain_name: str) -> Set[ZoneEntity]:
+def get_all_of_string_domain_name(domain_name: str) -> Set[ZoneEntity]:
     try:
         dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
@@ -103,6 +103,15 @@ def get_all_of(domain_name: str) -> Set[ZoneEntity]:
     result = set()
     query = DomainNameDependenciesAssociation.select()\
         .where(DomainNameDependenciesAssociation.domain_name == dne)
+    for row in query:
+        result.add(row.zone)
+    return result
+
+
+def get_all_of_entity_name_server(nse: NameServerEntity) -> Set[ZoneEntity]:
+    query = ZoneComposedAssociation.select()\
+        .where(ZoneComposedAssociation.name_server == nse)
+    result = set()
     for row in query:
         result.add(row.zone)
     return result

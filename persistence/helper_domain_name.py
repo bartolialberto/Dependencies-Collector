@@ -4,7 +4,8 @@ from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_ip_address, helper_alias, helper_zone
-from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity
+from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity, \
+    AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation
 from utils import domain_name_utils
 
 
@@ -81,3 +82,13 @@ def get_all_that_depends_on_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
         result.add(row.domain_name)
     return result
 
+
+def get_all_from_entity_autonomous_system(ase: AutonomousSystemEntity) -> Set[DomainNameEntity]:
+    query = AccessAssociation.select() \
+        .join(IpAddressDependsAssociation, on=(AccessAssociation.ip_address == IpAddressDependsAssociation.ip_address)) \
+        .join(NetworkNumbersAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
+        .where(NetworkNumbersAssociation.autonomous_system == ase)
+    result = set()
+    for row in query:
+        result.add(row.domain_name)
+    return result

@@ -11,7 +11,6 @@ from exceptions.UnknownReasonError import UnknownReasonError
 from utils import requests_utils, domain_name_utils, url_utils
 
 
-# TODO: docs
 class LandingResolver:
     """
     This class' concern is to provide tools to resolve URL landing.

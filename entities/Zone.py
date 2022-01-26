@@ -104,6 +104,44 @@ class Zone:
                 return name_server
         raise ValueError
 
+    def stamp_access_path(self, name_server: str) -> str:
+        """
+        This method return a string that represents schematically the access path and the name server parameter.
+
+        :param name_server: A name server of the self zone object.
+        :type name_server: str
+        :return: The string representation.
+        :rtype: str
+        """
+        if name_server not in self.nameservers:
+            raise ValueError
+        try:
+            return self.__inner_stamp_access_path(name_server, '')
+        except NoAvailablePathError:
+            raise
+
+    def __inner_stamp_access_path(self, name: str, result: str) -> str:
+        """
+        Recursive auxiliary method used by the 'stamp_access_path' method.
+
+        :param name: A domain name of the self zone object.
+        :type name: str
+        :param result: The result of the method carried through each recursive execution.
+        :type result: str
+        :return: The string representation.
+        :rtype: str
+        """
+        result = result + name
+        for rr in self.aliases:
+            if domain_name_utils.equals(rr.name, name):
+                result = result + " ---> "
+                return self.__inner_stamp_access_path(rr.get_first_value(), result)
+        for rr in self.addresses:
+            if domain_name_utils.equals(rr.name, name):
+                result = result + " ===> " + str(rr.values)
+                return result
+        raise NoAvailablePathError(name)
+
     def __str__(self) -> str:
         """
         This method returns a string representation of this object.
