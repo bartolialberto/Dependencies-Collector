@@ -16,12 +16,19 @@ class LandingResolver:
     """
     This class' concern is to provide tools to resolve URL landing.
 
-    """
+    ...
 
+    Attributes
+    ----------
+    dns_resolver : DnsResolver
+        A DNS resolver.
+    """
     def __init__(self, dns_resolver: DnsResolver):
         """
         Instantiate the object.
 
+        :param dns_resolver: A DNS resolver.
+        :type dns_resolver: DnsResolver
         """
         self.dns_resolver = dns_resolver
 

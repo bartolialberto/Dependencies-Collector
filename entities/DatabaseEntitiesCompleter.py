@@ -21,8 +21,8 @@ from persistence import helper_domain_name, helper_access, helper_alias, helper_
     helper_ip_range_tsv, helper_network_numbers, helper_rov, helper_prefixes_table, helper_ip_range_rov, \
     helper_ip_address_depends, helper_web_server, helper_web_site_lands, helper_ip_network, helper_script_server, \
     helper_script_site_lands, helper_script_withdraw, helper_script, helper_script_site
-from persistence.BaseModel import NameServerEntity, ScriptSiteEntity, IpAddressDependsAssociation, \
-    WebSiteLandsAssociation, ScriptWithdrawAssociation
+from persistence.BaseModel import NameServerEntity, IpAddressDependsAssociation, WebSiteLandsAssociation,\
+    ScriptWithdrawAssociation, ScriptSiteLandsAssociation
 from utils import network_utils, url_utils, file_utils, csv_utils
 
 
@@ -54,7 +54,7 @@ class DatabaseEntitiesCompleter:
     def do_complete_unresolved_entities(self, unresolved_entities: Set[UnresolvedEntityWrapper]) -> None:
         """
         This method is actually the one that executes (tries to execute) the completion of all unresolved entities.
-        It also deals with the insertion in the database if the new data resolved.
+        It also deals with the insertion in the database if there's new data resolved.
 
         :param unresolved_entities: All the unresolved entities.
         :type unresolved_entities: Set[UnresolvedEntityWrapper]
@@ -62,8 +62,8 @@ class DatabaseEntitiesCompleter:
         nse_list = list()
         wsla_https_list = list()
         wsla_http_list = list()
-        sse_https_list = list()
-        sse_http_list = list()
+        ssla_https_list = list()
+        ssla_http_list = list()
         iad_list = list()
         swas_list = list()
         for unresolved_entity in unresolved_entities:
@@ -74,9 +74,9 @@ class DatabaseEntitiesCompleter:
             elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_WEB_SITE:
                 wsla_http_list.append(unresolved_entity.entity)
             elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE:
-                sse_https_list.append(unresolved_entity.entity)
+                ssla_https_list.append(unresolved_entity.entity)
             elif unresolved_entity.cause == ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE:
-                sse_http_list.append(unresolved_entity.entity)
+                ssla_http_list.append(unresolved_entity.entity)
             elif unresolved_entity.cause == ResolvingErrorCauses.INCOMPLETE_DEPENDENCIES_FOR_ADDRESS:
                 iad_list.append(unresolved_entity.entity)
             elif unresolved_entity.cause == ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT:
@@ -84,8 +84,8 @@ class DatabaseEntitiesCompleter:
         self.do_complete_unresolved_name_servers(nse_list)
         self.do_complete_unresolved_web_sites_landing(wsla_https_list, is_https=True)
         self.do_complete_unresolved_web_sites_landing(wsla_http_list, is_https=False)
-        self.do_complete_unresolved_script_sites_landing(sse_https_list, True)
-        self.do_complete_unresolved_script_sites_landing(sse_http_list, False)
+        self.do_complete_unresolved_script_sites_landing(ssla_https_list, True)
+        self.do_complete_unresolved_script_sites_landing(ssla_http_list, False)
         self.do_complete_unresolved_ip_address_depends_association(iad_list)
         self.do_complete_not_withdrawn_scripts(swas_list)
 
@@ -139,23 +139,23 @@ class DatabaseEntitiesCompleter:
                 helper_ip_address_depends.update_ip_network(iada, ine)
             except DoesNotExist:
                 helper_ip_address_depends.insert(iae, ine, None, None)
-            helper_web_site_lands.update(wsla_dict[web_site], w_server_e, iae)
+            helper_web_site_lands.update(wsla_dict[web_site], w_server_e)
             print(f"for site: {web_site} now landing is: server={w_server_e.name.name}, IP address={iae.exploded_notation}")
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
-    def do_complete_unresolved_script_sites_landing(self, sses: List[ScriptSiteEntity], is_https: bool):
+    def do_complete_unresolved_script_sites_landing(self, sslas: List[ScriptSiteLandsAssociation], is_https: bool):
         print(f"\n\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
         if is_https:
             print(f"SCHEME USED: HTTPS")
         else:
             print(f"SCHEME USED: HTTP")
-        if len(sses) == 0:
+        if len(sslas) == 0:
             print(f"Nothing to do.\nEND UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
             return
-        sse_dict = dict()
-        for sse in sses:
-            sse_dict[sse.url] = sse
-        for script_site in sse_dict.keys():
+        ssla_dict = dict()
+        for ssla in sslas:
+            ssla_dict[ssla.script_site.url.string] = ssla
+        for script_site in ssla_dict.keys():
             try:
                 inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(script_site, is_https)
             except Exception:
@@ -169,7 +169,7 @@ class DatabaseEntitiesCompleter:
                 helper_ip_address_depends.update_ip_network(iada, ine)
             except DoesNotExist:
                 helper_ip_address_depends.insert(iae, ine, None, None)
-            helper_script_site_lands.insert(sse_dict[script_site], s_server_e, is_https, iae)
+            helper_script_site_lands.update(ssla_dict[script_site], s_server_e)
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
 
     def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]):
@@ -258,7 +258,23 @@ class DatabaseEntitiesCompleter:
 
     @staticmethod
     def dump_unresolved_entities(unresolved_entities: Set[UnresolvedEntityWrapper], separator: str, project_root_directory=Path.cwd()) -> None:
-        # TODO: docs
+        """
+        This static method dumps all the unresolved entities parameter to a file in the 'output' subfolder of the
+        project root directory parameter.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is returned.
+        If the application is started from a file that belongs to the entities package, then Path.cwd() will return the
+        entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set to default
+        as if the entry point is main.py file (which is the only entry point considered).
+
+        :param unresolved_entities: A set containing all the unresolved entities.
+        :type unresolved_entities: Set[UnresolvedEntityWrapper]
+        :param separator: The separator to use in the .csv file.
+        :type separator: str
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
+        """
         file = file_utils.set_file_in_folder('output', 'dump_unresolved_entities.csv', project_root_directory=project_root_directory)
         with file.open('w', encoding='utf-8', newline='') as f:
             write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{separator}"))

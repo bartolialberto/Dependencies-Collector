@@ -14,22 +14,26 @@ class ASResolverValueForROVPageScraping:
 
      Attributes
      ----------
-     server : str or None
-        A name server.
+     server : str
+        A server.
+    server_type : ServerTypes
+        The corresponding server type of the server attribute.
      entry_as_database : EntryIpAsDatabase or None
         An entry of the IpAsDatabase.
      entry_rov_page : RowPrefixesTable or None
         A row of the prefixes table of the ROVPageScraper or None.
-     ip_range_rtsv : ipaddress.IPv4Network or None
+     ip_range_tsv : ipaddress.IPv4Network or None
         An IP network or None.
     """
-    def __init__(self, server: str or None, server_type: ServerTypes, entry_as_database: EntryIpAsDatabase, network: ipaddress.IPv4Network or None):
+    def __init__(self, server: str, server_type: ServerTypes, entry_as_database: EntryIpAsDatabase, network: ipaddress.IPv4Network or None):
         """
         Initialize the object but sets the 'entry_rov_page' to None, because the idea is that ROVPageScraping it has yet
         to happen, so the object should updated later.
 
-        :param server: A name server.
+        :param server: A server.
         :type server: str
+        :param server_type: The corresponding server type of the server.
+        :type server_type: ServerTypes
         :param entry_as_database: An entry of the IpAsDatabase.
         :type entry_as_database: EntryIpAsDatabase
         :param network: An IP network or None.
@@ -53,21 +57,33 @@ class ASResolverValueForROVPageScraping:
 
 class ASResolverResultForROVPageScraping:
     """
-    This class represents a reformatted AutonomousSystemResolutionResults object. This reformat consists in reverting
-    the dictionary belonging to the AutonomousSystemResolutionResults object in a manner that uses the autonomous
-    system's number as keys, then the associated value to such key is another dictionary that uses IP addresses as keys;
-    the latter dictionary then associate such keys to a collection of infos, that are all 'contained' in a
-    ASResolverValueForROVPageScraping object.
+    This class represents a reformatted AutonomousSystemResolutionResults object. This reformat consists 3 different
+    dictionaries:
+
+    1- results: this dictionary consists in reverting the dictionary of results that are resolved completely (it means
+    that from the IP address we got the server and its type, the entry from the IP-AS database and the IP range tsv even
+    if it is not found [None value]) belonging to the AutonomousSystemResolutionResults object in a manner that uses the
+    autonomous system's number as keys, then the associated value to such key is another dictionary that uses IP
+    addresses as keys; the latter dictionary then associate such keys to a collection of infos, that are all 'contained'
+    in a tuple of 4 elements.
+
+    2- no_as_results: this dictionary is used to save the IP addresses that didn't resolved in the IP-AS database. It
+    uses IP address as key and for values set a tuple of 2 elements: the server name and its type
+
+    2- unresolved_servers: this dictionary is used to save the servers that didn't resolved even in a IP address. It
+    uses server name as key and then the server type as value.
 
     ...
 
     Attributes
     ----------
-    results : Dict[str, AutonomousSystemResolutionValues]
+    results : Dict[str, Tuple[str, ServerTypes, EntryIpAsDatabase, ipaddress.IPv4Network]]
+        The reformatted dictionary containing the completely resolved results.
+    no_as_results : Dict[str, Tuple[str, ServerTypes]]
+        The reformatted dictionary containing the results that didn't have a resolution from the IP-AS database.
+    unresolved_servers : Dict[str, ServerTypes]
         The reformatted dictionary.
-
     """
-    # TODO: docs
     def __init__(self, as_results: AutonomousSystemResolutionResults):
         """
         Initialize the object reformatting a AutonomousSystemResolutionResults object.

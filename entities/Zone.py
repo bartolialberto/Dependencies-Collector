@@ -71,7 +71,15 @@ class Zone:
         raise NoAvailablePathError(nameserver)
 
     def is_ip_of_name_servers(self, ip_address: str) -> str:
-        # TODO: docs
+        """
+        This method resolves a string IP address into a name server of the zone if there's correspondence.
+
+        :param ip_address: An IP address.
+        :type ip_address: str
+        :raise ValueError: If there's no correspondence.
+        :return: The name server.
+        :rtype: str
+        """
         for rr in self.addresses:
             if ip_address in rr.values:
                 canonical_name = rr.name
@@ -79,7 +87,15 @@ class Zone:
         raise ValueError
 
     def __resolve_name_server_from_ip_address(self, canonical_name: str) -> str:
-        # TODO: docs
+        """
+        This method is an auxiliary recursive method that helps the 'is_ip_of_name_servers' method of this class.
+
+        :param canonical_name: The canonical name.
+        :type canonical_name: str
+        :raise ValueError: If there's no correspondence.
+        :return: The name server.
+        :rtype: str
+        """
         for rr in self.aliases:
             if domain_name_utils.equals(rr.get_first_value(), canonical_name):
                 return self.__resolve_name_server_from_ip_address(rr.name)

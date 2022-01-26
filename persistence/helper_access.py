@@ -10,7 +10,8 @@ def insert(dne: DomainNameEntity or None, iae: IpAddressEntity or None) -> Acces
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AccessAssociation]:
     result = set()
-    query = AccessAssociation.select().where(AccessAssociation.domain_name == dne)
+    query = AccessAssociation.select()\
+        .where(AccessAssociation.domain_name == dne)
     for row in query:
         result.add(row)
     return result

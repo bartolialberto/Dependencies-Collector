@@ -1,7 +1,8 @@
 from typing import List, Set
 from peewee import DoesNotExist
-from persistence import helper_script_site
-from persistence.BaseModel import ScriptSiteEntity, ScriptServerEntity, IpAddressEntity, ScriptSiteLandsAssociation
+from persistence import helper_script_site, helper_url
+from persistence.BaseModel import ScriptSiteEntity, ScriptServerEntity, IpAddressEntity, ScriptSiteLandsAssociation, \
+    UrlEntity
 
 
 def insert(ssitee: ScriptSiteEntity, sservere: ScriptServerEntity or None, https: bool) -> ScriptSiteLandsAssociation:
@@ -42,19 +43,44 @@ def delete_all_from_script_site_entity(sse: ScriptSiteEntity):
         pass
 
 
-def get_https_unresolved() -> Set[ScriptSiteEntity]:
+def get_all_from_entity_script_site_and_scheme(sse: ScriptSiteEntity, https: bool) -> List[ScriptSiteLandsAssociation]:
+    result = list()
+    query = ScriptSiteLandsAssociation.select()\
+        .where((ScriptSiteLandsAssociation.script_site == sse) &
+            (ScriptSiteLandsAssociation.https == https))
+    for row in query:
+        result.append(row)
+    return result
+
+
+def get_all_from_string_script_site_and_scheme(script_site: str, https: bool) -> List[ScriptSiteLandsAssociation]:
+    try:
+        sse = helper_script_site.get(script_site)
+    except DoesNotExist:
+        raise
+    return get_all_from_entity_script_site_and_scheme(sse, https)
+
+
+def update(wsla: ScriptSiteLandsAssociation, new_s_server_e: ScriptServerEntity) -> None:
+    query = ScriptSiteLandsAssociation.update(script_server=new_s_server_e) \
+        .where((ScriptSiteLandsAssociation.script_site == wsla.script_site) &
+               (ScriptSiteLandsAssociation.https == wsla.https))
+    query.execute()
+
+
+def get_https_unresolved() -> Set[ScriptSiteLandsAssociation]:
     query = ScriptSiteLandsAssociation.select()\
         .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.https == True))
     result = set()
     for row in query:
-        result.add(row.script_site)
+        result.add(row)
     return result
 
 
-def get_http_unresolved() -> Set[ScriptSiteEntity]:
+def get_http_unresolved() -> Set[ScriptSiteLandsAssociation]:
     query = ScriptSiteLandsAssociation.select()\
         .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.https == False))
     result = set()
     for row in query:
-        result.add(row.script_site)
+        result.add(row)
     return result

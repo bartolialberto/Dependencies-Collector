@@ -356,7 +356,16 @@ class DnsResolver:
         return DnsZoneDependenciesResult(zone_list, direct_zone_name, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
     def resolve_web_site_domain_name(self, web_site_domain_name: str) -> Tuple[RRecord, List[RRecord]]:
-        # TODO: docs
+        """
+        This method resolves the domain name parameter (supposed to be extracted from an URL) in all the alias to
+        follow before the IP address is resolved.
+
+        :param web_site_domain_name: A domain name.
+        :type web_site_domain_name: str
+        :return: A tuple containing first the A type RR answer, and then a list of CNAME type RR that represents the
+        access path.
+        :rtype: Tuple[RRecord, List[RRecord]]
+        """
         try:
             rr_a, rr_cnames = self.cache.resolve_path(web_site_domain_name, as_string=False)
         except NoAvailablePathError:
@@ -366,7 +375,7 @@ class DnsResolver:
                 for rr in rr_cnames:
                     self.cache.add_entry(rr)
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
-                raise        # TODO
+                raise
         return rr_a, rr_cnames
 
     # TODO: refactor

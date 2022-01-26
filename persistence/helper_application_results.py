@@ -302,12 +302,12 @@ def get_unresolved_entities() -> set:
     total_results = total_results.union(iadas_set)
 
     # getting script sites that didn't land
-    https_sses = helper_script_site_lands.get_https_unresolved()
-    sses_https_set = UnresolvedEntityWrapper.create_from_set(https_sses, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE)
-    total_results = total_results.union(sses_https_set)
-    http_sses = helper_script_site_lands.get_https_unresolved()
-    sses_http_set = UnresolvedEntityWrapper.create_from_set(http_sses, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE)
-    total_results = total_results.union(sses_http_set)
+    https_sslas = helper_script_site_lands.get_https_unresolved()
+    sslas_https_set = UnresolvedEntityWrapper.create_from_set(https_sslas, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE)
+    total_results = total_results.union(sslas_https_set)
+    http_sslas = helper_script_site_lands.get_https_unresolved()
+    sslas_http_set = UnresolvedEntityWrapper.create_from_set(http_sslas, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE)
+    total_results = total_results.union(sslas_http_set)
 
     # getting name servers with no access path
     nses = helper_name_server.get_unresolved()

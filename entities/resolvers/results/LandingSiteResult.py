@@ -4,7 +4,6 @@ from entities.error_log.ErrorLog import ErrorLog
 from utils import domain_name_utils
 
 
-# TODO: docs
 class InnerLandingSiteSingleSchemeResult:
     """
     This class represents the result of a single landing resolution using one scheme (generally HTTP or HTTPS).
@@ -20,10 +19,12 @@ class InnerLandingSiteSingleSchemeResult:
         The list of pages URL redirection.
     hsts : bool
         The presence of Strict-Transport-Security policy in the landing page.
-    ip : ipaddress.IPv4Address
-        The IP address.
+    ips : Set[ipaddress.IPv4Address]
+        The IP addresses associated with the server name.
     server : str
         Domain name of the url.
+    access_path : List[str]
+        The chain of domain names to resolve the server name to an IP address.
     """
     def __init__(self, url: str, redirection_path: List[str], hsts: bool, ips: Set[IPv4Address], access_path: List[str]):
         self.url = url
@@ -35,6 +36,12 @@ class InnerLandingSiteSingleSchemeResult:
         self.access_path = access_path
 
     def stamp_access_path(self) -> str:
+        """
+        This method return a string that represents schematically the access path and the ip addresses.
+
+        :return: The string representation.
+        :rtype: str
+        """
         ip_string_set = list(map(lambda ip: ip.exploded, self.ips))
         result = ''
         for i, name in enumerate(self.access_path):
