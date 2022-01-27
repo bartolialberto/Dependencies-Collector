@@ -23,8 +23,8 @@ def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
     # from web landing
     https_w_server_e = helper_web_server.get_from(real_web_site, https=True, first_only=True)
     http_w_server_e = helper_web_server.get_from(real_web_site, https=False, first_only=True)
-    https_zes = helper_zone.get_all_of_string_domain_name(https_w_server_e.name.name)
-    http_zes = helper_zone.get_all_of_string_domain_name(http_w_server_e.name.name)
+    https_zes = helper_zone.get_all_of_string_domain_name(https_w_server_e.name.string)
+    http_zes = helper_zone.get_all_of_string_domain_name(http_w_server_e.name.string)
     for ze in https_zes:
         if ze not in zone_dependencies:
             zone_dependencies.add(ze)
@@ -35,7 +35,7 @@ def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
     # from scripts
     s_server_es = helper_script_server.get_from_string_web_site(real_web_site)
     for sse in s_server_es:
-        zes = helper_zone.get_all_of_string_domain_name(sse.name.name)
+        zes = helper_zone.get_all_of_string_domain_name(sse.name.string)
         for ze in zone_dependencies:
             if ze not in zone_dependencies:
                 zone_dependencies.add(ze)
@@ -54,7 +54,7 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
     # from scripts
     for dne in dnes:
         try:
-            sse = helper_script_server.get(dne.name)
+            sse, sse_dne = helper_script_server.get(dne.string)
         except DoesNotExist:
             continue
         wses = helper_web_site.get_all_from_entity_script_server(sse)
@@ -65,7 +65,7 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
     # from web landing
     for dne in dnes:
         try:
-            wse = helper_web_server.get(dne.name)
+            wse, wse_dne = helper_web_server.get(dne.string)
         except DoesNotExist:
             continue
         wses = helper_web_site.get_all_from_entity_web_server(wse)
@@ -115,7 +115,7 @@ def get_zone_names_dependencies_from_autonomous_system(as_number: int) -> Set[Zo
     result = set()
     for dne in dnes:
         try:
-            nse, dne = helper_name_server.get(dne.name)
+            nse, dne = helper_name_server.get(dne.string)
             nses.append(nse)
         except DoesNotExist:
             pass
@@ -123,4 +123,4 @@ def get_zone_names_dependencies_from_autonomous_system(as_number: int) -> Set[Zo
         zes = helper_zone.get_all_of_entity_name_server(nse)
         for ze in zes:
             result.add(ze)
-    return zes
+    return result

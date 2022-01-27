@@ -70,10 +70,10 @@ class BaseModel(Model):
 
 
 class DomainNameEntity(BaseModel):
-    name = CharField(primary_key=True)
+    string = CharField(primary_key=True)
 
     def __str__(self):
-        return f"<name={self.name}>"
+        return f"<name={self.string}>"
 
     class Meta:
         db_table = 'domain_name'

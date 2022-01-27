@@ -53,6 +53,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['dei.unipd.it']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = True
@@ -111,7 +112,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         for domain_name in domain_names_with_trailing_point:
             try:
                 dne = helper_domain_name.get(domain_name)
-                db_domain_names.add(dne.name)
+                db_domain_names.add(dne.string)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
         self.assertSetEqual(domain_names_with_trailing_point, db_domain_names)
@@ -137,7 +138,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 # check they are the same
                 nameservers_result_set = set(zone.nameservers)
                 tmp = helper_name_server.get_all_from_zone_name(zone.name)
-                nameservers_db_set = set(map(lambda x: x.name.name, tmp))
+                nameservers_db_set = set(map(lambda x: x.name.string, tmp))
                 self.assertSetEqual(nameservers_result_set, nameservers_db_set)
                 count_assertions = count_assertions + 1
         print(f"Reached this print means everything went well ({count_assertions} assertions)")
@@ -175,7 +176,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                     except (DoesNotExist, NoAliasFoundError) as e:
                         print(f"!!! {str(e)} !!!")
                         continue
-                    dnes_names = set(map(lambda dne: dne.name, dnes))
+                    dnes_names = set(map(lambda dne: dne.string, dnes))
                     self.assertIn(alias.get_first_value(), dnes_names)
                     count_assertions = count_assertions + 1
         print(f"Reached this print means everything went well ({count_assertions} assertions)")

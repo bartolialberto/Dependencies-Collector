@@ -21,16 +21,17 @@ def insert(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     return wse, dne
 
 
-def get(name: str) -> WebServerEntity:
+def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     dn = domain_name_utils.insert_trailing_point(name)
     try:
         dne = helper_domain_name.get(dn)
     except DoesNotExist:
         raise
     try:
-        return WebServerEntity.get(WebServerEntity.name == dne)
+        wse = WebServerEntity.get(WebServerEntity.name == dne)
     except DoesNotExist:
         raise
+    return wse, dne
 
 
 def get_from_string_website(website_url: str) -> List[WebServerEntity]:

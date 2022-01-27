@@ -17,6 +17,7 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
     helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server, helper_ip_range_tsv, \
     helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_alias
+from utils import domain_name_utils
 
 
 def insert_all_application_results(resolvers: ApplicationResolversWrapper) -> None:
@@ -51,7 +52,7 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
             helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
             w_server_https, wse_https_dne = helper_web_server.insert(result[web_site].https.server)
-            last = wse_https_dne.name
+            last = wse_https_dne.string
             final_dne = wse_https_dne
             for path in result[web_site].https.access_path[1:]:
                 last_dne = helper_domain_name.insert(last)
@@ -70,7 +71,7 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
             helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
             w_server_http, wse_http_dne = helper_web_server.insert(result[web_site].http.server)
-            last = wse_http_dne.name
+            last = wse_http_dne.string
             final_dne = wse_http_dne
             for path in result[web_site].http.access_path[1:]:
                 last_dne = helper_domain_name.insert(last)
@@ -176,7 +177,7 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
             helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
             s_server_https, sse_https_dne = helper_script_server.insert(result[script_site].https.server)
-            last = sse_https_dne.name
+            last = sse_https_dne.string
             final_dne = sse_https_dne
             for path in result[script_site].https.access_path[1:]:
                 last_dne = helper_domain_name.insert(last)
@@ -195,7 +196,7 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
             helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
             s_server_http, sse_http_dne = helper_script_server.insert(result[script_site].http.server)
-            last = sse_http_dne.name
+            last = sse_http_dne.string
             final_dne = sse_http_dne
             for path in result[script_site].http.access_path[1:]:
                 last_dne = helper_domain_name.insert(last)
@@ -228,18 +229,9 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
             server_type = finals.results[as_number][ip_address].server_type
             ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
             row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
-            if server_type == ServerTypes.NAMESERVER:
-                nse, dne = helper_name_server.insert(server)
-            elif server_type == ServerTypes.WEBSERVER:
-                wse, dne = helper_web_server.insert(server)
-            elif server_type == ServerTypes.SCRIPTSERVER:
-                sse, dne = helper_script_server.insert(server)
-            elif server_type == ServerTypes.WEB_AND_SCRIPT_SERVER:
-                wse, dne = helper_web_server.insert(server)
-                sse, dne = helper_script_server.insert(server)
-            else:
-                raise ValueError
-            helper_access.insert(dne, iae)
+            # TODO
+            # dne = helper_domain_name.get(server)
+            # helper_access.insert(dne, iae)
             if row_prefixes_table is not None:
                 irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
                 re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
@@ -264,25 +256,13 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
             raise
         server = finals.no_as_results[ip_address][0]
         server_type = finals.no_as_results[ip_address][1]
-        if server_type == ServerTypes.NAMESERVER:
-            nse, dne = helper_name_server.insert(server)
-        elif server_type == ServerTypes.WEBSERVER:
-            wse, dne = helper_web_server.insert(server)
-        elif server_type == ServerTypes.SCRIPTSERVER:
-            sse, dne = helper_web_server.insert(server)
-        else:
-            raise ValueError
-        helper_access.insert(dne, iae)
+        # TODO
+        # dne = helper_domain_name.get(server)
+        # helper_access.insert(dne, iae)
     for server in finals.unresolved_servers.keys():
         server_type = finals.unresolved_servers[server]
-        if server_type == ServerTypes.NAMESERVER:
-            helper_name_server.insert(server)
-        elif server_type == ServerTypes.WEBSERVER:
-            helper_web_server.insert(server)
-        elif server_type == ServerTypes.SCRIPTSERVER:
-            helper_web_server.insert(server)
-        else:
-            raise ValueError
+        # TODO
+        # dne = helper_domain_name.get(server)
 
 
 def get_unresolved_entities() -> set:

@@ -231,7 +231,7 @@ class DnsResolver:
                 for zone_name in zone_names:
                     tmp = list(map(lambda z: z.name, zone_list))
                     if zone_name not in tmp:
-                        zone = self.cache.resolve_zone_from_zone_name(zone_name)
+                        zone = self.cache.resolve_zone_object_from_zone_name(zone_name)
                         zone_list.append(zone)
                         print(f"Depends on zone: {zone.name}\t\t\t[NON-AUTHORITATIVE]")
                         for nm in zone.nameservers:
@@ -288,11 +288,7 @@ class DnsResolver:
             except NoRecordInCacheError:
                 try:
                     rr_ns_answer, rr_ns_aliases = self.do_query(current_domain, TypesRR.NS)
-                except NoAnswerError:
-                    # log error???
-                    # current_name non è niente???
-                    continue
-                except (DomainNonExistentError, UnknownReasonError) as e:
+                except (DomainNonExistentError, UnknownReasonError, NoAnswerError) as e:
                     error_logs.append(ErrorLog(e, current_domain, str(e)))
                     continue
                 current_zone_name = rr_ns_answer.name
@@ -316,7 +312,7 @@ class DnsResolver:
                         try:
                             rr_a_answer, rr_a_aliases = self.do_query(nameserver, TypesRR.A)
                             try:
-                                temp = list(map(lambda r: r.get_first_value(), rr_a_aliases))
+                                temp = list(map(lambda rra: rra.get_first_value(), rr_a_aliases))
                                 self.cache.lookup_from_list(temp, TypesRR.A)
                                 # already resolved. Nothing to do
                             except NoRecordInCacheError:
@@ -324,10 +320,12 @@ class DnsResolver:
                             for rr in rr_a_aliases:
                                 self.cache.add_entry(rr)
                                 list_utils.append_with_no_duplicates(current_zone_cnames, rr)
-                            list_utils.append_with_no_duplicates(current_zone_nameservers, nameserver)  # ma se il RR ha solo il campo values diverso?
                             list_utils.append_with_no_duplicates(current_zone_addresses, rr_a_answer)
                         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as exc:
                             error_logs.append(ErrorLog(exc, current_domain, str(exc)))
+                        finally:
+                            list_utils.append_with_no_duplicates(current_zone_nameservers, nameserver)  # ma se il RR ha solo il campo values diverso?
+
                     self._split_domain_name_and_add_to_list(elaboration_domains, nameserver, False)
 
                     #
@@ -461,7 +459,7 @@ class DnsResolver:
         :return: All the parameters 'filtered' from TLDs as a tuple.
         :rtype: Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]
         """
-        filtered_zone_list = list(filter(lambda z: z.name not in tld_list, zone_list))
+        filtered_zone_list = list(filter(lambda z: z.string not in tld_list, zone_list))
 
         filtered_zone_dependencies_per_zone = dict()
         for zone_name in zone_dependencies_per_zone.keys():

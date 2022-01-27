@@ -75,23 +75,23 @@ def get_zone_object(zone_name: str) -> Zone:
         nses = helper_name_server.get_all_from_zone_name(ze.name)
     except DoesNotExist:
         raise
-    zone_name_servers = list(map(lambda nse: nse.name.name, nses))
+    zone_name_servers = list(map(lambda nse: nse.name.string, nses))
     zone_name_aliases = list()
     zone_name_addresses = list()
     for nse in nses:
         try:
-            iae = helper_ip_address.get_first_of(nse.name.name)
-            zone_name_addresses.append(RRecord(nse.name.name, TypesRR.A, iae.exploded_notation))
+            iae = helper_ip_address.get_first_of(nse.name.string)
+            zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
         except DoesNotExist:
             try:
                 iae, a_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=True)
             except NoAvailablePathError:
                 raise
-            prev = nse.name.name
+            prev = nse.name.string
             for a_dne in a_dnes:
-                zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.name))
-                prev = a_dne.name
-            zone_name_addresses.append(RRecord(nse.name.name, TypesRR.A, iae.exploded_notation))
+                zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
+                prev = a_dne.string
+            zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses)
 
 

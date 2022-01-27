@@ -30,7 +30,7 @@ class MailServerDependenciesQueryTestCase(unittest.TestCase):
             self.fail(str(e))
         print(f"Parameter: {mail_server}")
         for i, mde in enumerate(mdes):
-            print(f"mail_domain[{i+1}/{len(mdes)}] = {mde.name.name}")
+            print(f"mail_domain[{i+1}/{len(mdes)}] = {mde.name.string}")
         print(f"------- [2] END GETTING MAIL DOMAINS FROM MAIL SERVERS QUERY -------")
 
 

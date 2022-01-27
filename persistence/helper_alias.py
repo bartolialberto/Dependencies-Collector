@@ -17,7 +17,7 @@ def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
     for row in query:
         result.add(row.alias)
     if len(result) == 0:
-        raise NoAliasFoundError(dne.name)
+        raise NoAliasFoundError(dne.string)
     else:
         return result
 

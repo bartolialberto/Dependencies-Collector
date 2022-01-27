@@ -54,6 +54,15 @@ class ASResolverValueForROVPageScraping:
         """
         self.entry_rov_page = entry
 
+    def __str__(self) -> str:
+        """
+        This method returns a string representation of this object.
+
+        :return: A string representation of this object.
+        :rtype: str
+        """
+        return f"{self.server},{self.server_type.to_string()},{str(self.entry_as_database)},{str(self.entry_rov_page)},{self.ip_range_tsv.compressed}"
+
 
 class ASResolverResultForROVPageScraping:
     """

@@ -104,10 +104,10 @@ class DatabaseEntitiesCompleter:
             print(f"nameserver[{i+1}]: {nse.name} resolved in: {str(rr_answer.values)}")
             helper_access.delete_of_entity_domain_name(nse.name)
             for rr in rr_aliases:
-                name_dne = helper_domain_name.insert(rr.name)
+                name_dne = helper_domain_name.insert(rr.string)
                 alias_dne = helper_domain_name.insert(rr.get_first_value())
                 helper_alias.insert(name_dne, alias_dne)
-            dne = helper_domain_name.insert(rr_answer.name)
+            dne = helper_domain_name.insert(rr_answer.string)
             for val in rr_answer.values:
                 iae = helper_ip_address.insert(val)
                 helper_access.insert(dne, iae)
@@ -140,7 +140,7 @@ class DatabaseEntitiesCompleter:
             except DoesNotExist:
                 helper_ip_address_depends.insert(iae, ine, None, None)
             helper_web_site_lands.update(wsla_dict[web_site], w_server_e)
-            print(f"for site: {web_site} now landing is: server={w_server_e.name.name}, IP address={iae.exploded_notation}")
+            print(f"for site: {web_site} now landing is: server={w_server_e.name.string}, IP address={iae.exploded_notation}")
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
     def do_complete_unresolved_script_sites_landing(self, sslas: List[ScriptSiteLandsAssociation], is_https: bool):
@@ -251,7 +251,7 @@ class DatabaseEntitiesCompleter:
                         continue
                     s_server_e, s_server_e_dne = helper_script_server.insert(inner_result.server)
                     helper_script_site_lands.insert(s_site_e, s_server_e, swa.https, inner_result.ip)
-                    print(f"--> for script: src={script.src} script server = {s_server_e.name.name}")
+                    print(f"--> for script: src={script.src} script server = {s_server_e.name.string}")
             except selenium.common.exceptions.WebDriverException:
                 continue
         print(f"END UNRESOLVED SCRIPT RESOLUTION")

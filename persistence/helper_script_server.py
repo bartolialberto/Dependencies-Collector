@@ -13,15 +13,16 @@ def insert(name: str) -> Tuple[ScriptServerEntity, DomainNameEntity]:
     return sse, dne
 
 
-def get(web_server: str) -> ScriptServerEntity:
+def get(web_server: str) -> Tuple[ScriptServerEntity, DomainNameEntity]:
     try:
         dne = helper_domain_name.get(web_server)
     except DoesNotExist:
         raise
     try:
-        return ScriptServerEntity.get(ScriptServerEntity.name == dne)
+        sse = ScriptServerEntity.get(ScriptServerEntity.name == dne)
     except DoesNotExist:
         raise
+    return sse, dne
 
 
 def get_from_string_web_site(web_site: str):

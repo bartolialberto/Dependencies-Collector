@@ -208,7 +208,7 @@ class LocalDnsResolverCache:
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name)
 
-    def resolve_zone_from_zone_name(self, zone_name: str) -> Zone:
+    def resolve_zone_object_from_zone_name(self, zone_name: str) -> Zone:
         """
         This method searches the Zone (the application-defined object) corresponding to the zone name parameter.
         It is 'constructed' searching for all the nameservers of the zone and the aliases.

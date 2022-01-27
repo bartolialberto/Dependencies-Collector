@@ -88,7 +88,7 @@ class Resolver:
                 else:
                     if result["CNAME"] is not None:
                         for rr in result["CNAME"]:
-                            found = self.cacheLookUp(rr.name, "CNAME")
+                            found = self.cacheLookUp(rr.string, "CNAME")
                             if found is None:
                                 self.cache.append(rr)
                             CNAMEDomains.append(rr)
@@ -186,7 +186,7 @@ class Resolver:
                     print("Not an existing domain, ", curName)
                     continue
                 else:
-                    zone = rr["Result"].name
+                    zone = rr["Result"].string
                     print("Depends on: ", zone)
                     check = rr["Result"]
                     self.cache.append(check)
@@ -216,11 +216,11 @@ class Resolver:
                             if rr["CNAME"] is not None:
                                 for l in rr["CNAME"]:
                                     for cn in dix["CNAME"]:
-                                        if cn == l.name:
+                                        if cn == l.string:
                                             alreadyCname = True
                                             break
                                     if not alreadyCname:
-                                        dix["CNAME"].append(l.name)
+                                        dix["CNAME"].append(l.string)
                                     alreadyCname = False
                             break
 
@@ -246,7 +246,7 @@ class Resolver:
                         alreadyCnameExist = False
                         for e in cnamelist:
                             for cn in dcElem["CNAME"]:
-                                if cn.name == e.name:
+                                if cn.name == e.string:
                                     alreadyCnameExist = True
                                     break
                             if not alreadyCnameExist:
@@ -391,7 +391,7 @@ class Resolver:
         fhand = open(csv, "w")
         line = ""
         for rr in self.cache:
-            line = rr.name + "," + rr.type
+            line = rr.string + "," + rr.type
             if rr.values == "NoAnswer":
                 line = line + ",NoAnswer"
             elif rr.values == "NXDomain":
@@ -412,7 +412,7 @@ class Resolver:
         """
         found = False
         for rr in self.cache:
-            if rr.name == name and rr.type == type:
+            if rr.string == name and rr.type == type:
                 found = True
                 return rr
         if not found:

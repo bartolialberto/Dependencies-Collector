@@ -17,7 +17,7 @@ def insert(name: str) -> DomainNameEntity:
     except InvalidDomainNameError:
         raise
     """
-    dne, created = DomainNameEntity.get_or_create(name=dn)
+    dne, created = DomainNameEntity.get_or_create(string=dn)
     return dne
 
 
@@ -43,7 +43,7 @@ def resolve_access_path(domain_name_parameter: DomainNameEntity or str, get_only
     except NoAvailablePathError:
         raise
     if len(inner_result[0]) == 0:
-        raise NoAvailablePathError(dne.name)
+        raise NoAvailablePathError(dne.string)
     if get_only_first_address:
         return inner_result[0].pop(), inner_result[1]
     else:
@@ -65,7 +65,7 @@ def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[
     try:
         adnes = helper_alias.get_all_aliases_from_entity(dne)
     except NoAliasFoundError:
-        raise NoAvailablePathError(dne.name)
+        raise NoAvailablePathError(dne.string)
     for adne in adnes:
         try:
             return __inner_resolve_access_path(adne, chain_dne)

@@ -7,10 +7,10 @@ from persistence.BaseModel import project_root_directory_name
 
 
 class ScriptDependenciesResolvingTestCase(unittest.TestCase):
+    results = None
     resolver = None
     headless_browser = None
     urls = None
-    results = None
 
     @staticmethod
     def get_project_root_folder() -> Path:
@@ -38,16 +38,17 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
                 cls.results[url] = cls.resolver.search_script_application_dependencies(url)
             except selenium.common.exceptions.WebDriverException as e:
                 print(f"!!! {str(e)} !!!")
+                exit(-1)
 
-    def test_1_debug_prints(self):
-        print(f"\n------- [1] START DEBUG PRINTS TEST -------")
+    def test_1_debug_prints_of_interested_scripts(self):
+        print(f"\n------- [1] START DEBUG PRINTS OF INTERESTED SCRIPTS TEST -------")
         for i, url in enumerate(self.results.keys()):
             print(f"url[{i+1}/{len(self.results.keys())}]: {url}")
             for j, script in enumerate(self.results[url]):
                 print(f"--> script[{j+1}/{len(self.results[url])}].src={script.src}")
             if i != len(self.results.keys())-1:
                 print()
-        print(f"------- [1] END DEBUG PRINTS TEST -------")
+        print(f"------- [1] END DEBUG PRINTS OF INTERESTED SCRIPTS TEST -------")
 
     @classmethod
     def tearDownClass(cls) -> None:

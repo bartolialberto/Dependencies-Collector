@@ -42,7 +42,7 @@ class ScriptDependenciesQueryTestCase(unittest.TestCase):
             if sse is None:
                 print(f"script server[{i+1}]: {sse}")
             else:
-                print(f"script server[{i+1}]: {sse.name.name}")
+                print(f"script server[{i+1}]: {sse.name.string}")
         print(f"------- [3] END GETTING SCRIPT SERVERS FROM WEB SITE QUERY -------")
 
 

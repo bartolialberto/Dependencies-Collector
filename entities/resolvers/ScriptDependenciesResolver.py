@@ -1,6 +1,7 @@
-from typing import List, Set
+from typing import Set
 import selenium
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 
@@ -34,7 +35,13 @@ class MainPageScript:
         else:
             return False
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        This method returns a string representation of this object.
+
+        :return: A string representation of this object.
+        :rtype: str
+        """
         return f"MainPageScript: src={self.src}, integrity={self.integrity}"
 
 
@@ -75,31 +82,9 @@ class ScriptDependenciesResolver:
         except selenium.common.exceptions.WebDriverException:
             raise
 
-        # TODO: trovare il modo definitivo per trovare il tipo di script voluto
-        # TODO: trovare degli esempi per verificare tutto il funzionamento correttamente (siti con iframe che contengono script)
         main_page_scripts = set()
-
-        """
         awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
-          lambda driver: driver.find_elements(By.TAG_NAME, 'script')
-        )
-        for script in awaiter_scripts:
-            src = script.get_attribute('src')
-            integrity = script.get_attribute('integrity')
-            if integrity == '':
-                integrity = None
-            if src is None:
-                pass    # inline script
-            elif src == '':
-                pass    # script in iframe
-            else:
-                main_page_scripts.add(MainPageScript(src, integrity))
-        return main_page_scripts
-        """
-
-
-        awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
-            lambda driver: driver.find_elements(By.XPATH, '//script[not(ancestor::iframe)]')   # descendant::script
+            expected_conditions.presence_of_all_elements_located((By.XPATH, '//script[not(ancestor::iframe)]'))
         )
         for script in awaiter_scripts:
             src = script.get_attribute('src')
@@ -107,11 +92,10 @@ class ScriptDependenciesResolver:
             if integrity == '':
                 integrity = None
             if src == '' or src is None:
-                pass
+                pass        # inline script
             else:
                 main_page_scripts.add(MainPageScript(src, integrity))
         return main_page_scripts
-
 
     def close(self):
         self.headless_browser.driver.quit()

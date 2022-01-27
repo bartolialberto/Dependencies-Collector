@@ -113,7 +113,7 @@ class DomainDependence:
             if tmp["IPs"] is None:
                 print(dom, " has not an IPv4 address, maybe it is not the name of a server.")
                 continue
-            cnamedDomains.append(tmp["IPs"].name)
+            cnamedDomains.append(tmp["IPs"].string)
             domainInformationDictionary["IP"] = list()
             tmpList = tmp["IPs"].values
             for ipadrs in tmpList:
@@ -123,7 +123,7 @@ class DomainDependence:
             domainInformationDictionary["Cname"] = list()
             if tmp["CNAMEs"] is not None:
                 for cnm in tmp["CNAMEs"]:
-                    cnamedDomains.append(cnm.name)
+                    cnamedDomains.append(cnm.string)
                     domainInformationDictionary["Cname"].append(cnm.values[0])
                     #qui dovrei fare anche domains.append(cnm.values[0]) aggiungo il cname ma non farlo piuttosto dopo in for each in fai in cnamedDomain
             domIpCname.append((dom, tmp))
@@ -280,10 +280,10 @@ class DomainDependence:
                                 for ns in zones["NameServers"]:
                                     cur.execute(
                                         'INSERT OR IGNORE INTO zone2nameserver (zone, cname,  nameserver) VALUES (?, ?, ?)',
-                                        (dom, lastRow, ns.name))
+                                        (dom, lastRow, ns.string))
                                     alreadyExists = False
                                     for nsr in nameservers:
-                                        if nsr.name == ns.name:
+                                        if nsr.string == ns.string:
                                             alreadyExists = True
                                             break
                                     if not alreadyExists:
@@ -294,7 +294,7 @@ class DomainDependence:
                 for namserv in nameservers:
                     listIP = namserv.values
                     for ips in listIP:
-                        cur.execute('INSERT OR IGNORE INTO host2Ip (host, IPv4) VALUES (?, ?)', (namserv.name, ips))
+                        cur.execute('INSERT OR IGNORE INTO host2Ip (host, IPv4) VALUES (?, ?)', (namserv.string, ips))
                         for dic in el["ZonesDependence"]:
                             for dix in dic["NStoRange"]:
                                 if dix["IP"] == ips:
@@ -306,9 +306,9 @@ class DomainDependence:
                                             'INSERT OR IGNORE INTO range2AS (IP_range, AS_code, location_code, AS_description) VALUES (?, ?, ?, ?)',
                                             (rang, code, rng.geocode, rng.ASName))
                                     break
-                    subdoms = objResolver.subdomains(namserv.name, rootIncluded=True)
+                    subdoms = objResolver.subdomains(namserv.string, rootIncluded=True)
                     isFirst = True
-                    directZone = namserv.name
+                    directZone = namserv.string
                     zonesSyntacticDependence = list()
                     for sbdom in reversed(subdoms):
                         for zones in el["ZonesDependence"]:
@@ -323,7 +323,7 @@ class DomainDependence:
                                     break
                     isAlreadyInNameservers = False
                     cur.execute('INSERT OR IGNORE INTO host2directZone (host, direct_zone) VALUES (?, ?)',
-                                (namserv.name, directZone))
+                                (namserv.string, directZone))
                     for dom in zonesSyntacticDependence:
                         cur.execute('INSERT OR IGNORE INTO zone2synctacticDependence (zone, synctactic_zone) VALUES (?, ?)',
                                     (directZone, dom))
@@ -347,9 +347,9 @@ class DomainDependence:
                                 for ns in zones["NameServers"]:
                                     cur.execute(
                                         'INSERT OR IGNORE INTO zone2nameserver (zone, cname, nameserver) VALUES (?, ?, ?)',
-                                        (dom, lastRow, ns.name))
+                                        (dom, lastRow, ns.string))
                                     for nase in nameservers:
-                                        if nase.name == ns.name:
+                                        if nase.string == ns.string:
                                             isAlreadyInNameservers = True
                                             break
                                     if not isAlreadyInNameservers:
@@ -430,7 +430,7 @@ class DomainDependence:
                     lisns["IPs"] = list()
                     lisnsIP = list()
                     for ns in zn["NameServers"]:
-                        lisns["Name"] = ns.name
+                        lisns["Name"] = ns.string
                         for ip in ns.values:
                             lisnsIP.append(ip)
                         lisns["IPs"] = lisnsIP
@@ -453,7 +453,7 @@ class DomainDependence:
                     for ns in zn["NameServers"]:
                         lisns = dict()
                         lisns["IPs"] = list()
-                        lisns["Name"] = ns.name
+                        lisns["Name"] = ns.string
                         for ip in ns.values:
                             lisnsIP = dict()
                             lisnsIP["RangeInfo"] = list()
