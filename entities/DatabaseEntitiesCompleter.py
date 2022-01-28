@@ -161,14 +161,20 @@ class DatabaseEntitiesCompleter:
             except Exception:
                 continue
             s_server_e, s_server_e_dne = helper_script_server.insert(inner_result.server)
-            iae = helper_ip_address.insert(inner_result.ip)
-            predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
-            ine = helper_ip_network.insert(predefined_network)
-            try:
-                iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
-                helper_ip_address_depends.update_ip_network(iada, ine)
-            except DoesNotExist:
-                helper_ip_address_depends.insert(iae, ine, None, None)
+            last_dne = s_server_e_dne
+            for dn in inner_result.access_path[1:]:
+                dne = helper_domain_name.insert(dn)
+                last_dne = dne
+            for ip in inner_result.ips:
+                iae = helper_ip_address.insert(ip)
+                helper_access.insert(last_dne, iae)
+                predefined_network = network_utils.get_predefined_network(iae.exploded_notation)
+                ine = helper_ip_network.insert(predefined_network)
+                try:
+                    iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
+                    helper_ip_address_depends.update_ip_network(iada, ine)
+                except DoesNotExist:
+                    helper_ip_address_depends.insert(iae, ine, None, None)
             helper_script_site_lands.update(ssla_dict[script_site], s_server_e)
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
 
@@ -189,7 +195,7 @@ class DatabaseEntitiesCompleter:
             if irte is None:
                 try:
                     entry = self.resolvers_wrapper.ip_as_database.resolve_range(ip)
-                    ase = helper_autonomous_system.insert(entry.as_number)
+                    ase = helper_autonomous_system.insert(entry.as_number, entry.as_description)
 
                     belonging_network, networks = entry.get_network_of_ip(ip)  # it cannot happen that the entry is found but not the network ==> no exceptions are catched
                     new_irte = helper_ip_range_tsv.insert(belonging_network.compressed)
@@ -211,7 +217,7 @@ class DatabaseEntitiesCompleter:
                     row = self.resolvers_wrapper.rov_page_scraper.get_network_if_present(ip)
                     new_irre = helper_ip_range_rov.insert(row.prefix.compressed)
                     re = helper_rov.insert(row.rov_state.to_string(), row.visibility)
-                    helper_prefixes_table.insert(irre, re, ase)
+                    helper_prefixes_table.insert(new_irre, re, ase)
                     helper_ip_address_depends.update_ip_range_rov(iada, new_irre)
                     if tsv_modified:
                         print(f", ip_range_tsv is now resolved to {new_irre.compressed_notation}")
@@ -247,10 +253,18 @@ class DatabaseEntitiesCompleter:
                         inner_result = self.resolvers_wrapper.landing_resolver.do_single_request(se.src, swa.https)
                     except Exception:
                         print(f"--> for script: src={script.src} it is impossible to resolve landing...")
-                        helper_script_site_lands.insert(s_site_e, None, swa.https, None)
+                        helper_script_site_lands.insert(s_site_e, None, swa.https)
                         continue
                     s_server_e, s_server_e_dne = helper_script_server.insert(inner_result.server)
-                    helper_script_site_lands.insert(s_site_e, s_server_e, swa.https, inner_result.ip)
+                    last_dne = s_server_e_dne
+                    for dn in inner_result.access_path[1:]:
+                        dne = helper_domain_name.insert(dn)
+                        last_dne = dne
+                    for ip in inner_result.ips:
+                        iae = helper_ip_address.insert(ip)
+                        helper_access.insert(last_dne, iae)
+                        # TODO: e la question IP range per ogni address???
+                    helper_script_site_lands.insert(s_site_e, s_server_e, swa.https)
                     print(f"--> for script: src={script.src} script server = {s_server_e.name.string}")
             except selenium.common.exceptions.WebDriverException:
                 continue

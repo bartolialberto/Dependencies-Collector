@@ -8,6 +8,7 @@ class ScriptDependenciesErrorSimulationTestCase(unittest.TestCase):
         print(f"\n------- [1] START SETTING WEB SITE SCRIPT WITHDRAW ASSOCIATION TO NULL QUERY -------")
         # PARAMETERS
         web_site = 'google.it/doodles'
+        web_site = 'mail.dei.unipd.it/horde5/login.php'
         https = False
         # ELABORATION
         print(f"Web site: {web_site}")
@@ -20,7 +21,6 @@ class ScriptDependenciesErrorSimulationTestCase(unittest.TestCase):
             swa.delete_instance()
         helper_script_withdraw.insert(wse, None, https, None)
         print(f"------- [1] END SETTING WEB SITE SCRIPT WITHDRAW ASSOCIATION TO NULL QUERY -------")
-
 
 
 if __name__ == '__main__':

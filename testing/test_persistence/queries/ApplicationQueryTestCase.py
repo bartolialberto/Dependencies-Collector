@@ -1,7 +1,7 @@
 import unittest
 from peewee import DoesNotExist
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_application_queries, helper_autonomous_system
+from persistence import helper_application_queries
 
 
 class ApplicationQueryTestCase(unittest.TestCase):

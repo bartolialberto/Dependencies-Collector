@@ -93,7 +93,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True) -> Tuple[bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False) -> Tuple[bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -113,9 +113,9 @@ def get_input_application_flags(default_complete_unresolved_database=False, defa
     print(f"******* COMPUTING INPUT FLAGS *******")
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
-        if arg == 'qualcosa_da_definire':
+        if arg == '-continue':
             default_complete_unresolved_database = True
-        if arg == 'qualcosa_da_definire':
+        if arg == '-tlds':
             default_consider_tld = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")
