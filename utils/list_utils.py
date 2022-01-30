@@ -69,7 +69,7 @@ def are_all_objects_of_type(_list: list, _class):       # Zones.RRecord
     return True
 
 
-def are_all_objects_RRecord_and_rr_type(_list: list, rr_type: TypesRR):
+def are_all_objects_RRecord_of_type(_list: list, rr_type: TypesRR):
     """
     A particular static method that control if a list has all elements of type RRecord and a certain attribute type.
 

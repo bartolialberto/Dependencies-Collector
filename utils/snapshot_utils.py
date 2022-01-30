@@ -4,7 +4,7 @@ from utils import file_utils
 
 
 def take_temporary_snapshot(web_sites: List[str], mail_domains: List[str], complete_unresolved_database: bool, consider_tld: bool) -> None:
-    take_temp_snapshot_of_string_list(web_sites, 'temp_web_pages')
+    take_temp_snapshot_of_string_list(web_sites, 'temp_web_sites')
     take_temp_snapshot_of_string_list(mail_domains, 'temp_mail_domains')
     take_temp_snapshot_of_flags(complete_unresolved_database, consider_tld, 'temp_flags')
 

@@ -1,6 +1,7 @@
 from typing import List
 from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
+from utils import domain_name_utils
 
 
 class RRecord:
@@ -40,7 +41,7 @@ class RRecord:
         else:
             self.values = values
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: any) -> bool:
         """
         This method returns True only if self and other are semantically equal.
         This equality depends upon the developer.
@@ -51,7 +52,7 @@ class RRecord:
         :rtype: bool
         """
         if isinstance(other, RRecord):
-            if self.name == other.name and self.type == other.type:
+            if domain_name_utils.equals(self.name, other.name) and self.type == other.type:
                 return True
             else:
                 return False

@@ -53,7 +53,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['dei.unipd.it']
+        cls.domain_names = ['twitter.com']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = True
@@ -211,7 +211,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         count_assertions = 0
         for i, domain_name in enumerate(self.dns_results.keys()):
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
+                zones_set_db = helper_zone.get_zone_dependencies_of_string_domain_name(domain_name)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
                 continue
@@ -240,7 +240,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print("\n------- [6] START ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")
         for i, nameserver in enumerate(self.zone_dependencies_per_nameserver.keys()):
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of_domain_name(nameserver)
+                zones_set_db = helper_zone.get_zone_dependencies_of_string_domain_name(nameserver)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
                 continue

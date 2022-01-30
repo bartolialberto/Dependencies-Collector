@@ -40,14 +40,37 @@ class LocalDnsResolverCache:
         self.cache = list()
         self.separator = separator
 
-    def add_entry(self, entry: RRecord) -> None:
+    def add_entry(self, entry: RRecord, control_for_no_duplicates=False) -> None:
         """
         Adds a resource record.
 
         :param entry: The resource record.
         :type entry: RRecord
+        :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
+        :type control_for_no_duplicates: bool
         """
-        self.cache.append(entry)
+        if control_for_no_duplicates:
+            if entry not in self.cache:
+                self.cache.append(entry)
+        else:
+            self.cache.append(entry)
+
+    def add_entries(self, entries: List[RRecord], control_for_no_duplicates=False) -> None:
+        """
+        Adds multiple resource records.
+
+        :param entries: The resource record list.
+        :type entries: List[RRecord]
+        :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
+        :type control_for_no_duplicates: bool
+        """
+        if control_for_no_duplicates:
+            for entry in entries:
+                if entry not in self.cache:
+                    self.cache.append(entry)
+        else:
+            for entry in entries:
+                self.cache.append(entry)
 
     def set_separator(self, separator: str) -> None:
         """
@@ -146,7 +169,7 @@ class LocalDnsResolverCache:
         :rtype: Set[str]
         """
         try:
-            rr_a, aliases = self.resolve_path(name, as_string=True)
+            rr_a, aliases = self.resolve_path(name, TypesRR.A, as_string=True)
         except NoAvailablePathError:
             result = set()
             result.add(name)
@@ -155,22 +178,25 @@ class LocalDnsResolverCache:
         result.add(name)
         return result
 
-    def resolve_path(self, domain_name: str, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
+    def resolve_path(self, domain_name: str, rr_type_wanted: TypesRR, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
         """
-        This method resolves the access path from the domain name parameter.
+        This method resolves the path from the domain name parameter to a RR of the TypesRR parameter.
         It returns the final RR and all the alias along the access path.
-        There is also a boolean flag that decides to return all the aliases as RRs or simple strings.
+        There is also a boolean flag that decides to return all the aliases as RRs or simple strings. When returning as
+        strings the name parameter is removed, so the list start with an alias.
 
         :param domain_name: The domain name.
         :type domain_name: str
+        :param rr_type_wanted: The RR type to be searched.
+        :type rr_type_wanted: TypesRR
         :param as_string: Flag to decide the list of aliases format.
         :param as_string: bool
         :raise NoAvailablePathError: If there is not an access path.
-        :return: The resolution RR and the list of alises as a tuple.
+        :return: The resolution RR and the list of aliases as a tuple.
         :rtype: Tuple[RRecord, List[str] or List[RRecord]]
         """
         try:
-            inner_result = self.__inner_resolve_path(domain_name, result=None)
+            inner_result = self.__inner_resolve_path(domain_name, rr_type_wanted, result=None)
         except NoAvailablePathError:
             raise
         aliases = list()
@@ -181,12 +207,14 @@ class LocalDnsResolverCache:
                 aliases.append(rr)
         return inner_result[-1], aliases
 
-    def __inner_resolve_path(self, domain_name: str, result=None) -> List[RRecord]:
+    def __inner_resolve_path(self, domain_name: str, rr_type_resolution: TypesRR, result=None) -> List[RRecord]:
         """
-        This method is the real resolver for the access path of a domain name. It's recursive.
+        This method is the real resolver for the path of a domain name. It's recursive.
 
         :param domain_name: The domain name.
         :type domain_name: str
+        :param rr_type_resolution: The RR type to be searched that resolves the path.
+        :type rr_type_resolution: TypesRR
         :param result: Is a parameter that populates with each recursive invocation.
         :type result: None or List[RRecord]
         :return: The access path.
@@ -197,18 +225,18 @@ class LocalDnsResolverCache:
         else:
             pass
         try:
-            rr_a = self.lookup_first(domain_name, TypesRR.A)
+            rr_a = self.lookup_first(domain_name, rr_type_resolution)
             result.append(rr_a)
             return result
         except NoRecordInCacheError:
             try:
                 rr_cname = self.lookup_first(domain_name, TypesRR.CNAME)
                 result.append(rr_cname)
-                return self.__inner_resolve_path(rr_cname.get_first_value(), result=result)
+                return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, result=result)
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name)
 
-    def resolve_zone_object_from_zone_name(self, zone_name: str) -> Zone:
+    def resolve_zone_object_from_zone_name(self, zone_name: str) -> Tuple[Zone, List[RRecord]]:
         """
         This method searches the Zone (the application-defined object) corresponding to the zone name parameter.
         It is 'constructed' searching for all the nameservers of the zone and the aliases.
@@ -221,13 +249,16 @@ class LocalDnsResolverCache:
         :rtype: Zone
         """
         try:
-            rr_ns = self.lookup_first(zone_name, TypesRR.NS)
+            rr_ns, rr_cnames = self.resolve_path(zone_name, TypesRR.NS, as_string=False)
         except NoRecordInCacheError:
             raise
         try:
-            return self.resolve_zone_from_ns_rr(rr_ns)
+            zone = self.resolve_zone_from_ns_rr(rr_ns)
         except NoRecordInCacheError:
             raise
+        for rr in rr_cnames:
+            zone.zone_aliases.append(rr)
+        return zone, rr_cnames
 
     def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Zone:
         """
@@ -242,18 +273,18 @@ class LocalDnsResolverCache:
         """
         result_zone_name = rr_ns.name
         result_zone_nameservers = list()
-        result_zone_cnames = list()
+        result_zone_name_servers_cnames = list()
         result_zone_addresses = list()
         for nameserver in rr_ns.values:
             result_zone_nameservers.append(nameserver)
             try:
-                rr_a, rr_cnames = self.resolve_path(nameserver, as_string=False)
+                rr_a, rr_cnames = self.resolve_path(nameserver, TypesRR.A, as_string=False)
             except NoAvailablePathError:
                 raise
             for rr in rr_cnames:
-                result_zone_cnames.append(rr)
+                result_zone_name_servers_cnames.append(rr)
             result_zone_addresses.append(rr_a)
-        return Zone(result_zone_name, result_zone_nameservers, result_zone_cnames, result_zone_addresses)
+        return Zone(result_zone_name, result_zone_nameservers, result_zone_name_servers_cnames, result_zone_addresses, list())
 
     def resolve_zones_from_nameserver(self, nameserver: str) -> List[str]:
         """
@@ -314,7 +345,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def load_csv_from_output_folder(self, filename='dns_cache.csv', project_root_directory=Path.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename='dns_cache', project_root_directory=Path.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
         'dns_cache.csv' file from the output folder of the project root directory (if set correctly). So just invoking
@@ -326,7 +357,7 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: Name of the cache file. default is 'dns_cache.csv'.
+        :param filename: Name of the cache file without extension. Default is 'dns_cache'.
         :type filename: str
         :param project_root_directory: Path of the project root.
         :type project_root_directory: Path
@@ -338,7 +369,7 @@ class LocalDnsResolverCache:
         """
         file = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory("output", filename, project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory("output", filename+".csv", project_root_directory)
             file = result[0]
         except FilenameNotFoundError:
             raise

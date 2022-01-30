@@ -10,6 +10,16 @@ def insert(dne: DomainNameEntity, adne: DomainNameEntity) -> AliasAssociation:
     return aa
 
 
+def get_from_entity_domain_name(dne: DomainNameEntity) -> DomainNameEntity:
+    query = AliasAssociation.select() \
+        .join(DomainNameEntity, on=(AliasAssociation.name == dne))\
+        .limit(1)
+    if len(query) == 0:
+        raise DoesNotExist
+    for row in query:
+        return row.alias
+
+
 def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
     result = set()
     query = AliasAssociation.select() \

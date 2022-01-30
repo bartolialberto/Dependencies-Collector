@@ -53,7 +53,7 @@ def is_grammatically_correct(domain_name: str) -> bool:
         return False
 
 
-def get_subdomains_name_list(domain: str, root_included=False) -> List[str]:
+def get_subdomains_name_list(domain: str, root_included=False, parameter_included=True) -> List[str]:
     """
     Method that gives all the subdomain name from a domain name. An example:
         'www.units.it' ---> ['it.', 'units.it.', 'www.units.it.']
@@ -65,17 +65,19 @@ def get_subdomains_name_list(domain: str, root_included=False) -> List[str]:
     :type domain: str
     :param root_included: Optional boolean to decide if the root domain has to be returned.
     :type root_included: bool
+    :param parameter_included: Optional boolean to decide if the domain parameter has to be returned.
+    :type parameter_included: bool
     :return: The list containing all subdomains' domain name.
     :rtype: list[str]
     """
     if '@' in domain:
         split = domain.split('@')
-        return inner_subdomains_parser(split[-1], root_included=root_included)
+        return inner_subdomains_parser(split[-1], root_included=root_included, parameter_included=parameter_included)
     else:
-        return inner_subdomains_parser(domain, root_included=root_included)
+        return inner_subdomains_parser(domain, root_included=root_included, parameter_included=parameter_included)
 
 
-def inner_subdomains_parser(domain: str, root_included=False) -> List[str]:
+def inner_subdomains_parser(domain: str, root_included=False, parameter_included=True) -> List[str]:
     """
     Method that gives all the subdomain name from a domain name. An example:
         'www.units.it' ---> ['it.', 'units.it.', 'www.units.it.']
@@ -87,6 +89,8 @@ def inner_subdomains_parser(domain: str, root_included=False) -> List[str]:
     :type domain: str
     :param root_included: Optional boolean to decide if the root domain has to be returned.
     :type root_included: bool
+    :param parameter_included: Optional boolean to decide if the domain parameter has to be returned.
+    :type parameter_included: bool
     :return: The list containing all subdomains' domain name.
     :rtype: list[str]
     """
@@ -106,6 +110,8 @@ def inner_subdomains_parser(domain: str, root_included=False) -> List[str]:
         subdomains.append(current_domain)
     if not root_included:
         subdomains.pop(0)
+    if not parameter_included:
+        subdomains.remove(domain)
     return subdomains
 
 

@@ -56,7 +56,10 @@ def handle_tables_creation():       # execute at the end of the file
             AutonomousSystemEntity,
             ROVEntity,
             PrefixesTableAssociation,
-            NetworkNumbersAssociation],    # 32 entities and associations
+            NetworkNumbersAssociation,
+            ScriptSiteDomainNameAssociation,
+            WebSiteDomainNameAssociation,
+            ZoneNameAliasAssociation],    # 33 entities and associations
             safe=True)
 
 
@@ -391,8 +394,8 @@ class IpAddressDependsAssociation(BaseModel):
 
 
 class PrefixesTableAssociation(BaseModel):
-    ip_range_rov = ForeignKeyField(IpRangeROVEntity)     # era null=True
-    rov = ForeignKeyField(ROVEntity)             # era null=True
+    ip_range_rov = ForeignKeyField(IpRangeROVEntity)
+    rov = ForeignKeyField(ROVEntity)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
     def __str__(self):
@@ -412,6 +415,42 @@ class NetworkNumbersAssociation(BaseModel):
 
     class Meta:
         db_table = 'network_numbers'
+
+
+class WebSiteDomainNameAssociation(BaseModel):
+    domain_name = ForeignKeyField(DomainNameEntity)
+    web_site = ForeignKeyField(WebSiteEntity)
+
+    def __str__(self):
+        return f"<web_site={self.web_site}, domain_name={self.domain_name}>"
+
+    class Meta:
+        db_table = 'web_site_domain_name'
+        primary_key = CompositeKey('web_site', 'domain_name')
+
+
+class ScriptSiteDomainNameAssociation(BaseModel):
+    domain_name = ForeignKeyField(DomainNameEntity)
+    script_site = ForeignKeyField(ScriptSiteEntity)
+
+    def __str__(self):
+        return f"<script_site={self.script_site}, domain_name={self.domain_name}>"
+
+    class Meta:
+        db_table = 'script_site_domain_name'
+        primary_key = CompositeKey('script_site', 'domain_name')
+
+
+class ZoneNameAliasAssociation(BaseModel):
+    domain_name = ForeignKeyField(DomainNameEntity)
+    zone = ForeignKeyField(ZoneEntity)
+
+    def __str__(self):
+        return f"<zone={self.zone}, domain_name={self.domain_name}>"
+
+    class Meta:
+        db_table = 'zone_name_alias'
+        primary_key = CompositeKey('zone', 'domain_name')
 
 
 handle_tables_creation()

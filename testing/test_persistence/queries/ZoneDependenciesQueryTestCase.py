@@ -10,7 +10,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
         domain_name = 'consent.youtube.com'
         # QUERY
         try:
-            zes = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
+            zes = helper_zone.get_zone_dependencies_of_string_domain_name(domain_name)
         except DoesNotExist as e:
             self.fail(str(e))
         print(f"Parameter: {domain_name}")
@@ -41,7 +41,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameter: {zone_name}")
         try:
-            zo = helper_zone.get_zone_object(zone_name)
+            zo = helper_zone.get_zone_object_from_zone_name(zone_name)
         except DoesNotExist as e:
             self.fail(str(e))
         print(f"Resolved: {str(zo)}. More prints:")

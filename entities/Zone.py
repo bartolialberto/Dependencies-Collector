@@ -1,3 +1,4 @@
+import copy
 from typing import List
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
@@ -15,17 +16,19 @@ class Zone:
     Instance Attributes
     -------------------
     name : str
-        The name of the zone..
+        The name of the zone.
     nameservers : List[str]
         A list of all nameservers name of the zone. Some zones contain nameserver that are not directly resolvable,
         so the better solution is to keep nameservers are pure strings.
     aliases : List[RRecord]
         The aliases associated with all the nameservers of the zone.
+    zone_aliases : List[RRecord]
+        The aliases associated with the zone name.
     addresses : List[RRecord]
         The resolving RRecord associated with all the nameservers.
     """
 
-    def __init__(self, zone_name: str, nameservers_of_zone: List[str], list_cnames: List[RRecord], addresses: List[RRecord]):
+    def __init__(self, zone_name: str, nameservers_of_zone: List[str], name_servers_cnames: List[RRecord], addresses: List[RRecord], zone_name_cnames: List[RRecord]):
         """
         Instantiate a Zone object initializing all the attributes defined above.
 
@@ -33,9 +36,9 @@ class Zone:
         :type zone_name: str
         :param nameservers_of_zone: The list of all nameservers name of the zone.
         :type nameservers_of_zone: List[str]
-        :param list_cnames: The list of all aliases associated with the nameservers of the zone, as RRecord of type
+        :param name_servers_cnames: The list of all aliases associated with the nameservers of the zone, as RRecord of type
         CNAME (so there's the mapping between nameserver and alias).
-        :type list_cnames: List[RRecord]
+        :type name_servers_cnames: List[RRecord]
         :param addresses: The list of all RR of type A that resolves all nameservers.
         :type addresses: List[RRecord]
         """
@@ -43,14 +46,20 @@ class Zone:
             self.nameservers = list()
         else:
             self.nameservers = nameservers_of_zone
-        if not list_utils.are_all_objects_RRecord_and_rr_type(list_cnames, TypesRR.CNAME):
+        if not list_utils.are_all_objects_RRecord_of_type(name_servers_cnames, TypesRR.CNAME):
             raise ValueError()
-        if nameservers_of_zone is None or len(list_cnames) == 0:
+        if nameservers_of_zone is None or len(name_servers_cnames) == 0:
             self.aliases = list()
         else:
-            self.aliases = list_cnames
+            self.aliases = name_servers_cnames
+        if not list_utils.are_all_objects_RRecord_of_type(zone_name_cnames, TypesRR.CNAME):
+            raise ValueError()
+        else:
+            self.zone_aliases = zone_name_cnames        # c'è dipendenza da dove la troviamo
         self.name = zone_name
         self.addresses = addresses
+        if len(self.nameservers) != len(self.addresses):
+            raise ValueError
 
     def resolve_name_server_access_path(self, nameserver: str) -> RRecord:
         """
@@ -141,6 +150,41 @@ class Zone:
                 result = result + " ===> " + str(rr.values)
                 return result
         raise NoAvailablePathError(name)
+
+    def resolve_zone_name_resolution_path(self) -> List[RRecord]:
+        # no aliases ==> NoAvailablePathError
+        inner_result = self.__inner_reversed_resolve_zone_name_resolution_path(self.name, None)
+        if len(inner_result) == 0:
+            raise NoAvailablePathError(self.name)
+        return list(reversed(inner_result))
+
+    def __inner_reversed_resolve_zone_name_resolution_path(self, name: str, result: List[RRecord] or None) -> List[RRecord]:
+        # no aliases ==> empty list
+        if result is None:
+            result = list()
+        else:
+            pass
+        for rr in self.zone_aliases:
+            if domain_name_utils.equals(rr.get_first_value(), name):
+                result.append(rr)
+                return self.__inner_reversed_resolve_zone_name_resolution_path(rr.name, result)
+        return result
+
+    def stamp_zone_name_resolution_path(self) -> str:
+        """
+        This method return a string that represents schematically the name resolution path of the (self) zone name.
+
+        :return: The string representation.
+        :rtype: str
+        """
+        try:
+            result = self.resolve_zone_name_resolution_path()
+        except NoAvailablePathError:
+            return f"{self.name}"
+        string = copy.deepcopy(result[0].name)
+        for rr in result:
+            string = string + ' ---> ' + rr.get_first_value()
+        return string
 
     def __str__(self) -> str:
         """

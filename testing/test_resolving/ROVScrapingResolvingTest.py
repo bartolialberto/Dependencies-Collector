@@ -15,6 +15,7 @@ from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableNotPresentError import TableNotPresentError
+from persistence.BaseModel import project_root_directory_name
 
 
 class ROVScrapingResolvingTestCase(unittest.TestCase):
@@ -25,7 +26,7 @@ class ROVScrapingResolvingTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent

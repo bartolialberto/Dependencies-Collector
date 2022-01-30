@@ -1,10 +1,9 @@
 from typing import Set
 from peewee import DoesNotExist
-
 from entities.Zone import Zone
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_web_server, helper_domain_name_dependencies, helper_script_server, helper_zone, \
-    helper_domain_name, helper_web_site, helper_name_server, helper_autonomous_system
+    helper_domain_name, helper_web_site, helper_name_server, helper_autonomous_system, helper_web_site_domain_name
 from persistence.BaseModel import ZoneEntity, WebSiteEntity, AutonomousSystemEntity
 from utils import url_utils, domain_name_utils
 
@@ -20,22 +19,27 @@ def get_all_zone_dependencies_from_web_site(web_site: str) -> Set[ZoneEntity]:
         raise
     zone_dependencies = set()
 
+    # from web site domain name
+    wsdna = helper_web_site_domain_name.get_from_string_web_site(real_web_site)
+    web_site_dne = wsdna.domain_name
+    web_site_dne_zes = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_dne)
+    for ze in web_site_dne_zes:
+        zone_dependencies.add(ze)
+
     # from web landing
     https_w_server_e = helper_web_server.get_from(real_web_site, https=True, first_only=True)
     http_w_server_e = helper_web_server.get_from(real_web_site, https=False, first_only=True)
-    https_zes = helper_zone.get_all_of_string_domain_name(https_w_server_e.name.string)
-    http_zes = helper_zone.get_all_of_string_domain_name(http_w_server_e.name.string)
+    https_zes = helper_zone.get_zone_dependencies_of_entity_domain_name(https_w_server_e.name)
+    http_zes = helper_zone.get_zone_dependencies_of_entity_domain_name(http_w_server_e.name)
     for ze in https_zes:
-        if ze not in zone_dependencies:
-            zone_dependencies.add(ze)
+        zone_dependencies.add(ze)
     for ze in http_zes:
-        if ze not in zone_dependencies:
-            zone_dependencies.add(ze)
+        zone_dependencies.add(ze)
 
     # from scripts
     s_server_es = helper_script_server.get_from_string_web_site(real_web_site)
     for sse in s_server_es:
-        zes = helper_zone.get_all_of_string_domain_name(sse.name.string)
+        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(sse.name)
         for ze in zone_dependencies:
             if ze not in zone_dependencies:
                 zone_dependencies.add(ze)
@@ -51,6 +55,15 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
     web_sites = set()
     dnes = helper_domain_name.get_all_that_depends_on_zone(ze)
 
+    # from web site domain name
+    for dne in dnes:
+        try:
+            wsdna = helper_web_site_domain_name.get_from_entity_domain_name(dne)
+        except DoesNotExist:
+            continue
+        web_sites.add(wsdna.web_site)
+        break       # should always be only 1
+
     # from scripts
     for dne in dnes:
         try:
@@ -59,8 +72,7 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
             continue
         wses = helper_web_site.get_all_from_entity_script_server(sse)
         for wse in wses:
-            if wse not in web_sites:
-                web_sites.add(wse)
+            web_sites.add(wse)
 
     # from web landing
     for dne in dnes:
@@ -70,8 +82,7 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
             continue
         wses = helper_web_site.get_all_from_entity_web_server(wse)
         for wse in wses:
-            if wse not in web_sites:
-                web_sites.add(wse)
+            web_sites.add(wse)
 
     return web_sites
 
@@ -91,7 +102,7 @@ def get_direct_zone_from_web_site(web_site: str) -> Zone:
 
 def get_autonomous_systems_dependencies_from_zone_name(zone_name: str) -> Set[AutonomousSystemEntity]:
     try:
-        zo = helper_zone.get_zone_object(zone_name)
+        zo = helper_zone.get_zone_object_from_zone_name(zone_name)
     except DoesNotExist:
         raise
     result = set()

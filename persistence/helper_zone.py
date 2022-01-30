@@ -1,14 +1,14 @@
 import copy
-from typing import Set
+from typing import Set, List, Tuple
 from peewee import DoesNotExist
 from entities.RRecord import RRecord
 from entities.Zone import Zone
 from entities.enums.TypesRR import TypesRR
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
-    helper_domain_name
+    helper_domain_name, helper_zone_name_alias
 from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation, \
-    DirectZoneAssociation, NameServerEntity, ZoneComposedAssociation
+    DirectZoneAssociation, NameServerEntity, ZoneComposedAssociation, DomainNameEntity
 from utils import domain_name_utils
 
 
@@ -25,6 +25,17 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
     else:
         return ze       # scorciatoia?
 
+    if len(zone.zone_aliases) == 1:
+        last_alias_dne = helper_domain_name.insert(zone.zone_aliases[-1].name)
+        helper_zone_name_alias.insert(ze, last_alias_dne)
+    else:
+        for rr in zone.zone_aliases[1:-1]:
+            from_dne = helper_domain_name.insert(rr.name)
+            to_dne = helper_domain_name.insert(rr.get_first_value())
+            helper_alias.insert(from_dne, to_dne)
+        last_alias_dne = helper_domain_name.insert(zone.zone_aliases[-1].name)
+        helper_zone_name_alias.insert(ze, last_alias_dne)
+
     nsdne_dict = dict()
     for nameserver in zone.nameservers:
         nse, nsdne = helper_name_server.insert(nameserver)
@@ -37,22 +48,11 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
             ane = helper_domain_name.insert(alias)
             helper_alias.insert(dne, ane)
 
-    name_server_unresolved = set(copy.deepcopy(zone.nameservers))
     for rr in zone.addresses:
         dne = helper_domain_name.insert(rr.name)
-        last_ip_string = None
         for value in rr.values:
             iae = helper_ip_address.insert(value)
             helper_access.insert(dne, iae)
-            last_ip_string = value
-        try:
-            name_server_to_be_removed = zone.is_ip_of_name_servers(last_ip_string)
-        except ValueError:
-            raise
-        name_server_unresolved.remove(name_server_to_be_removed)
-
-    for name_server in name_server_unresolved:
-        helper_access.insert(nsdne_dict[name_server], None)
 
     return ze
 
@@ -66,15 +66,46 @@ def get(zone_name: str) -> ZoneEntity:
     return ze
 
 
-def get_zone_object(zone_name: str) -> Zone:
+def resolve_zone_object(zone_name: str) -> Tuple[Zone, List[DomainNameEntity]]:
     try:
         ze = get(zone_name)
+        dnes = list()
     except DoesNotExist:
-        raise
+        try:
+            dne = helper_domain_name.get(zone_name)
+        except DoesNotExist:
+            raise
+        try:
+            ze, dnes = inner_resolve_zone_from_path(dne, None)
+        except DoesNotExist:
+            raise
+    zo = get_zone_object_from_zone_entity(ze)
+    return zo, dnes
+
+
+def inner_resolve_zone_from_path(dne: DomainNameEntity, result: List[DomainNameEntity] or None) -> Tuple[ZoneEntity, List[DomainNameEntity]]:
+    if result is None:
+        result = list()
+    else:
+        pass
+    result.append(dne)
+    try:
+        zna = helper_zone_name_alias.get_from_entity_domain_name(dne)
+        return zna.zone
+    except DoesNotExist:
+        try:
+            alias_dne = helper_alias.get_from_entity_domain_name(dne)
+            return inner_resolve_zone_from_path(alias_dne, result)
+        except DoesNotExist:
+            raise
+
+
+def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
     try:
         nses = helper_name_server.get_all_from_zone_name(ze.name)
     except DoesNotExist:
         raise
+    zone_name = ze.name
     zone_name_servers = list(map(lambda nse: nse.name.string, nses))
     zone_name_aliases = list()
     zone_name_addresses = list()
@@ -92,20 +123,15 @@ def get_zone_object(zone_name: str) -> Zone:
                 zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
                 prev = a_dne.string
             zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
-    return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses)
+    return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())       # TODO zone name cnames
 
 
-def get_all_of_string_domain_name(domain_name: str) -> Set[ZoneEntity]:
+def get_zone_object_from_zone_name(zone_name: str) -> Zone:
     try:
-        dne = helper_domain_name.get(domain_name)
+        ze = get(zone_name)
     except DoesNotExist:
         raise
-    result = set()
-    query = DomainNameDependenciesAssociation.select()\
-        .where(DomainNameDependenciesAssociation.domain_name == dne)
-    for row in query:
-        result.add(row.zone)
-    return result
+    return get_zone_object_from_zone_entity(ze)
 
 
 def get_all_of_entity_name_server(nse: NameServerEntity) -> Set[ZoneEntity]:
@@ -125,12 +151,16 @@ def get_everyone() -> Set[ZoneEntity]:
     return result
 
 
-def get_zone_dependencies_of_domain_name(domain_name: str) -> Set[ZoneEntity]:
+def get_zone_dependencies_of_string_domain_name(domain_name: str) -> Set[ZoneEntity]:
     dn = domain_name_utils.insert_trailing_point(domain_name)
     try:
         dne = helper_domain_name.get(dn)
     except DoesNotExist:
         raise
+    return get_zone_dependencies_of_entity_domain_name(dne)
+
+
+def get_zone_dependencies_of_entity_domain_name(dne: DomainNameEntity) -> Set[ZoneEntity]:
     result = set()
     query = DomainNameDependenciesAssociation.select()\
         .where(DomainNameDependenciesAssociation.domain_name == dne)
@@ -162,4 +192,4 @@ def get_direct_zone_object_of(domain_name: str) -> Zone:
         dza = DirectZoneAssociation.get(DirectZoneAssociation.domain_name == dne)
     except DoesNotExist:
         raise
-    return get_zone_object(dza.zone.name)
+    return get_zone_object_from_zone_name(dza.zone.name)

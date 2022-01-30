@@ -9,6 +9,7 @@ from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
+from persistence.BaseModel import project_root_directory_name
 
 
 class DnsQueryTestCase(unittest.TestCase):
@@ -30,7 +31,7 @@ class DnsQueryTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent
@@ -39,8 +40,9 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'c.ns.c10r.facebook.com.'
-        cls.domain_name = 'dns.unipd.it'
-        cls.type = TypesRR.A
+        cls.domain_name = 'cdn-auth.digidentity.eu.'
+        cls.domain_name = 'd1hljz92zxtrmu.cloudfront.net.'
+        cls.type = TypesRR.CNAME
         cls.import_cache_from_output_folder = True
         # ELABORATION
         PRD = DnsQueryTestCase.get_project_root_folder()
@@ -63,6 +65,7 @@ class DnsQueryTestCase(unittest.TestCase):
         print(f"answer.canonical_name = {answer.canonical_name}")
         print(f"answer.qname = {answer.qname}")
         print(f"answer.nameserver = {answer.nameserver}")
+        print(f"answer.type = {dns.rdatatype.to_text(answer.rdtype)}")
         print(f"answer.expiration = {answer.expiration} ==> [UTC]: {datetime.utcfromtimestamp(answer.expiration)}")
         if len(answer.chaining_result.cnames) != 0:
             print(f"answer.chaining_result.canonical_name = {answer.chaining_result.canonical_name}")

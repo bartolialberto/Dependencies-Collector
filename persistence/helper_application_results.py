@@ -16,7 +16,8 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
     helper_script_hosted_on, helper_autonomous_system, helper_rov, helper_ip_network, helper_prefixes_table, \
     helper_ip_address_depends, helper_access, helper_script_site_lands, helper_script_server, helper_ip_range_tsv, \
-    helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_alias
+    helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_alias, helper_web_site_domain_name, \
+    helper_script_site_domain_name
 from utils import domain_name_utils
 
 
@@ -44,6 +45,8 @@ def insert_all_application_results(resolvers: ApplicationResolversWrapper) -> No
 def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
     for web_site in result.keys():
         w_site_e = helper_web_site.insert(web_site)
+        w_site_dne = helper_domain_name.insert(domain_name_utils.deduct_domain_name(web_site))
+        helper_web_site_domain_name.insert(w_site_dne, w_site_dne)
         helper_web_site_lands.delete_all_from_entity_web_site(w_site_e)
 
         # HTTPS result
@@ -169,6 +172,8 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str,
 def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
     for script_site in result.keys():
         s_site_e = helper_script_site.insert(script_site)
+        s_site_dne = helper_domain_name.insert(domain_name_utils.deduct_domain_name(script_site))
+        helper_script_site_domain_name.insert(s_site_dne, s_site_e)
         helper_script_site_lands.delete_all_from_script_site_entity(s_site_e)   # TODO: ???
 
         # HTTPS result

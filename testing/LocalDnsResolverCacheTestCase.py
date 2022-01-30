@@ -50,7 +50,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         print(f"\n------- [1] START PATH RESOLVING -------")
         print(f"Parameter: domain name: {domain_name}")
         try:
-            rr_a, aliases = self.cache.resolve_path(domain_name, as_string=as_string)
+            rr_a, aliases = self.cache.resolve_path(domain_name, TypesRR.A, as_string=as_string)
             print(f"as_string is set to: {as_string}")
             print(f"Aliases found through access path:")
             if as_string:
@@ -86,7 +86,11 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         # TEST
         print(f"Parameter: zone name = {zone_name}")
         try:
-            zone = self.cache.resolve_zone_object_from_zone_name(zone_name)
+            zone, rr_cnames = self.cache.resolve_zone_object_from_zone_name(zone_name)
+            if len(rr_cnames) == 0:
+                pass
+            else:
+                print(f"Zone name resolution path: {zone.stamp_zone_name_resolution_path()}")
             for i, nameserver in enumerate(zone.nameservers):
                 rr = zone.resolve_name_server_access_path(nameserver)
                 print(f"for nameserver[{i+1}]: {nameserver}\tresolved = {rr.values}")

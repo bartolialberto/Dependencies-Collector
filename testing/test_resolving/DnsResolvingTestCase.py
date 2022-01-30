@@ -6,6 +6,8 @@ from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.error_log.ErrorLogger import ErrorLogger
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from persistence.BaseModel import project_root_directory_name
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -15,9 +17,6 @@ from entities.error_log.ErrorLogger import ErrorLogger
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
-from exceptions.FilenameNotFoundError import FilenameNotFoundError
-
-
 class DnsResolvingTestCase(unittest.TestCase):
     """
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
@@ -54,7 +53,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent
@@ -62,7 +61,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['cdn-auth.digidentity.eu.', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = True
@@ -245,8 +244,8 @@ class DnsResolvingTestCase(unittest.TestCase):
                         print(f"The normal one has more values:")
                     for elem in set_minor:
                         set_major.remove(elem)
-                    for i, elem in enumerate(set_major):
-                        print(f"extra[{i+1}/{len(set_major)}] = {elem}")
+                    for j, elem in enumerate(set_major):
+                        print(f"extra[{j+1}/{len(set_major)}] = {elem}")
                 self.assertSetEqual(set_new, set_old)
         else:
             print(f"Dictionaries keys size are different...")
