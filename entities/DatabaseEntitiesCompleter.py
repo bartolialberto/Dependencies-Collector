@@ -263,7 +263,6 @@ class DatabaseEntitiesCompleter:
                     for ip in inner_result.ips:
                         iae = helper_ip_address.insert(ip)
                         helper_access.insert(last_dne, iae)
-                        # TODO: e la question IP range per ogni address???
                     helper_script_site_lands.insert(s_site_e, s_server_e, swa.https)
                     print(f"--> for script: src={script.src} script server = {s_server_e.name.string}")
             except selenium.common.exceptions.WebDriverException:

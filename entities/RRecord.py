@@ -112,11 +112,28 @@ class RRecord:
 
     @staticmethod
     def parse_mail_server_from_value(value: str) -> str:
+        """
+        This static method parse the mail server from the value string belonging in the values field of a RR.
+
+        :param value: A string.
+        :type value: str
+        :return: The mail server parsed.
+        :rtype: str
+        """
         split_value = value.split(' ')
         return split_value[1]       # TODO: se è un IP? Da gestire
 
     @staticmethod
     def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:      # FORWARD DECLARATIONS (REFERENCES)
+        """
+        This method takes a list of strings that should represents an access path or a name resolution path, and returns
+        such list as a path of CNAME RRs.
+
+        :param domain_names: An access path or name resolution path of domain names.
+        :type domain_names: List[str]
+        :return: A list of CNAME RRs.
+        :rtype: List[RRecord]
+        """
         if len(domain_names) == 0:
             raise ValueError
         elif len(domain_names) == 1:

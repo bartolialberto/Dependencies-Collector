@@ -144,7 +144,7 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str,
         try:
             wse = helper_web_site.get(web_site)
         except DoesNotExist:
-            raise        # TODO: non dovrebbe mai succedere
+            raise        # should never happen
         https_scripts = web_site_script_dependencies[web_site].https
         http_scripts = web_site_script_dependencies[web_site].http
 
@@ -174,7 +174,7 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
         s_site_e = helper_script_site.insert(script_site)
         s_site_dne = helper_domain_name.insert(domain_name_utils.deduct_domain_name(script_site))
         helper_script_site_domain_name.insert(s_site_e, s_site_dne)
-        helper_script_site_lands.delete_all_from_script_site_entity(s_site_e)   # TODO: ???
+        helper_script_site_lands.delete_all_from_script_site_entity(s_site_e)   # TODO: modify
 
         # HTTPS result
         is_https = True
@@ -226,7 +226,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
         ase = helper_autonomous_system.insert(as_number, entry_as_database.as_description)
         for ip_address in finals.results[as_number].keys():
             try:
-                iae = helper_ip_address.get(ip_address)     # TODO: insert?
+                iae = helper_ip_address.get(ip_address)
             except DoesNotExist:
                 raise
             ine = helper_ip_network.insert_from_address_entity(iae)
@@ -256,7 +256,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
                     helper_network_numbers.insert(irte, ase)
     for ip_address in finals.no_as_results.keys():
         try:
-            iae = helper_ip_address.get(ip_address)  # TODO: insert?
+            iae = helper_ip_address.get(ip_address)
         except DoesNotExist:
             raise
         server = finals.no_as_results[ip_address][0]

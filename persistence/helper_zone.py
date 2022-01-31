@@ -135,7 +135,7 @@ def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
                 zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
                 prev = a_dne.string
             zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
-    return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())       # TODO zone name cnames
+    return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())
 
 
 def get_zone_object_from_zone_name(zone_name: str) -> Zone:
