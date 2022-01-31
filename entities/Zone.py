@@ -193,7 +193,7 @@ class Zone:
         :return: A string representation of this object.
         :rtype: str
         """
-        return f"{self.name}, {len(self.nameservers)}#nameservers, {len(self.aliases)}#aliases, {len(self.addresses)}#addresses"
+        return f"{self.name}, {len(self.zone_aliases)}#zone-aliases, {len(self.nameservers)}#nameservers, {len(self.aliases)}#aliases, {len(self.addresses)}#addresses"
 
     def __eq__(self, other) -> bool:
         """

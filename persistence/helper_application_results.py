@@ -46,7 +46,7 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
     for web_site in result.keys():
         w_site_e = helper_web_site.insert(web_site)
         w_site_dne = helper_domain_name.insert(domain_name_utils.deduct_domain_name(web_site))
-        helper_web_site_domain_name.insert(w_site_dne, w_site_dne)
+        helper_web_site_domain_name.insert(w_site_e, w_site_dne)
         helper_web_site_lands.delete_all_from_entity_web_site(w_site_e)
 
         # HTTPS result
@@ -173,7 +173,7 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
     for script_site in result.keys():
         s_site_e = helper_script_site.insert(script_site)
         s_site_dne = helper_domain_name.insert(domain_name_utils.deduct_domain_name(script_site))
-        helper_script_site_domain_name.insert(s_site_dne, s_site_e)
+        helper_script_site_domain_name.insert(s_site_e, s_site_dne)
         helper_script_site_lands.delete_all_from_script_site_entity(s_site_e)   # TODO: ???
 
         # HTTPS result

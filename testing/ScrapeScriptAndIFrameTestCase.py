@@ -65,7 +65,7 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
             if src == '' or src is None:
                 count_inline = count_inline + 1
             print(f"--> script[{j+1}/{len(self.all_scripts)}].src={src}")
-        print(f"Number of inline scripts = {count_inline}")
+        print(f"Number of inline (NO src) scripts = {count_inline}")
         print(f"{len(self.all_scripts)} - {count_inline} = {len(self.all_scripts) - count_inline}")
         print(f"------- [1] END DEBUG PRINTS OF ALL SCRIPTS TEST -------")
 

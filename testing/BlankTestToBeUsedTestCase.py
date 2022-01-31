@@ -23,13 +23,12 @@ class BlankTestToBeUsedTestCase(unittest.TestCase):
     def test_something(self):
         PRD = BlankTestToBeUsedTestCase.get_project_root_folder()
         dns_resolver = DnsResolver(None)
-        dns_resolver.cache.load_csv_from_output_folder('cache_from_dns_test', PRD)
+        # dns_resolver.cache.load_csv_from_output_folder('cache_from_dns_test', PRD)
 
         var = 'cdn-auth.digidentity.eu.'
 
         try:
-            zo, cnames = dns_resolver.cache.resolve_zone_object_from_zone_name(var)
-            print(f"Zone name resolution path: {zo.stamp_zone_name_resolution_path()}")
+            rr_answer, rr_cnames = dns_resolver.do_query(var, TypesRR.NS)
         except (NoRecordInCacheError, NoAvailablePathError) as e:
             print(f"!!! {str(e)} !!!")
 

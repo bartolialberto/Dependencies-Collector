@@ -15,9 +15,7 @@ from utils import domain_name_utils
 
 
 # DOMAIN NAME LIST EXAMPLES
-# ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-# ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es']
-# ['unipd.it', 'dei.unipd.it', 'www.units.it', 'units.it', 'dia.units.it']
+# ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
@@ -52,8 +50,8 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = ['accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['twitter.com']
+        cls.domain_names = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['cdn-auth.digidentity.eu.']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = True
@@ -240,10 +238,10 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print("\n------- [6] START ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")
         for i, nameserver in enumerate(self.zone_dependencies_per_nameserver.keys()):
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of_string_domain_name(nameserver)
+                zones_set_db = helper_zone.get_zone_dependencies_of_string_name_server(nameserver)
             except DoesNotExist as e:
-                print(f"!!! {str(e)} !!!")
-                continue
+                self.fail(f"!!! {str(e)} !!!")
+            zone_names_set_db = set(map(lambda ze: ze.name, zones_set_db))
             are_same_len = len(self.zone_dependencies_per_nameserver[nameserver]) == len(zones_set_db)
             if not are_same_len:
                 print(f"Tot zone dependencies for '{nameserver}':")
@@ -253,7 +251,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                 print(f"--> number of zone dependencies found from db: {len(zones_set_db)}")
                 for j, ze in enumerate(zones_set_db):
                     print(f"----> zone[{j + 1}/{len(zones_set_db)}] = {ze.name}")
-            self.assertEqual(len(self.zone_dependencies_per_nameserver[nameserver]), len(zones_set_db))
+            self.assertSetEqual(set(self.zone_dependencies_per_nameserver[nameserver]), zone_names_set_db)
             count_assertions = count_assertions + 1
         print(f"Reached this print means everything went well ({count_assertions} assertions)")
         print("------- [6] END ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")

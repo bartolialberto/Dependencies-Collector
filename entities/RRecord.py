@@ -101,11 +101,6 @@ class RRecord:
             values.append(val)
         return RRecord(split_entry[0], type_rr, values)
 
-    @staticmethod
-    def parse_mail_server_from_value(value: str) -> str:
-        split_value = value.split(' ')
-        return split_value[1]       # TODO: se è un IP? Da gestire
-
     def __str__(self):
         """
         This method returns a string representation of this object.
@@ -114,3 +109,20 @@ class RRecord:
         :rtype: str
         """
         return f"{self.name}\t{self.type.to_string()}\t{str(self.values)}"
+
+    @staticmethod
+    def parse_mail_server_from_value(value: str) -> str:
+        split_value = value.split(' ')
+        return split_value[1]       # TODO: se è un IP? Da gestire
+
+    @staticmethod
+    def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:
+        if len(domain_names) == 0:
+            raise ValueError
+        elif len(domain_names) == 1:
+            raise ValueError
+        else:
+            result = list()
+            for i, domain_name in enumerate(domain_names[::2]):
+                result.append(RRecord(domain_names[i], TypesRR.CNAME, domain_names[i+1]))
+            return result

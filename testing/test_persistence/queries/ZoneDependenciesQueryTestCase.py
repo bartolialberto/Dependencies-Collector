@@ -34,27 +34,8 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
             print(f"[{i+1}/{len(zes)}] = {ze.name}")
         print(f"------- [2] END GETTING DEPENDENCIES OF ZONE QUERY -------")
 
-    def test_3_get_zone_object_from_zone_name(self):
-        print(f"\n------- [3] START GETTING ZONE OBJECT FROM ZONE NAME QUERY -------")
-        # PARAMETER
-        zone_name = 'nstld.com'
-        # QUERY
-        print(f"Parameter: {zone_name}")
-        try:
-            zo = helper_zone.get_zone_object_from_zone_name(zone_name)
-        except DoesNotExist as e:
-            self.fail(str(e))
-        print(f"Resolved: {str(zo)}. More prints:")
-        for i, name_server in enumerate(zo.nameservers):
-            print(f"nameserver[{i+1}/{len(zo.nameservers)}] = {name_server} ===ACCESS_PATH==> {str(zo.resolve_name_server_access_path(name_server).values)}")
-        for i, rr in enumerate(zo.aliases):
-            print(f"alias[{i+1}/{len(zo.aliases)}] = (name={rr.name}, first_value={rr.get_first_value()})")
-        for i, rr in enumerate(zo.addresses):
-            print(f"address[{i+1}/{len(zo.addresses)}] = (name={rr.name}, values={str(rr.values)})")
-        print(f"------- [3] END GETTING ZONE OBJECT FROM ZONE NAME QUERY -------")
-
-    def test_4_get_all_zones_from_name_server(self):
-        print(f"\n------- [4] START GETTING ZONES FROM NAME SERVER QUERY -------")
+    def test_3_get_all_zones_from_name_server(self):
+        print(f"\n------- [3] START GETTING ZONES FROM NAME SERVER QUERY -------")
         # PARAMETER
         name_server = 'av1.nstld.com.'
         # QUERY
@@ -66,7 +47,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
         print(f"Resolved {len(zes)} zones:")
         for i, ze in enumerate(zes):
             print(f"zone[{i+1}/{len(zes)}] = {str(ze)}")
-        print(f"------- [4] END GETTING ZONES FROM NAME SERVER QUERY -------")
+        print(f"------- [3] END GETTING ZONES FROM NAME SERVER QUERY -------")
 
 
 if __name__ == '__main__':
