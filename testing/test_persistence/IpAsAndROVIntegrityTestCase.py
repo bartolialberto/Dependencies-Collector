@@ -211,7 +211,7 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
 
     def test_2_no_more_than_one_association_for_network(self):
         print("\n------- [2] START NO DUPLICATES FOR EACH NETWORK TEST -------")
-        ines = helper_ip_network.get_all()
+        ines = helper_ip_network.get_everyone()
         pass
         print(f"Everything went well.")
         print("------- [2] END NO DUPLICATES FOR EACH NETWORK TEST -------")

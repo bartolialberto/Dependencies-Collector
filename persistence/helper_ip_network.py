@@ -37,7 +37,7 @@ def get(ip_network_parameter: ipaddress.IPv4Network or str) -> IpNetworkEntity:
     return ine
 
 
-def get_all() -> Set[IpNetworkEntity]:
+def get_everyone() -> Set[IpNetworkEntity]:
     result = set()
     query = IpNetworkEntity.select()
     for row in query:

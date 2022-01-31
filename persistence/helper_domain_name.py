@@ -1,9 +1,8 @@
 from typing import List, Tuple, Set
 from peewee import DoesNotExist
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_ip_address, helper_alias, helper_zone
+from persistence import helper_ip_address, helper_alias
 from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity, \
     AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation
 from utils import domain_name_utils

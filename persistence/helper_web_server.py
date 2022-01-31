@@ -34,31 +34,6 @@ def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     return wse, dne
 
 
-def get_from_string_website(website_url: str) -> List[WebServerEntity]:
-    try:
-        wse = helper_web_site.get(website_url)
-    except DoesNotExist:
-        raise
-
-    query = WebSiteLandsAssociation.select()\
-        .where(WebSiteLandsAssociation.web_site == wse)
-
-    result = list()
-    for row in query:
-        result.append(row.web_server)
-    return result
-
-
-def get_from_website_entity(wse: WebSiteEntity) -> List[WebServerEntity]:
-    query = WebSiteLandsAssociation.select()\
-        .where(WebSiteLandsAssociation.web_site == wse)
-
-    result = list()
-    for row in query:
-        result.append(row.web_server)
-    return result
-
-
 def get_from(website_param: str or WebSiteEntity, https: bool, first_only: bool) -> List[WebServerEntity] or WebServerEntity:
     wse = None
     query = None

@@ -44,7 +44,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameter: {name_server}")
         try:
-            zes = helper_name_server.get_every_zone_of(name_server)
+            zes = helper_zone.get_all_of_string_name_server(name_server)
         except DoesNotExist as e:
             self.fail(str(e))
         print(f"Resolved {len(zes)} zones:")

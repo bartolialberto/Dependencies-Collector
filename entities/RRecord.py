@@ -116,7 +116,7 @@ class RRecord:
         return split_value[1]       # TODO: se è un IP? Da gestire
 
     @staticmethod
-    def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:
+    def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:      # FORWARD DECLARATIONS (REFERENCES)
         if len(domain_names) == 0:
             raise ValueError
         elif len(domain_names) == 1:

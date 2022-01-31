@@ -23,7 +23,7 @@ class Zone:
     aliases : List[RRecord]
         The aliases associated with all the nameservers of the zone.
     zone_aliases : List[RRecord]
-        The aliases associated with the zone name.
+        The CNAME RRs that leads to the zone name if encountered.
     addresses : List[RRecord]
         The resolving RRecord associated with all the nameservers.
     """
@@ -153,6 +153,13 @@ class Zone:
         raise NoAvailablePathError(name)
 
     def resolve_zone_name_resolution_path(self) -> List[RRecord]:
+        """
+        This method resolves the zone name resolution path.
+
+        :raise NoAvailablePathError: If there's no aliases.
+        :return: A list of CNAME RR that ends with the zone name as alias, if there are at least one RR.
+        :rtype: List[RRecord]
+        """
         # no aliases ==> NoAvailablePathError
         inner_result = self.__inner_reversed_resolve_zone_name_resolution_path(self.name, None)
         if len(inner_result) == 0:
@@ -160,7 +167,17 @@ class Zone:
         return list(reversed(inner_result))
 
     def __inner_reversed_resolve_zone_name_resolution_path(self, name: str, result: List[RRecord] or None) -> List[RRecord]:
-        # no aliases ==> empty list
+        """
+        Recursive auxiliary method used by the 'resolve_zone_name_resolution_path' method.
+
+        :param name: A domain name.
+        :type name: str
+        :param result: The result of the method carried through each recursive invocation. None value corresponds to the
+        initial seed.
+        :type result: List[RRecord] or None
+        :return: A list of CNAME RR that ends with the zone name as alias. If there are no RRs then the list is empty.
+        :rtype: List[RRecord]
+        """
         if result is None:
             result = list()
         else:

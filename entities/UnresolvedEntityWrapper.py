@@ -1,4 +1,4 @@
-from typing import Set, Callable
+from typing import Set
 from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
 
 

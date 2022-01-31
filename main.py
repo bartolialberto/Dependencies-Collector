@@ -162,6 +162,10 @@ if __name__ == "__main__":
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
+        if not consider_tld:
+            if resolvers.tlds_loaded_from_web_page:
+                resolvers.export_tlds_to_input_folder()
+                print("> TLDs scraped are exported in the 'input' folder as file 'tlds.txt'")
     except Exception as e:
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")

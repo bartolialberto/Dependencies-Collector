@@ -53,6 +53,5 @@ class ServerTypes(Enum):
             return ServerTypes.NAME_AND_SCRIPT_AND_WEB_SERVER
 
         else:
-            print('')
-            pass
+            raise ValueError
 

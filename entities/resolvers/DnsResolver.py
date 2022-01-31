@@ -233,7 +233,7 @@ class DnsResolver:
                 names_path_param = [current_domain]
 
             try:
-                zone, names_to_be_elaborated, error_logs_to_be_added = self.zone_check(names_path_param)
+                zone, names_to_be_elaborated, error_logs_to_be_added = self.resolve_zone(names_path_param)
                 for log in error_logs_to_be_added:
                     error_logs.append(log)
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
@@ -278,30 +278,57 @@ class DnsResolver:
                 raise
         return rr_a, rr_cnames
 
-    # TODO
-    def resolve_cname(self, cname: str, parameter_included=True) -> List[str]:
+    def resolve_cname(self, name: str, parameter_included=True) -> List[str]:
+        """
+        This methods resolves the CNAME RR of the name parameter, then if there are more CNAME RR from the alias of the
+        previous CNAME RR then recursively it will continue the resolving. It will stops when there are no other CNAME
+        RR available for the last alias computed.
+        In the end it will be created a sort of 'alias path'.
+
+        :param name: A domain name.
+        :type name: str
+        :param parameter_included: Decide if in the result list the parameter should be considered.
+        :type parameter_included: bool
+        :raise DomainNonExistentError: If during the CNAME query happens such error.
+        :raise UnknownReasonError: If during the CNAME query happens such error.
+        :raise NoAvailablePathError: If there's no path for name parameter.
+        :return: The path of alias.
+        :rtype: List[str]
+        """
         try:
-            names = self.__inner_resolve_cname(cname, None)
+            names = self.__inner_resolve_cname(name, None)
         except (DomainNonExistentError, UnknownReasonError):
             raise
         if len(names) == 1:     # only the parameter
-            raise NoAvailablePathError(cname)
+            raise NoAvailablePathError(name)
         else:
             if not parameter_included:
-                names.remove(cname)
+                names.remove(name)
             return names
 
-    def __inner_resolve_cname(self, cname: str, path: List[str] or None) -> List[str]:
+    def __inner_resolve_cname(self, name: str, path: List[str] or None) -> List[str]:
+        """
+        Recursive auxiliary method in 'resolve_cname' method.
+
+        :param name: A domain name.
+        :type name: str
+        :param path: Result carried through all recursive invocations. None value corresponds to the initial seed.
+        :type path: List[str] or None
+        :raise DomainNonExistentError: If during the CNAME query happens such error.
+        :raise UnknownReasonError: If during the CNAME query happens such error.
+        :return: The path of alias.
+        :rtype: List[str]
+        """
         if path is None:
             path = list()
         else:
             pass
-        path.append(cname)
+        path.append(name)
         try:
-            rr_answer = self.cache.lookup_first(cname, TypesRR.CNAME)
+            rr_answer = self.cache.lookup_first(name, TypesRR.CNAME)
         except NoRecordInCacheError:
             try:
-                rr_answer, rr_cnames = self.do_query(cname, TypesRR.CNAME)
+                rr_answer, rr_cnames = self.do_query(name, TypesRR.CNAME)
                 self.cache.add_entry(rr_answer)
             except NoAnswerError:
                 return path
@@ -309,7 +336,21 @@ class DnsResolver:
                 raise
         return self.__inner_resolve_cname(rr_answer.get_first_value(), path)
 
-    def zone_check(self, domain_name_path: List[str]) -> Tuple[Zone, List[str], List[ErrorLog]]:
+    def resolve_zone(self, domain_name_path: List[str]) -> Tuple[Zone, List[str], List[ErrorLog]]:
+        """
+        This method resolves the NS RR of the domain name in the domain_name_path parameter. It will return the zone
+        (as Zone, the application-defined object) resolved, a list of name to append in the current domain name
+        elaboration list to be done and a list of error logs happened during the method execution.
+
+        :param domain_name_path: The path resolved from the CNAME previous resolving.
+        :type domain_name_path: List[str]
+        :raise DomainNonExistentError: If during the NS query happens such error.
+        :raise UnknownReasonError: If during the NS query happens such error.
+        :raise NoAnswerError: If during the NS query happens such error.
+        :return: A tuple containing the zone resolved, the names to be added to continue the zone dependencies resolving
+        and a list of error logs.
+        :rtype: Tuple[Zone, List[str], List[ErrorLog]]
+        """
         domain_name = copy.deepcopy(domain_name_path[-1])
         error_logs_to_be_added = list()
         try:
@@ -377,6 +418,16 @@ class DnsResolver:
         return zone, names_to_be_elaborated, error_logs_to_be_added
 
     def extract_zone_name_dependencies(self, zone_list: List[Zone]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+        """
+        This method extracts the zone dependencies for each name server and the zone dependencies for each zone name
+        from the Zone (the application-defined object) list resolved.
+
+        :param zone_list:
+        :type zone_list: List[Zone]
+        :return: A dictionary that associates all the name server to a list of zone names and then a dictionary that
+        associates all zone names to a list of zone names, as a tuple.
+        :rtype: Tuple[Dict[str, List[str]], Dict[str, List[str]]]
+        """
         zone_name_dependencies_per_zone_name = dict()
         zone_name_dependencies_per_name_server = dict()
         for zone in zone_list:
@@ -408,6 +459,17 @@ class DnsResolver:
         return zone_name_dependencies_per_name_server, zone_name_dependencies_per_zone_name
 
     def parse_zone_dependencies_of_name_server(self, name_server: str, zone_list: List[Zone]) -> List[str]:
+        """
+        This methods takes as data pool the Zone (the application-defined object) list resolved and extract the zone
+        dependencies from the name_server parameter.
+
+        :param name_server: A name server.
+        :type name_server: str
+        :param zone_list: All the Zone (the application-defined object) list resolved.
+        :type zone_list: List[Zone]
+        :return: A list of zone names.
+        :rtype: List[str]
+        """
         zone_dependencies = list()
         # ancestor zones
         zones = self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list)
@@ -422,7 +484,53 @@ class DnsResolver:
                 list_utils.append_with_no_duplicates(zones, z)
         return list(map(lambda zo: zo.name, zone_dependencies))
 
+    def __parse_recursively_zones_of_name_server_from_zone_list(self, names_to_be_checked: List[str], zone_list: List[Zone], result: List[Zone] or None) -> List[Zone]:
+        """
+        Recursive auxiliary method used in 'parse_zone_dependencies_of_name_server' method.
+
+        :param names_to_be_checked: The name to check carried through all recursive invocations.
+        :type names_to_be_checked: List[str]
+        :param zone_list: All the Zone (the application-defined object) list resolved.
+        :type zone_list: List[Zone]
+        :param result: Result carried through all recursive invocations. None value corresponds to the initial seed.
+        :type result: List[Zone] or None
+        :return: A list of Zone (the application-defined object).
+        :rtype: List[Zone]
+        """
+        if result is None:
+            result = list()
+        else:
+            pass
+        if len(names_to_be_checked) == 0:
+            return result
+        start_names_to_be_checked = copy.deepcopy(names_to_be_checked)
+        for name in names_to_be_checked:
+            try:
+                rr_answer, rr_cnames = self.cache.resolve_path(name, TypesRR.A, as_string=False)
+                for rr in rr_cnames:
+                    list_utils.append_with_no_duplicates(names_to_be_checked, rr.name)
+                list_utils.append_with_no_duplicates(names_to_be_checked, rr_answer.name)
+            except NoAvailablePathError:
+                pass
+            zones = self.__parse_zones_of_domain_name_from_zone_list(name, zone_list)
+            for zone in zones:
+                list_utils.append_with_no_duplicates(result, zone)
+        for name in start_names_to_be_checked:
+            names_to_be_checked.remove(name)
+        return self.__parse_recursively_zones_of_name_server_from_zone_list(names_to_be_checked, zone_list, result)
+
     def parse_zone_dependencies_of_zone(self, current_zone: Zone, zone_list: List[Zone]) -> List[str]:
+        """
+        This methods takes as data pool the Zone (the application-defined object) list resolved and extract the zone
+        dependencies from the current_zone parameter.
+
+        :param current_zone: A Zone (the application-defined object) object.
+        :type current_zone: Zone
+        :param zone_list: All the Zone (the application-defined object) list resolved.
+        :type zone_list: List[Zone]
+        :return: A list of zone names.
+        :rtype: List[str]
+        """
         zone_dependencies = list()
         # ancestor zones
         zones = self.__parse_zones_of_domain_name_from_zone_list(current_zone.name, zone_list)
@@ -436,6 +544,18 @@ class DnsResolver:
         return list(map(lambda zo: zo.name, zone_dependencies))
 
     def __parse_zones_of_domain_name_from_zone_list(self, name: str, zone_list: List[Zone]) -> List[Zone]:
+        """
+        This methods takes as data pool the Zone (the application-defined object) list resolved.
+        Then it creates a list of domain names from the name parameter considering all the ancestor domain names and
+        extract the zone dependencies from the data pool mentioned above.
+
+        :param name: name
+        :type name: str
+        :param zone_list: The Zone (the application-defined object) list used as data pool.
+        :type zone_list: List[Zone]
+        :return: A list of Zone (the application-defined object).
+        :rtype: List[Zone]
+        """
         subdomains = domain_name_utils.get_subdomains_name_list(name, root_included=True, parameter_included=False)
         result = list()
         for subdomain in subdomains:
@@ -444,32 +564,24 @@ class DnsResolver:
                     result.append(zone)
         return result
 
-    def __parse_recursively_zones_of_name_server_from_zone_list(self, names_to_be_checked: List[str], zone_list: List[Zone], result: List[Zone] or None) -> List[Zone]:
-        if result is None:
-            result = list()
-        else:
-            pass
-        if len(names_to_be_checked) == 0:
-            return result
-        start_names_to_be_checked = copy.deepcopy(names_to_be_checked)
-        for name in names_to_be_checked:
-            try:
-                rr_answer, rr_cnames = self.cache.resolve_path(name, TypesRR.A, as_string=False)
-                for rr in rr_cnames:
-                        list_utils.append_with_no_duplicates(names_to_be_checked, rr.name)
-                list_utils.append_with_no_duplicates(names_to_be_checked, rr_answer.name)
-            except NoAvailablePathError:
-                pass
-            zones = self.__parse_zones_of_domain_name_from_zone_list(name, zone_list)
-            for zone in zones:
-                list_utils.append_with_no_duplicates(result, zone)
-        for name in start_names_to_be_checked:
-            names_to_be_checked.remove(name)
-        return self.__parse_recursively_zones_of_name_server_from_zone_list(names_to_be_checked, zone_list, result)
-
     def try_to_resolve_partially_cached_access_path(self, name_server: str) -> Tuple[List[RRecord], RRecord, List[str]]:
-        # case in which a name server was resolved previously, and now another name server is a domain name that has
-        # as alias the previously quoted name server. So there's only the cname missing to complete the resolution.
+        """
+        This method is used in the scenario where a certain domain name access path is already resolved in the cache,
+        and the name_server parameter (domain name yet to compute) has a CNAME RR associated to the previous mentioned
+        domain name.
+        It returns the entire CNAME RRs followed to resolve the access path, the A RR that resolves the access path and
+        the domain names to be added in the current domain names elaboration, all as a tuple.
+
+        :param name_server: A domain name.
+        :type name_server: str
+        :raise NoAnswerError: If the CNAME query raises such error.
+        :raise DomainNonExistentError: If the CNAME query raises such error.
+        :raise UnknownReasonError: If the CNAME query raises such error.
+        :raise NoAvailablePathError: If the A RR is not contained in cache.
+        :return: The entire CNAME RRs followed to resolve the access path, the A RR that resolves the access path and
+        the domain names to be added in the current domain names elaboration, all as a tuple.
+        :rtype: Tuple[List[RRecord], RRecord, List[str]]
+        """
         try:
             rr_answer, rr_cnames = self.do_query(name_server, TypesRR.CNAME)
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
@@ -488,6 +600,18 @@ class DnsResolver:
         return rr_aliases_to_be_added, alias_rr_answer, alias_subdomains
 
     def extract_direct_zone_name(self, domain_name: str, zone_list: List[Zone]) -> str:
+        """
+        This method extracts the direct zone of the domain name parameter from the zone_list parameter used as data
+        pool.
+
+        :param domain_name: A domain name.
+        :type domain_name: str
+        :param zone_list: All the Zone (the application-defined object) list resolved.
+        :type zone_list: List[Zone]
+        :raise ValueError: If there's no match from all the ancestor domain name as zone. Should never happen..
+        :return: The direct zone name.
+        :rtype: str
+        """
         dn = domain_name_utils.insert_trailing_point(domain_name)
         for_zone_name_subdomains = reversed(domain_name_utils.get_subdomains_name_list(dn, root_included=True, parameter_included=True))
         zone_name_dependencies = list(map(lambda z: z.name, zone_list))

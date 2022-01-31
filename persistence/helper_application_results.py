@@ -290,7 +290,7 @@ def get_unresolved_entities() -> set:
     https_sslas = helper_script_site_lands.get_https_unresolved()
     sslas_https_set = UnresolvedEntityWrapper.create_from_set(https_sslas, ResolvingErrorCauses.NO_HTTPS_LANDING_FOR_SCRIPT_SITE)
     total_results = total_results.union(sslas_https_set)
-    http_sslas = helper_script_site_lands.get_https_unresolved()
+    http_sslas = helper_script_site_lands.get_http_unresolved()
     sslas_http_set = UnresolvedEntityWrapper.create_from_set(http_sslas, ResolvingErrorCauses.NO_HTTP_LANDING_FOR_SCRIPT_SITE)
     total_results = total_results.union(sslas_http_set)
 

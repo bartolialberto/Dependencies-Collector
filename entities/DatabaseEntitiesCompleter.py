@@ -96,18 +96,18 @@ class DatabaseEntitiesCompleter:
             return
         for i, nse in enumerate(nses):
             try:
-                rr_answer, rr_aliases = self.resolvers_wrapper.dns_resolver.do_query(nse.name, TypesRR.A)
+                rr_answer, rr_aliases = self.resolvers_wrapper.dns_resolver.do_query(nse.name.string, TypesRR.A)
             except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
                 print(f"!!! {str(e)} !!!")
                 self.resolvers_wrapper.error_logger.add_entry(ErrorLog(e, nse.name, str(e)))
                 continue        # keep the relation as it is to keep the error info in the DB
-            print(f"nameserver[{i+1}]: {nse.name} resolved in: {str(rr_answer.values)}")
+            print(f"nameserver[{i+1}]: {nse.name.string} resolved in: {str(rr_answer.values)}")
             helper_access.delete_of_entity_domain_name(nse.name)
             for rr in rr_aliases:
-                name_dne = helper_domain_name.insert(rr.string)
+                name_dne = helper_domain_name.insert(rr.name)
                 alias_dne = helper_domain_name.insert(rr.get_first_value())
                 helper_alias.insert(name_dne, alias_dne)
-            dne = helper_domain_name.insert(rr_answer.string)
+            dne = helper_domain_name.insert(rr_answer.name)
             for val in rr_answer.values:
                 iae = helper_ip_address.insert(val)
                 helper_access.insert(dne, iae)
@@ -227,7 +227,7 @@ class DatabaseEntitiesCompleter:
                     if tsv_modified:
                         print("")
             else:
-                print("")
+                pass
         print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
 
     def do_complete_not_withdrawn_scripts(self, swas: List[ScriptWithdrawAssociation]):

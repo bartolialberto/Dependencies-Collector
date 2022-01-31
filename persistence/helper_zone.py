@@ -42,6 +42,10 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
     for nameserver in zone.nameservers:
         nse, nsdne = helper_name_server.insert(nameserver)
         helper_zone_composed.insert(ze, nse)
+        try:
+            zone.resolve_name_server_access_path(nameserver)
+        except NoAvailablePathError:
+            helper_access.insert(nsdne, None)
         nsdne_dict[nameserver] = nsdne  # to avoid get again entities from database
 
     for rr_alias in zone.aliases:
@@ -140,6 +144,14 @@ def get_zone_object_from_zone_name(zone_name: str) -> Zone:
     except DoesNotExist:
         raise
     return get_zone_object_from_zone_entity(ze)
+
+
+def get_all_of_string_name_server(name_server: str) -> Set[ZoneEntity]:
+    try:
+        nse, ns_dne = helper_name_server.get(name_server)
+    except DoesNotExist:
+        raise
+    return get_all_of_entity_name_server(nse)
 
 
 def get_all_of_entity_name_server(nse: NameServerEntity) -> Set[ZoneEntity]:

@@ -1,8 +1,7 @@
 from typing import List, Set
 from peewee import DoesNotExist
-
-from persistence import helper_url, helper_web_site
-from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity, IpAddressEntity
+from persistence import helper_web_site
+from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity
 
 
 def insert(wsitee: WebSiteEntity, wservere: WebServerEntity or None, https: bool) -> WebSiteLandsAssociation:

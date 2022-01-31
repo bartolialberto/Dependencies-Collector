@@ -14,7 +14,11 @@ def insert(compressed_notation: str) -> IpRangeROVEntity:
 
 def get(ip_range_rov: str) -> IpRangeROVEntity:
     try:
-        return IpRangeROVEntity.get_by_id(ip_range_rov)
+        ip = ipaddress.IPv4Network(ip_range_rov)
+    except ValueError:
+        raise
+    try:
+        return IpRangeROVEntity.get_by_id(ip.compressed)
     except DoesNotExist:
         raise
 

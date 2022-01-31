@@ -126,58 +126,6 @@ class LocalDnsResolverCache:
         else:
             return result
 
-    def lookup_first_name_from_alias(self, domain_name: str) -> RRecord:
-        """
-        Returns first CNAME RR in which the domain_name parameter is an alias.
-
-        :param domain_name:
-        :return:
-        """
-        for rr in self.cache:
-            if rr.type == TypesRR.CNAME and domain_name_utils.is_contained_in_list(rr.values, domain_name):
-                return rr
-        raise NoRecordInCacheError(domain_name, TypesRR.CNAME)
-
-    def lookup_from_list(self, names: List[str], type_rr: TypesRR) -> RRecord:
-        """
-        This method looks up the first resource record found in cache using all the name in the list parameter
-        sequentially. Practically aggregates a simple look_up_first method for the first element in a list.
-
-        :param names: List of domain names.
-        :type names: List[str]
-        :param type_rr:
-        :type type_rr: TypesRR
-        :return: The first resource record found from all the elements in the list sequentially.
-        :rtype: RRecord
-        """
-        for name in names:
-            try:
-                return self.lookup_first(name, type_rr)
-            except NoRecordInCacheError:
-                pass
-        raise NoRecordInCacheError(str(names), type_rr)
-
-    def lookup_all_aliases(self, name: str) -> Set[str]:
-        """
-        This method, given a domain name, searches all the aliases associated with it in the cache: that means resource
-        records with the domain name parameter as name, or resource records with contains the domain name parameter in
-        the values field.
-
-        :param name: The domain name.
-        :type name: str
-        :return: A set of all the aliases (as string) associated to the domain name parameter.
-        :rtype: Set[str]
-        """
-        try:
-            rr_a, aliases = self.resolve_path(name, TypesRR.A, as_string=True)
-        except NoAvailablePathError:
-            result = set()
-            result.add(name)
-            return result
-        result = set(aliases)
-        result.add(name)
-        return result
-
     def resolve_path(self, domain_name: str, rr_type_wanted: TypesRR, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
         """
         This method resolves the path from the domain name parameter to a RR of the TypesRR parameter.
@@ -297,15 +245,9 @@ class LocalDnsResolverCache:
         :rtype: List[str]
         """
         result = []
-        aliases = self.lookup_all_aliases(nameserver)
         for rr in self.cache:
             if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, nameserver):
                 list_utils.append_with_no_duplicates(result, rr.name)
-            else:
-                for alias in aliases:
-                    if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, alias):
-                        list_utils.append_with_no_duplicates(result, rr.name)
-                        break
         return result
 
     def load_csv(self, path: str, take_snapshot=True) -> None:

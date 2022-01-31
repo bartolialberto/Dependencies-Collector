@@ -18,9 +18,13 @@ def insert(address_param: str or ipaddress.IPv4Address) -> IpAddressEntity:
     return iae
 
 
-def get(ip_string_exploded_notation: str) -> IpAddressEntity:
+def get(ip_address: str) -> IpAddressEntity:
     try:
-        iae = IpAddressEntity.get_by_id(ip_string_exploded_notation)
+        ip = ipaddress.IPv4Address(ip_address)
+    except ValueError:
+        raise
+    try:
+        iae = IpAddressEntity.get_by_id(ip.exploded)
     except DoesNotExist:
         raise
     return iae
@@ -50,29 +54,3 @@ def get_all_of(dne: DomainNameEntity) -> Set[IpAddressEntity]:
     for row in query:
         result.add(row.ip_address)
     return result
-
-
-def get_all_from_name_server(name_server: str) -> Set[IpAddressEntity]:
-    try:
-        nse, dne = helper_name_server.get(name_server)
-    except DoesNotExist:
-        raise
-    query = AccessAssociation.select()\
-        .where(AccessAssociation.domain_name == dne)
-    result = set()
-    for row in query:
-        result.add(row.ip_address)
-    return result
-
-
-def get_first_from_name_server(name_server: str) -> IpAddressEntity:
-    try:
-        nse, dne = helper_name_server.get(name_server)
-    except DoesNotExist:
-        raise
-    query = AccessAssociation.select()\
-        .where(AccessAssociation.domain_name == dne)\
-        .limit(1)
-    for row in query:
-        return row.ip_address
-    raise DoesNotExist

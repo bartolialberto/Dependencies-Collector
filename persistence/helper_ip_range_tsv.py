@@ -13,7 +13,10 @@ def insert(compressed_notation: str) -> IpRangeTSVEntity:
 
 
 def get(network: str) -> IpRangeTSVEntity:
-    ip_network = ipaddress.IPv4Network(network)
+    try:
+        ip_network = ipaddress.IPv4Network(network)
+    except ValueError:
+        raise
     try:
         irte = IpRangeTSVEntity.get_by_id(ip_network.compressed)
     except DoesNotExist:

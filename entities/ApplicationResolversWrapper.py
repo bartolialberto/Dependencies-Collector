@@ -1,7 +1,7 @@
 import ipaddress
+from pathlib import Path
 from typing import List, Dict, Tuple, Set
 import selenium
-
 from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainPageScript
 from entities.resolvers.DnsResolver import DnsResolver
@@ -40,6 +40,10 @@ class ApplicationResolversWrapper:
 
     Attributes
     ----------
+    tlds : List[str]
+        The TLDs list.
+    tlds_loaded_from_web_page : bool
+        The flag that is set if the TLDs are scraped from the web page.
     execute_rov_scraping : bool
         A flag that decides if ROVPage scraping will be done.
     landing_resolver : LandingResolver
@@ -94,18 +98,20 @@ class ApplicationResolversWrapper:
             print(f"!!! {str(e)} !!!")
             raise Exception
         if not consider_tld:
-            tlds = None
+            self.tlds = None
             # attempt loading TLDs from file
             try:
-                tlds = TLDPageScraper.import_txt_from_input_folder()
-                print(f"> TLDs import from file in input folder completed. {len(tlds)} TLDs parsed.")
+                self.tlds = TLDPageScraper.import_txt_from_input_folder()
+                print(f"> TLDs import from file in input folder completed. {len(self.tlds)} TLDs parsed.")
+                self.tlds_loaded_from_web_page = False
             except (FileNotFoundError, ValueError, PermissionError, OSError):
                 pass
             # scraping TLDs from web page
-            if tlds is None:
+            if self.tlds is None:
                 self._tld_scraper = TLDPageScraper(self.headless_browser)
                 try:
                     tlds = self._tld_scraper.scrape_tld()
+                    self.tlds_loaded_from_web_page = True
                 except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                     print(f"!!! {str(e)} !!!")
                     raise Exception
@@ -113,8 +119,9 @@ class ApplicationResolversWrapper:
         else:
             print(f"> No TLDs scraping executed.")
             self._tld_scraper = None
-            tlds = None
-        self.dns_resolver = DnsResolver(tlds)
+            self.tlds = None
+            self.tlds_loaded_from_web_page = False
+        self.dns_resolver = DnsResolver(self.tlds)
         self.landing_resolver = LandingResolver(self.dns_resolver)
         try:
             self.dns_resolver.cache.load_csv_from_output_folder()
@@ -566,3 +573,25 @@ class ApplicationResolversWrapper:
                     finally:
                         result[script].add(script_site)
         return result, script_sites
+
+    def export_tlds_to_input_folder(self, filename="tlds.txt", project_root_directory=Path.cwd()):
+        """
+        Exports all the TLDs scraped from the web page in the 'input' folder of the project root folder.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
+
+        :param filename: Name of file with extension.
+        :type filename: str
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
+        :return:
+        """
+        file = file_utils.set_file_in_folder("input", filename, project_root_directory=project_root_directory)
+        with file.open('w', encoding='utf-8') as f:  # 'w' or 'x'
+            for tld in self.tlds:
+                f.write(tld + '\n')
+            f.close()

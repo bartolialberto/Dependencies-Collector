@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Set
 from peewee import DoesNotExist
 from persistence import helper_ip_address
@@ -12,7 +13,11 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity or None, irte: IpRangeTSVE
 
 def get_from_string_ip_address(ip_address: str) -> IpAddressDependsAssociation:
     try:
-        iae = helper_ip_address.get(ip_address)
+        ip = ipaddress.IPv4Address(ip_address)
+    except ValueError:
+        raise
+    try:
+        iae = helper_ip_address.get(ip.exploded)
     except DoesNotExist:
         raise
     return get_from_entity_ip_address(iae)
@@ -25,18 +30,9 @@ def get_from_entity_ip_address(iae: IpAddressEntity) -> IpAddressDependsAssociat
         raise
 
 
-def delete_by_id(entity_id: int):
-    try:
-        iada = IpAddressDependsAssociation.get_by_id(entity_id)
-    except DoesNotExist:
-        return
-    iada.delete_instance()
-
-
 def get_unresolved() -> Set[IpAddressDependsAssociation]:
     query = IpAddressDependsAssociation.select()\
         .where((IpAddressDependsAssociation.ip_range_tsv.is_null(True)) | (IpAddressDependsAssociation.ip_range_rov.is_null(True)))
-
     result = set()
     for row in query:
         result.add(row)
