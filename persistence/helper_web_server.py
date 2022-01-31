@@ -1,8 +1,8 @@
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from peewee import DoesNotExist
-from persistence import helper_url, helper_web_site, helper_domain_name
+from persistence import helper_web_site, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
-from utils import url_utils, domain_name_utils
+from utils import domain_name_utils
 
 """
 def insert(lpe: LandingPageEntity) -> WebServerEntity:
@@ -58,3 +58,11 @@ def get_from(website_param: str or WebSiteEntity, https: bool, first_only: bool)
         for row in query:
             result.append(row.web_server)
         return result
+
+
+def get_everyone() -> Set[WebServerEntity]:
+    query = WebServerEntity.select()
+    result = set()
+    for row in query:
+        result.add(row)
+    return result

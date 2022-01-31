@@ -6,7 +6,7 @@ from entities.Zone import Zone
 from entities.enums.TypesRR import TypesRR
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_name_server, helper_ip_address, helper_zone_composed, helper_access, helper_alias, \
-    helper_domain_name, helper_zone_name_alias
+    helper_domain_name, helper_alias_to_zone
 from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation, \
     DirectZoneAssociation, NameServerEntity, ZoneComposedAssociation, DomainNameEntity
 from utils import domain_name_utils
@@ -29,14 +29,14 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
         pass
     elif len(zone.zone_aliases) == 1:
         last_alias_dne = helper_domain_name.insert(zone.zone_aliases[-1].name)
-        helper_zone_name_alias.insert(ze, last_alias_dne)
+        helper_alias_to_zone.insert(ze, last_alias_dne)
     else:
         for rr in zone.zone_aliases[1:-1]:
             from_dne = helper_domain_name.insert(rr.name)
             to_dne = helper_domain_name.insert(rr.get_first_value())
             helper_alias.insert(from_dne, to_dne)
         last_alias_dne = helper_domain_name.insert(zone.zone_aliases[-1].name)
-        helper_zone_name_alias.insert(ze, last_alias_dne)
+        helper_alias_to_zone.insert(ze, last_alias_dne)
 
     nsdne_dict = dict()
     for nameserver in zone.nameservers:
@@ -102,7 +102,7 @@ def __inner_resolve_zone_from_path(dne: DomainNameEntity, result: List[DomainNam
         pass
     result.append(dne)
     try:
-        zna = helper_zone_name_alias.get_from_entity_domain_name(dne)
+        zna = helper_alias_to_zone.get_from_entity_domain_name(dne)
         return zna.zone, result
     except DoesNotExist:
         try:

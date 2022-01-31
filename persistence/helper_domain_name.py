@@ -91,3 +91,11 @@ def get_all_from_entity_autonomous_system(ase: AutonomousSystemEntity) -> Set[Do
     for row in query:
         result.add(row.domain_name)
     return result
+
+
+def get_everyone() -> Set[DomainNameEntity]:
+    query = DomainNameEntity.select()
+    result = set()
+    for row in query:
+        result.add(row)
+    return result

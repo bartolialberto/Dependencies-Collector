@@ -47,3 +47,10 @@ def get_all_from_entity_web_server(wse: WebServerEntity) -> Set[WebSiteEntity]:
         result.add(row.web_site)
     return result
 
+
+def get_everyone() -> Set[WebSiteEntity]:
+    query = WebSiteEntity.select()
+    result = set()
+    for row in query:
+        result.add(row)
+    return result

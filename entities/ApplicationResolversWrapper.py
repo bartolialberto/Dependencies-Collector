@@ -79,21 +79,29 @@ class ApplicationResolversWrapper:
     total_rov_page_scraper_results : ASResolverResultForROVPageScraping
         Results for and from ROVPage scraping.
     """
-    def __init__(self, consider_tld: bool, execute_rov_scraping: bool):
+    def __init__(self, consider_tld: bool, execute_rov_scraping: bool, project_root_directory=Path.cwd()):
         """
         Initialize all components from scratch.
         Here is checked the presence of the geckodriver executable and the presence of the .tsv database.
         If the latter is absent then automatically it will be downloaded and put in the input folder.
         If the consider_flag flag is true then a TLDPageScraper is instantiated and the TLDs list is computed.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
 
         :param consider_tld: A flag that will consider or remove the Top-Level Domains when computing zone dependencies.
         :type consider_tld: bool
         :param execute_rov_scraping: A flag that decides if ROVPage scraping will be done.
         :type execute_rov_scraping: bool
+        :param project_root_directory: The Path object pointing at the project root directory.
+        :type project_root_directory: Path
         """
         self.execute_rov_scraping = execute_rov_scraping
         try:
-            self.headless_browser = FirefoxHeadlessWebDriver()
+            self.headless_browser = FirefoxHeadlessWebDriver(project_root_directory=project_root_directory)
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             raise Exception
@@ -101,7 +109,7 @@ class ApplicationResolversWrapper:
             self.tlds = None
             # attempt loading TLDs from file
             try:
-                self.tlds = TLDPageScraper.import_txt_from_input_folder()
+                self.tlds = TLDPageScraper.import_txt_from_input_folder('tlds.txt', project_root_directory)
                 print(f"> TLDs import from file in input folder completed. {len(self.tlds)} TLDs parsed.")
                 self.tlds_loaded_from_web_page = False
             except (FileNotFoundError, ValueError, PermissionError, OSError):
@@ -132,10 +140,10 @@ class ApplicationResolversWrapper:
             print("> .tsv database file is up-to-date.")
         else:
             print("> Latest .tsv database (~25 MB) is downloading and extracting... ", end='')
-            requests_utils.download_latest_tsv_database()
+            requests_utils.download_latest_tsv_database(project_root_directory=project_root_directory)
             print("DONE.")
         try:
-            self.ip_as_database = IpAsDatabase()
+            self.ip_as_database = IpAsDatabase(project_root_directory=project_root_directory)
         except (FileWithExtensionNotFoundError, OSError) as e:
             print(f"!!! {str(e)} !!!")
             raise Exception

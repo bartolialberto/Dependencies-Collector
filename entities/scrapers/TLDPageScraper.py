@@ -101,6 +101,12 @@ class TLDPageScraper:
     def import_txt_from_input_folder(filename='tlds.txt', project_root_folder=Path.cwd()) -> List[str]:
         """
         This static method parses a .txt file from the 'input' folder and consider each line of the file as a TLD.
+        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+        to default as if the entry point is main.py file (which is the only entry point considered).
 
         :param filename: The filename (with extension) to load.
         :type filename: str

@@ -40,3 +40,11 @@ def get_every_of(mail_server_parameter: MailServerEntity or str) -> Set[MailDoma
     for row in query:
         result.add(row.mail_domain)
     return result
+
+
+def get_everyone() -> Set[MailDomainEntity]:
+    query = MailDomainEntity.select()
+    result = set()
+    for row in query:
+        result.add(row)
+    return result

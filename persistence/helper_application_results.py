@@ -3,7 +3,6 @@ from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
-from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult
 from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import MultipleDnsMailServerDependenciesResult

@@ -59,7 +59,7 @@ def handle_tables_creation():       # execute at the end of the file
             NetworkNumbersAssociation,
             ScriptSiteDomainNameAssociation,
             WebSiteDomainNameAssociation,
-            ZoneNameAliasAssociation],    # 33 entities and associations
+            AliasToZoneAssociation],    # 33 entities and associations
             safe=True)
 
 
@@ -441,7 +441,7 @@ class ScriptSiteDomainNameAssociation(BaseModel):
         primary_key = CompositeKey('script_site', 'domain_name')
 
 
-class ZoneNameAliasAssociation(BaseModel):
+class AliasToZoneAssociation(BaseModel):
     domain_name = ForeignKeyField(DomainNameEntity)
     zone = ForeignKeyField(ZoneEntity)
 
@@ -449,7 +449,7 @@ class ZoneNameAliasAssociation(BaseModel):
         return f"<zone={self.zone}, domain_name={self.domain_name}>"
 
     class Meta:
-        db_table = 'zone_name_alias'
+        db_table = 'alias_to_zone'
         primary_key = CompositeKey('zone', 'domain_name')
 
 

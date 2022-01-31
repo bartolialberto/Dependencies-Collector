@@ -62,6 +62,14 @@ def get_all_from_ip_address(address: str) -> List[NameServerEntity]:
         return result
 
 
+def get_everyone() -> Set[NameServerEntity]:
+    query = NameServerEntity.select()
+    result = set()
+    for row in query:
+        result.add(row)
+    return result
+
+
 def get_unresolved() -> Set[NameServerEntity]:
     query = NameServerEntity.select()\
         .join_from(NameServerEntity, DomainNameEntity)\
