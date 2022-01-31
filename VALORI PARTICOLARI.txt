@@ -1,0 +1,14 @@
+RR CHE PREVEDE 1 CNAME NELL'access path: www.units.it
+RR CHE PREVEDE 1 CNAME NELL'access path: www.youtube.com
+
+RR CHE PREVEDE 2 CNAME NELL'access path: idp-cineca.units.it.
+RR CHE PREVEDE 2 CNAME NELL'access path: login.microsoftonline.com.
+
+ZONA CHE PREVEDE UN CNAME NEL name resolution path: cdn-auth.digidentity.eu.
+
+ZONA CHE PREVEDE 2 NAME SERVER CON INDIRIZZO IP UGUALE: twitter.com
+
+NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: youtube-ui.l.google.com.
+NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: www.tm.ak.prd.aadg.akadns.net.
+
+SERVER CHE LAVORA SOLO SU HTTP: www.darklyrics.com

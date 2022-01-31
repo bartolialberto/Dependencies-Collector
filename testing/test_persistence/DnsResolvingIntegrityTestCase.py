@@ -51,6 +51,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        cls.domain_names = ['cdn-auth.digidentity.eu.']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = True
@@ -147,23 +148,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
 
         """
         print("\n------- [3] START ALIASES INTEGRITY CHECK -------")
-        """
-        for domain_name in self.dns_results.keys():
-            for zone in self.dns_results[domain_name]:
-                for alias in zone.aliases:
-                    try:
-                        dne_set = helper_alias.get_all_aliases_from_name(alias.name)
-                    except DoesNotExist as e:
-                        print(f"!!! {str(e)} !!!")
-                        continue
-                    dne_name_set = set(map(lambda rr: rr.name, dne_set))
-
-                    if alias.get_first_value() in dne_name_set:
-                        pass
-                    else:
-                        raise ValueError
-        """
-
         count_assertions = 0
         for domain_name in self.dns_results.keys():
             for zone in self.dns_results[domain_name]:
@@ -226,7 +210,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print(f"Reached this print means everything went well ({count_assertions} assertions)")
         print("------- [5] END DNS RESULTS INTEGRITY CHECK -------")
 
-    # FIXME
     def test_6_zone_dependencies_per_nameserver_integrity_check(self):
         """
         Checks data integrity between zone dependencies of nameservers retrieved from elaboration, and DB relations
@@ -265,7 +248,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         print("\n------- [7] START ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
         for i, zone in enumerate(self.zone_dependencies_per_zone.keys()):
             try:
-                ze_set_db = helper_zone_links.get_all_from_zone_name(zone)
+                ze_set_db = helper_zone.get_zone_dependencies_of_zone_name(zone)
             except DoesNotExist as e:
                 print(f"!!! {str(e)} !!!")
                 continue

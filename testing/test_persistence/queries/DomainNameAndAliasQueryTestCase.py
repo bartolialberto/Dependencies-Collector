@@ -2,7 +2,7 @@ import unittest
 from peewee import DoesNotExist
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_domain_name, helper_alias, helper_ip_network
+from persistence import helper_domain_name, helper_alias
 
 
 class DomainNameAndAliasQueryTestCase(unittest.TestCase):

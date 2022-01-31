@@ -98,10 +98,12 @@ class TLDPageScraper:
             raise
 
     @staticmethod
-    def import_txt_from_input_folder(project_root_folder=Path.cwd()) -> List[str]:
+    def import_txt_from_input_folder(filename='tlds.txt', project_root_folder=Path.cwd()) -> List[str]:
         """
         This static method parses a .txt file from the 'input' folder and consider each line of the file as a TLD.
 
+        :param filename: The filename (with extension) to load.
+        :type filename: str
         :param project_root_folder: The Path object pointing at the project root directory.
         :type project_root_folder: Path
         :raise FileNotFoundError: If the file is not found.
@@ -113,7 +115,7 @@ class TLDPageScraper:
         :rtype: List[str]
         """
         try:
-            result = file_utils.search_for_filename_in_subdirectory('input', 'tlds.txt', project_root_folder)
+            result = file_utils.search_for_filename_in_subdirectory('input', filename, project_root_folder)
         except FileNotFoundError:
             raise
         file = result[0]

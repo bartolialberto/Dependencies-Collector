@@ -59,6 +59,6 @@ def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld
                                          project_root_directory=project_root_directory)
     with file.open('w', encoding='utf-8') as f:  # 'w' or 'x'
         f.write('complete_unresolved_database:'+str(complete_unresolved_database)+'\n')
-        f.write('consider_tld:'+str(consider_tld))
+        f.write('consider_tld:'+str(consider_tld)+'\n')
         f.write('execute_rov_scraping:'+str(execute_rov_scraping))
         f.close()

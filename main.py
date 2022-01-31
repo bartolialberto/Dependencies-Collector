@@ -117,9 +117,9 @@ def get_input_application_flags(default_complete_unresolved_database=True, defau
     for arg in sys.argv[1:]:
         if arg == '-continue':
             default_complete_unresolved_database = True
-        if arg == '-tlds':
+        elif arg == '-tlds':
             default_consider_tld = True
-        if arg == '-rov':
+        elif arg == '-rov':
             default_consider_tld = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")

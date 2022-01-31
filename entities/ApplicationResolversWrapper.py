@@ -94,13 +94,22 @@ class ApplicationResolversWrapper:
             print(f"!!! {str(e)} !!!")
             raise Exception
         if not consider_tld:
-            self._tld_scraper = TLDPageScraper(self.headless_browser)
+            tlds = None
+            # attempt loading TLDs from file
             try:
-                tlds = self._tld_scraper.scrape_tld()
-            except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
-                print(f"!!! {str(e)} !!!")
-                raise Exception
-            print(f"> TLDs scraping completed. {len(tlds)} TLDs parsed.")
+                tlds = TLDPageScraper.import_txt_from_input_folder()
+                print(f"> TLDs import from file in input folder completed. {len(tlds)} TLDs parsed.")
+            except (FileNotFoundError, ValueError, PermissionError, OSError):
+                pass
+            # scraping TLDs from web page
+            if tlds is None:
+                self._tld_scraper = TLDPageScraper(self.headless_browser)
+                try:
+                    tlds = self._tld_scraper.scrape_tld()
+                except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
+                    print(f"!!! {str(e)} !!!")
+                    raise Exception
+                print(f"> TLDs scraping completed. {len(tlds)} TLDs parsed.")
         else:
             print(f"> No TLDs scraping executed.")
             self._tld_scraper = None
@@ -195,9 +204,9 @@ class ApplicationResolversWrapper:
         reformat = ASResolverResultForROVPageScraping(self.total_ip_as_db_results)
 
         if self.execute_rov_scraping:
-            self.total_rov_page_scraper_results = reformat
-        else:
             self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat)
+        else:
+            self.total_rov_page_scraper_results = reformat
 
     def do_web_site_landing_resolving(self, web_sites: Set[str]) -> Dict[str, LandingSiteResult]:
         """

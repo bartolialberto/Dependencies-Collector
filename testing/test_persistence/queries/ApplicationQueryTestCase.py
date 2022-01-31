@@ -53,7 +53,7 @@ class ApplicationQueryTestCase(unittest.TestCase):
         except DoesNotExist as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, ase in enumerate(ases):
-            print(f"autonomous system[{i+1}]: {str(ase)}")
+            print(f"autonomous system[{i+1}]: AS{ase.number}\t{ase.description}")
         print(f"------- [4] END GETTING AUTONOMOUS SYSTEM FROM ZONE NAME QUERY -------")
 
     def test_5_query_all_zone_names_from_autonomous_system_number(self):
@@ -67,7 +67,7 @@ class ApplicationQueryTestCase(unittest.TestCase):
         except DoesNotExist as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, ze in enumerate(zes):
-            print(f"zone[{i+1}]: {str(ze)}")
+            print(f"zone[{i+1}]: {ze.name}")
         print(f"------- [5] END GETTING ZONE NAMES FROM AUTONOMOUS SYSTEM QUERY -------")
 
 

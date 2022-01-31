@@ -399,12 +399,15 @@ class DnsResolver:
                 zone_names = self.parse_zone_dependencies_of_name_server(name_server, zone_list)
                 for zone_name in zone_names:
                     list_utils.append_with_no_duplicates(zone_name_dependencies_per_name_server[name_server], zone_name)
+        # eliminate the self zone from its dependencies
+        for zone in zone_list:
+            try:
+                zone_name_dependencies_per_zone_name[zone.name].remove(zone.name)
+            except ValueError:
+                pass
         return zone_name_dependencies_per_name_server, zone_name_dependencies_per_zone_name
 
     def parse_zone_dependencies_of_name_server(self, name_server: str, zone_list: List[Zone]) -> List[str]:
-        if name_server == 'j.root-servers.net.':
-            print('')
-            pass
         zone_dependencies = list()
         # ancestor zones
         zones = self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list)
@@ -417,23 +420,6 @@ class DnsResolver:
             for z in zs:
                 list_utils.append_with_no_duplicates(zone_dependencies, z)
                 list_utils.append_with_no_duplicates(zones, z)
-
-            """
-            for name_server in zone.nameservers:
-                temp_names = list()
-                try:
-                    rr_answer, rr_cnames = self.cache.resolve_path(name_server, TypesRR.A)
-                    for rr in rr_cnames:
-                        temp_names.append(rr.name)
-                    temp_names.append(rr_answer.name)
-                    for alias in temp_names:
-                        for z in self.__parse_zones_of_domain_name_from_zone_list(alias, zone_list):
-                            list_utils.append_with_no_duplicates(zone_dependencies, z)
-                except NoAvailablePathError:
-                    pass
-                for z in self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list):
-                    list_utils.append_with_no_duplicates(zone_dependencies, z)
-            """
         return list(map(lambda zo: zo.name, zone_dependencies))
 
     def parse_zone_dependencies_of_zone(self, current_zone: Zone, zone_list: List[Zone]) -> List[str]:
@@ -443,11 +429,11 @@ class DnsResolver:
         for zone in zones:
             zone_dependencies.append(zone)
         # zones from name servers
-        for zone in zones:
-            for name_server in zone.nameservers:
-                for z in self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list):
-                    list_utils.append_with_no_duplicates(zone_dependencies, z)
-        return list(map(lambda zo: zo.name, zones))
+        for name_server in current_zone.nameservers:
+            name_server_zones = self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list)
+            for z in name_server_zones:
+                list_utils.append_with_no_duplicates(zone_dependencies, z)
+        return list(map(lambda zo: zo.name, zone_dependencies))
 
     def __parse_zones_of_domain_name_from_zone_list(self, name: str, zone_list: List[Zone]) -> List[Zone]:
         subdomains = domain_name_utils.get_subdomains_name_list(name, root_included=True, parameter_included=False)

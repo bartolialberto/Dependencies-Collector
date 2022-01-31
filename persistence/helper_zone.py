@@ -185,7 +185,7 @@ def get_zone_dependencies_of_entity_domain_name(dne: DomainNameEntity) -> Set[Zo
     return result
 
 
-def get_zone_dependencies_of_zone(zone_name: str) -> Set[ZoneEntity]:
+def get_zone_dependencies_of_zone_name(zone_name: str) -> Set[ZoneEntity]:
     zn = domain_name_utils.insert_trailing_point(zone_name)
     try:
         ze = get(zn)
@@ -193,9 +193,9 @@ def get_zone_dependencies_of_zone(zone_name: str) -> Set[ZoneEntity]:
         raise
     result = set()
     query = ZoneLinksAssociation.select()\
-        .join(ZoneEntity, on=(ZoneLinksAssociation.dependency == ze))
+        .join(ZoneEntity, on=(ZoneLinksAssociation.zone == ze))
     for row in query:
-        result.add(row.zone)
+        result.add(row.dependency)
     return result
 
 

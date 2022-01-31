@@ -36,6 +36,16 @@ class DomainNameTestCase(unittest.TestCase):
         self.assertTrue(is_right)
         print(f"------- [2] END DEDUCTING URL TEST -------")
 
+    def test_3_insert_trailing_point(self):
+        print(f"\n------- [3] START INSERTING TRAILING POINT TEST -------")
+        # PARAMETERS
+        domain_name = '.'
+        # ELABORATION
+        result = domain_name_utils.insert_trailing_point(domain_name)
+        print(f"Domain name: {domain_name}")
+        print(f"Result: {result}")
+        print(f"------- [3] END INSERTING TRAILING POINT TEST -------")
+
 
 if __name__ == '__main__':
     unittest.main()

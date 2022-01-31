@@ -23,9 +23,12 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
         print(f"\n------- [2] START GETTING DEPENDENCIES OF ZONE QUERY -------")
         # PARAMETER
         zone_name = 'nstld.com'
+        zone_name = 'gtld-servers.net.'
+        zone_name = 'cineca.it.'
+        zone_name = 'net'
         # QUERY
         try:
-            zes = helper_zone.get_zone_dependencies_of_zone(zone_name)
+            zes = helper_zone.get_zone_dependencies_of_zone_name(zone_name)
         except DoesNotExist as e:
             self.fail(str(e))
         print(f"Parameter: {zone_name}")
@@ -46,7 +49,7 @@ class ZoneDependenciesQueryTestCase(unittest.TestCase):
             self.fail(str(e))
         print(f"Resolved {len(zes)} zones:")
         for i, ze in enumerate(zes):
-            print(f"zone[{i+1}/{len(zes)}] = {str(ze)}")
+            print(f"zone[{i+1}/{len(zes)}] = {ze.name}")
         print(f"------- [3] END GETTING ZONES FROM NAME SERVER QUERY -------")
 
 

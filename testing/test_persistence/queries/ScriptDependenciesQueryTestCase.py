@@ -4,18 +4,14 @@ from persistence import helper_script, helper_script_site, helper_script_server
 
 
 class ScriptDependenciesQueryTestCase(unittest.TestCase):
-    web_site = None
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        # PARAMETER
-        cls.web_site = 'google.it/doodles'
-        print(f"PARAMETER = {cls.web_site}")
-
     def test_1_get_scripts_from_web_site(self):
         print(f"\n------- [1] START GETTING SCRIPTS FROM WEB SITE QUERY -------")
+        # PARAMETER
+        web_site = 'google.it/doodles'
+        # QUERY
+        print(f"Web site parameter: {web_site}")
         try:
-            ses = helper_script.get_from(self.web_site)
+            ses = helper_script.get_from(web_site)
         except DoesNotExist as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, se in enumerate(ses):
@@ -24,8 +20,12 @@ class ScriptDependenciesQueryTestCase(unittest.TestCase):
 
     def test_2_get_script_sites_from_web_site(self):
         print(f"\n------- [2] START GETTING SCRIPT SITES FROM WEB SITE QUERY -------")
+        # PARAMETER
+        web_site = 'google.it/doodles'
+        # QUERY
+        print(f"Web site parameter: {web_site}")
         try:
-            sses = helper_script_site.get_from_string_web_site(self.web_site)
+            sses = helper_script_site.get_from_string_web_site(web_site)
         except DoesNotExist as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, sse in enumerate(sses):
@@ -34,8 +34,12 @@ class ScriptDependenciesQueryTestCase(unittest.TestCase):
 
     def test_3_get_script_sites_from_web_site(self):
         print(f"\n------- [3] START GETTING SCRIPT SERVERS FROM WEB SITE QUERY -------")
+        # PARAMETER
+        web_site = 'google.it/doodles'
+        # QUERY
+        print(f"Web site parameter: {web_site}")
         try:
-            sses = helper_script_server.get_from_string_web_site(self.web_site)
+            sses = helper_script_server.get_from_string_web_site(web_site)
         except DoesNotExist as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, sse in enumerate(sses):
