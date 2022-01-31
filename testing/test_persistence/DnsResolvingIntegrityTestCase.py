@@ -51,7 +51,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['cdn-auth.digidentity.eu.']
         cls.import_cache_from_output_folder = False
         cls.clear_cache_at_start = False
         cls.consider_tld = True

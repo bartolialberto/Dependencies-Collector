@@ -40,6 +40,8 @@ class ApplicationResolversWrapper:
 
     Attributes
     ----------
+    execute_rov_scraping : bool
+        A flag that decides if ROVPage scraping will be done.
     landing_resolver : LandingResolver
         Instance of a LandingResolver object.
     headless_browser : FirefoxHeadlessWebDriver
@@ -73,7 +75,7 @@ class ApplicationResolversWrapper:
     total_rov_page_scraper_results : ASResolverResultForROVPageScraping
         Results for and from ROVPage scraping.
     """
-    def __init__(self, consider_tld=False):
+    def __init__(self, consider_tld: bool, execute_rov_scraping: bool):
         """
         Initialize all components from scratch.
         Here is checked the presence of the geckodriver executable and the presence of the .tsv database.
@@ -82,7 +84,10 @@ class ApplicationResolversWrapper:
 
         :param consider_tld: A flag that will consider or remove the Top-Level Domains when computing zone dependencies.
         :type consider_tld: bool
+        :param execute_rov_scraping: A flag that decides if ROVPage scraping will be done.
+        :type execute_rov_scraping: bool
         """
+        self.execute_rov_scraping = execute_rov_scraping
         try:
             self.headless_browser = FirefoxHeadlessWebDriver()
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
@@ -189,7 +194,10 @@ class ApplicationResolversWrapper:
 
         reformat = ASResolverResultForROVPageScraping(self.total_ip_as_db_results)
 
-        self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat)
+        if self.execute_rov_scraping:
+            self.total_rov_page_scraper_results = reformat
+        else:
+            self.total_rov_page_scraper_results = self.do_rov_page_scraping(reformat)
 
     def do_web_site_landing_resolving(self, web_sites: Set[str]) -> Dict[str, LandingSiteResult]:
         """

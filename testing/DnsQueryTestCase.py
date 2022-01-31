@@ -40,18 +40,17 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'c.ns.c10r.facebook.com.'
-        cls.domain_name = 'cdn-auth.digidentity.eu.'
-        cls.domain_name = 'd1hljz92zxtrmu.cloudfront.net.'
-        cls.type = TypesRR.CNAME
+        cls.domain_name = 'j.root-servers.net'
+        cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION
         PRD = DnsQueryTestCase.get_project_root_folder()
         cls.dns_resolver = DnsResolver(None)
         if cls.import_cache_from_output_folder:
             try:
-                cls.dns_resolver.cache.load_csv_from_output_folder(PRD)
+                cls.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=PRD)
             except FilenameNotFoundError:
-                print(f"NO CACHE FILE FOUND")
+                print(f"!!! NO CACHE FILE FOUND !!!")
         print(f"PARAMETER: {cls.domain_name}")
 
     def test_1_do_raw_query_and_prints_raw_infos(self):

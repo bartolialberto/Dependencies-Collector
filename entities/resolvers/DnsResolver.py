@@ -210,7 +210,7 @@ class DnsResolver:
             raise InvalidDomainNameError(domain)  # giusto???
         zone_list = list()  # si va a popolare con ogni iterazione
         print(f"Cache has {start_cache_length} entries.")
-        print(f"Looking at zone dependencies for '{domain}'..")
+        print(f"Looking at zone dependencies for: {domain} ..")
         for current_domain in elaboration_domains:
             # is domain a nameserver with aliases?
             try:
@@ -402,17 +402,38 @@ class DnsResolver:
         return zone_name_dependencies_per_name_server, zone_name_dependencies_per_zone_name
 
     def parse_zone_dependencies_of_name_server(self, name_server: str, zone_list: List[Zone]) -> List[str]:
+        if name_server == 'j.root-servers.net.':
+            print('')
+            pass
         zone_dependencies = list()
         # ancestor zones
         zones = self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list)
         for zone in zones:
             zone_dependencies.append(zone)
         # zones from name servers
-        # TODO: we have to take even then zone from name servers???
         for zone in zones:
+            copy_name_servers = copy.deepcopy(zone.nameservers)
+            zs = self.__parse_recursively_zones_of_name_server_from_zone_list(copy_name_servers, zone_list, None)
+            for z in zs:
+                list_utils.append_with_no_duplicates(zone_dependencies, z)
+                list_utils.append_with_no_duplicates(zones, z)
+
+            """
             for name_server in zone.nameservers:
+                temp_names = list()
+                try:
+                    rr_answer, rr_cnames = self.cache.resolve_path(name_server, TypesRR.A)
+                    for rr in rr_cnames:
+                        temp_names.append(rr.name)
+                    temp_names.append(rr_answer.name)
+                    for alias in temp_names:
+                        for z in self.__parse_zones_of_domain_name_from_zone_list(alias, zone_list):
+                            list_utils.append_with_no_duplicates(zone_dependencies, z)
+                except NoAvailablePathError:
+                    pass
                 for z in self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_list):
                     list_utils.append_with_no_duplicates(zone_dependencies, z)
+            """
         return list(map(lambda zo: zo.name, zone_dependencies))
 
     def parse_zone_dependencies_of_zone(self, current_zone: Zone, zone_list: List[Zone]) -> List[str]:
@@ -436,6 +457,29 @@ class DnsResolver:
                 if domain_name_utils.equals(subdomain, zone.name):
                     result.append(zone)
         return result
+
+    def __parse_recursively_zones_of_name_server_from_zone_list(self, names_to_be_checked: List[str], zone_list: List[Zone], result: List[Zone] or None) -> List[Zone]:
+        if result is None:
+            result = list()
+        else:
+            pass
+        if len(names_to_be_checked) == 0:
+            return result
+        start_names_to_be_checked = copy.deepcopy(names_to_be_checked)
+        for name in names_to_be_checked:
+            try:
+                rr_answer, rr_cnames = self.cache.resolve_path(name, TypesRR.A, as_string=False)
+                for rr in rr_cnames:
+                        list_utils.append_with_no_duplicates(names_to_be_checked, rr.name)
+                list_utils.append_with_no_duplicates(names_to_be_checked, rr_answer.name)
+            except NoAvailablePathError:
+                pass
+            zones = self.__parse_zones_of_domain_name_from_zone_list(name, zone_list)
+            for zone in zones:
+                list_utils.append_with_no_duplicates(result, zone)
+        for name in start_names_to_be_checked:
+            names_to_be_checked.remove(name)
+        return self.__parse_recursively_zones_of_name_server_from_zone_list(names_to_be_checked, zone_list, result)
 
     def try_to_resolve_partially_cached_access_path(self, name_server: str) -> Tuple[List[RRecord], RRecord, List[str]]:
         # case in which a name server was resolved previously, and now another name server is a domain name that has

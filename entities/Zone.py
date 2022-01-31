@@ -59,7 +59,8 @@ class Zone:
         self.name = zone_name
         self.addresses = addresses
         if len(self.nameservers) != len(self.addresses):
-            raise ValueError
+            # can happened where there's no internet...
+            pass
 
     def resolve_name_server_access_path(self, nameserver: str) -> RRecord:
         """

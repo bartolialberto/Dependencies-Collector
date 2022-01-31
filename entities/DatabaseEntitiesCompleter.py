@@ -211,7 +211,7 @@ class DatabaseEntitiesCompleter:
                 except DoesNotExist:
                     ase = None
 
-            if irre is None and ase is not None:
+            if self.resolvers_wrapper.execute_rov_scraping and irre is None and ase is not None:
                 try:
                     self.resolvers_wrapper.rov_page_scraper.load_as_page(ase.number)
                     row = self.resolvers_wrapper.rov_page_scraper.get_network_if_present(ip)

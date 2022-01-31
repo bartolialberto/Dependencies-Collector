@@ -93,7 +93,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False) -> Tuple[bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -107,6 +107,8 @@ def get_input_application_flags(default_complete_unresolved_database=True, defau
     :type default_complete_unresolved_database: bool
     :param default_consider_tld: The default value of the flag.
     :type default_consider_tld: bool
+    :param default_execute_rov_scraping: The default value of the flag.
+    :type default_execute_rov_scraping: bool
     :return: A tuple of booleans for each flag.
     :rtype: Tuple[bool]
     """
@@ -117,9 +119,12 @@ def get_input_application_flags(default_complete_unresolved_database=True, defau
             default_complete_unresolved_database = True
         if arg == '-tlds':
             default_consider_tld = True
+        if arg == '-rov':
+            default_consider_tld = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")
-    return default_complete_unresolved_database, default_consider_tld
+    print(f"> EXECUTE ROV SCRAPING flag: {str(default_execute_rov_scraping)}")
+    return default_complete_unresolved_database, default_consider_tld, default_execute_rov_scraping
 
 
 if __name__ == "__main__":
@@ -131,10 +136,10 @@ if __name__ == "__main__":
         # application input
         input_websites = get_input_websites()
         input_mail_domains = get_input_mail_domains()
-        complete_unresolved_database, consider_tld = get_input_application_flags()
+        complete_unresolved_database, consider_tld, execute_rov_scraping = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
-        resolvers = ApplicationResolversWrapper(consider_tld=consider_tld)
+        resolvers = ApplicationResolversWrapper(consider_tld, execute_rov_scraping)
         headless_browser_is_instantiated = True
         # complete unresolved database is flag is set to
         if complete_unresolved_database:
@@ -145,7 +150,7 @@ if __name__ == "__main__":
         # auxiliary elaborations
         print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
-        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld)    # for future error reproducibility
+        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_rov_scraping)    # for future error reproducibility
         # actual elaboration of all resolvers
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
