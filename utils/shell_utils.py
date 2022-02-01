@@ -116,10 +116,7 @@ def handle_getting_domain_names_from_txt_file() -> List[str]:
         lines = f.readlines()
         for line in lines:
             candidate = line.rstrip()       # strip from whitespaces and EOL (End Of Line)
-            if domain_name_utils.is_grammatically_correct(candidate):
-                domain_list.append(candidate)
-            else:
-                pass
+            domain_list.append(candidate)
         f.close()
         if len(domain_list) == 0:
             raise NoValidDomainNamesFoundError(abs_filepath)

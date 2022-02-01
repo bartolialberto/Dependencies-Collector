@@ -37,6 +37,7 @@ def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bo
     url = ''
     hsts = False
 
+    """
     try:
         domain_name_utils.grammatically_correct(string)
         url = domain_name_utils.deduct_http_url(string, as_https=as_https)
@@ -46,6 +47,8 @@ def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bo
             url = url_utils.deduct_http_url(string, as_https=as_https)
         except InvalidUrlError:
             raise
+    """
+    url = domain_name_utils.deduct_http_url(string, as_https=as_https)
 
     try:
         response = requests.get(url, headers={'Connection': 'close'}, stream=True)

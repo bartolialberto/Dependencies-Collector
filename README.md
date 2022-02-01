@@ -52,11 +52,11 @@ is not present then a default content hardwired in the code will be used); appli
 contain protocol.
 4) a text file `mail_domains.txt` with one mail domain in each line (if this file is not present then a default content
 hardwired in the code will be used)
-5) a text file `tlds.txt` with all the TLDs to consider (one per line with trailing point, example: `com.`) when the
-application is set to not consider them, so the application needs a list of all the zone names to remove. If the file is
-missing and the flag to not consider TLDs is set, the application will scrape the most recent list from a dedicated web
-page and at the end of the application execution will export all TLDs in the `input` folder following the format
-mentioned above.
+5) a text file `tlds.txt` containing a list of TLDs (one per line with trailing point, example: `com.`): if the
+application flag to consider TLDs is set to `False` then we have to provide a list of such TLDs that will be removed
+when executing. If the file is missing but the flag to consider TLDs is `False`, the application will scrape the
+most recent list from a dedicated web page and at the end of the application execution will export all TLDs in the
+`input` folder following the format mentioned above.
 
 If the `output` folder contains a text file `dns_cache.csv` (produced by a previous execution of the tool) then the
 content of this file will be used for initializing the DNS cache of the DNS resolver module. Otherwise, the DNS cache

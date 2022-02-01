@@ -145,6 +145,11 @@ def deduct_http_url(domain_name: str, as_https=True) -> str:
         else:
             return temp
     else:
+        if as_https:
+            return "https://" + temp + "/"
+        else:
+            return "http://" + temp + "/"
+        """
         if is_grammatically_correct(temp):
             if as_https:
                 return "https://"+temp+"/"
@@ -152,6 +157,7 @@ def deduct_http_url(domain_name: str, as_https=True) -> str:
                 return "http://"+temp+"/"
         else:
             raise InvalidDomainNameError(temp)
+        """
 
 
 def eliminate_trailing_point(domain_name: str) -> str:

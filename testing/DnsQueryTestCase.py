@@ -42,6 +42,7 @@ class DnsQueryTestCase(unittest.TestCase):
         cls.domain_name = 'c.ns.c10r.facebook.com.'
         cls.domain_name = 'j.root-servers.net'
         cls.domain_name = 'idp-cineca.units.it.'
+        cls.domain_name = 'login.microsoftonline.com.'
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION

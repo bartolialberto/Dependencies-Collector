@@ -76,7 +76,7 @@ class DomainNameEntity(BaseModel):
     string = CharField(primary_key=True)
 
     def __str__(self):
-        return f"<name={self.string}>"
+        return f"<string={self.string}>"
 
     class Meta:
         db_table = 'domain_name'
@@ -307,7 +307,7 @@ class DomainNameDependenciesAssociation(BaseModel):
 
 class DirectZoneAssociation(BaseModel):
     domain_name = ForeignKeyField(DomainNameEntity)
-    zone = ForeignKeyField(ZoneEntity)
+    zone = ForeignKeyField(ZoneEntity, null=True)
 
     def __str__(self):
         return f"<domain_name={self.domain_name}, zone={self.zone}>"

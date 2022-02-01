@@ -112,18 +112,18 @@ class ApplicationResolversWrapper:
                 self.tlds = TLDPageScraper.import_txt_from_input_folder('tlds.txt', project_root_directory)
                 print(f"> TLDs import from file in input folder completed. {len(self.tlds)} TLDs parsed.")
                 self.tlds_loaded_from_web_page = False
-            except (FileNotFoundError, ValueError, PermissionError, OSError):
-                pass
+            except (FilenameNotFoundError, FileNotFoundError, ValueError, PermissionError, OSError):
+                self.tlds = None
             # scraping TLDs from web page
             if self.tlds is None:
                 self._tld_scraper = TLDPageScraper(self.headless_browser)
                 try:
-                    tlds = self._tld_scraper.scrape_tld()
+                    self.tlds = self._tld_scraper.scrape_tld()
                     self.tlds_loaded_from_web_page = True
                 except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
                     print(f"!!! {str(e)} !!!")
                     raise Exception
-                print(f"> TLDs scraping completed. {len(tlds)} TLDs parsed.")
+                print(f"> TLDs scraping completed. {len(self.tlds)} TLDs parsed.")
         else:
             print(f"> No TLDs scraping executed.")
             self._tld_scraper = None
@@ -209,6 +209,10 @@ class ApplicationResolversWrapper:
         :param domain_names: A list of web sites.
         :type domain_names: List[str]
         """
+        new_domain_names = list()
+        for domain_name in domain_names:
+            if domain_name not in self.total_dns_results.zone_dependencies_per_domain_name.keys():
+                new_domain_names.append(domain_name)
         current_dns_results = self.do_dns_resolving(domain_names)
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results,  ServerTypes.SCRIPTSERVER)
 
@@ -485,28 +489,32 @@ class ApplicationResolversWrapper:
     def _extract_domain_names_from_preamble(self, mail_domains: List[str]) -> List[str]:
         """
         This method extract domain names from the PREAMBLE execution: this means it extract them from the landing web
-        sites resolution results (saved in this object), and from the input mail domains.
+        sites resolution results (saved in this object), input mail domains and from the mail servers resolved.
 
-        :param mail_domains: The input mail domains.
+        :param mail_domains: All the input mail domains.
         :type mail_domains: List[str]
         :return: A list of extracted domain names.
         :rtype: List[str]
         """
         domain_names = list()
-        # adding domain names from webservers and websites
         for website in self.landing_web_sites_results.keys():
+            # adding domain names from web sites
             web_site_domain_name = domain_name_utils.deduct_domain_name(website, with_trailing_point=True)
             list_utils.append_with_no_duplicates(domain_names, web_site_domain_name)
-            # from web servers
+            # adding domain names from web servers
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
             if https_result is not None:
                 list_utils.append_with_no_duplicates(domain_names, https_result.server)
             if http_result is not None:
                 list_utils.append_with_no_duplicates(domain_names, http_result.server)
-        # adding domain names from mail_domains
+        # adding mail domains
         for mail_domain in mail_domains:
             list_utils.append_with_no_duplicates(domain_names, mail_domain)
+        # adding mail servers
+        for mail_domain in self.mail_domains_results.dependencies.keys():
+            for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers:
+                list_utils.append_with_no_duplicates(domain_names, mail_server)
         return domain_names
 
     def _extract_domain_names_from_landing_script_sites_results(self) -> List[str]:

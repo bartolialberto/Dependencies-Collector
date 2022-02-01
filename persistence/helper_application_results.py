@@ -1,6 +1,7 @@
 from typing import Dict, Set
 from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
+from entities.RRecord import RRecord
 from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.enums.ResolvingErrorCauses import ResolvingErrorCauses
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
@@ -54,16 +55,23 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
             helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
             w_server_https, wse_https_dne = helper_web_server.insert(result[web_site].https.server)
-            last = wse_https_dne.string
-            final_dne = wse_https_dne
-            for path in result[web_site].https.access_path[1:]:
-                last_dne = helper_domain_name.insert(last)
-                next_dne = helper_domain_name.insert(path)
-                final_dne = next_dne
-                helper_alias.insert(last_dne, next_dne)
+            final_https_dne = wse_https_dne
+
+            if len(result[web_site].https.access_path) == 0:
+                pass
+            elif len(result[web_site].https.access_path) == 1:
+                pass
+            else:
+                rrs = RRecord.construct_cname_rrs_from_list_access_path(result[web_site].https.access_path)
+                for rr in rrs:
+                    dne = helper_domain_name.insert(rr.name)
+                    alias_dne = helper_domain_name.insert(rr.get_first_value())
+                    helper_alias.insert(dne, alias_dne)
+                    final_https_dne = alias_dne
+
             for ip in result[web_site].https.ips:
                 iae = helper_ip_address.insert(ip)
-                helper_access.insert(final_dne, iae)
+                helper_access.insert(final_https_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
             helper_web_site_lands.insert(w_site_e, w_server_https, is_https)
 
@@ -73,16 +81,23 @@ def insert_landing_web_sites_results(result: Dict[str, LandingSiteResult]):
             helper_web_site_lands.insert(w_site_e, None, is_https)
         else:
             w_server_http, wse_http_dne = helper_web_server.insert(result[web_site].http.server)
-            last = wse_http_dne.string
-            final_dne = wse_http_dne
-            for path in result[web_site].http.access_path[1:]:
-                last_dne = helper_domain_name.insert(last)
-                next_dne = helper_domain_name.insert(path)
-                final_dne = next_dne
-                helper_alias.insert(last_dne, next_dne)
+            final_http_dne = wse_http_dne
+
+            if len(result[web_site].http.access_path) == 0:
+                pass
+            elif len(result[web_site].http.access_path) == 1:
+                pass
+            else:
+                rrs = RRecord.construct_cname_rrs_from_list_access_path(result[web_site].http.access_path)
+                for rr in rrs:
+                    dne = helper_domain_name.insert(rr.name)
+                    alias_dne = helper_domain_name.insert(rr.get_first_value())
+                    helper_alias.insert(dne, alias_dne)
+                    final_http_dne = alias_dne
+
             for ip in result[web_site].http.ips:
                 iae = helper_ip_address.insert(ip)
-                helper_access.insert(final_dne, iae)
+                helper_access.insert(final_http_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
             helper_web_site_lands.insert(w_site_e, w_server_http, is_https)
 
@@ -106,7 +121,8 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
         try:
             ze = ze_dict[zone_name]
         except KeyError:
-            raise
+            ze = helper_zone.insert(zone_name)       # TODO: non dovrebbe succedere
+            ze_dict[zone_name] = ze
         for zone_dependency in dns_results.zone_name_dependencies_per_zone[zone_name]:
             try:
                 ze_dep = ze_dict[zone_dependency]
@@ -118,7 +134,7 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
         try:
             nse, dne = helper_name_server.get(name_server)
         except DoesNotExist:
-            raise
+            nse, dne = helper_name_server.insert(name_server)       # TODO: non dovrebbe succedere
         for zone_name in dns_results.zone_name_dependencies_per_name_server[name_server]:
             try:
                 ze = ze_dict[zone_name]
@@ -127,7 +143,15 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
             helper_domain_name_dependencies.insert(dne, ze)
 
     for domain_name in dns_results.direct_zone_name_per_domain_name.keys():
-        helper_direct_zone.insert(dne_dict[domain_name], ze_dict[dns_results.direct_zone_name_per_domain_name[domain_name]])
+        dne = dne_dict[domain_name]
+        if dns_results.direct_zone_name_per_domain_name[domain_name] is None:
+            helper_direct_zone.insert(dne, None)
+        else:
+            try:
+                ze = ze_dict[dns_results.direct_zone_name_per_domain_name[domain_name]]
+            except KeyError:
+                ze = helper_zone.insert(dns_results.direct_zone_name_per_domain_name[domain_name])      # TODO: non dovrebbe succedere
+            helper_direct_zone.insert(dne, ze)
 
 
 def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResult) -> None:
@@ -181,16 +205,23 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
             helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
             s_server_https, sse_https_dne = helper_script_server.insert(result[script_site].https.server)
-            last = sse_https_dne.string
-            final_dne = sse_https_dne
-            for path in result[script_site].https.access_path[1:]:
-                last_dne = helper_domain_name.insert(last)
-                next_dne = helper_domain_name.insert(path)
-                final_dne = next_dne
-                helper_alias.insert(last_dne, next_dne)
+            final_https_dne = sse_https_dne
+
+            if len(result[script_site].https.access_path) == 0:
+                pass
+            elif len(result[script_site].https.access_path) == 1:
+                pass
+            else:
+                rrs = RRecord.construct_cname_rrs_from_list_access_path(result[script_site].https.access_path)
+                for rr in rrs:
+                    dne = helper_domain_name.insert(rr.name)
+                    alias_dne = helper_domain_name.insert(rr.get_first_value())
+                    helper_alias.insert(dne, alias_dne)
+                    final_https_dne = alias_dne
+
             for ip in result[script_site].https.ips:
                 iae = helper_ip_address.insert(ip)
-                helper_access.insert(final_dne, iae)
+                helper_access.insert(final_https_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
             helper_script_site_lands.insert(s_site_e, s_server_https, is_https)
 
@@ -200,16 +231,23 @@ def insert_landing_script_sites_results(result: Dict[str, LandingSiteResult]):
             helper_script_site_lands.insert(s_site_e, None, is_https)
         else:
             s_server_http, sse_http_dne = helper_script_server.insert(result[script_site].http.server)
-            last = sse_http_dne.string
-            final_dne = sse_http_dne
-            for path in result[script_site].http.access_path[1:]:
-                last_dne = helper_domain_name.insert(last)
-                next_dne = helper_domain_name.insert(path)
-                final_dne = next_dne
-                helper_alias.insert(last_dne, next_dne)
+            final_http_dne = sse_http_dne
+
+            if len(result[script_site].http.access_path) == 0:
+                pass
+            elif len(result[script_site].http.access_path) == 1:
+                pass
+            else:
+                rrs = RRecord.construct_cname_rrs_from_list_access_path(result[script_site].http.access_path)
+                for rr in rrs:
+                    dne = helper_domain_name.insert(rr.name)
+                    alias_dne = helper_domain_name.insert(rr.get_first_value())
+                    helper_alias.insert(dne, alias_dne)
+                    final_http_dne = alias_dne
+
             for ip in result[script_site].http.ips:
                 iae = helper_ip_address.insert(ip)
-                helper_access.insert(final_dne, iae)
+                helper_access.insert(final_http_dne, iae)
             # networks and the rest is inserted in the IP-AS / ROV results later
             helper_script_site_lands.insert(s_site_e, s_server_http, is_https)
 
@@ -225,7 +263,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
         ase = helper_autonomous_system.insert(as_number, entry_as_database.as_description)
         for ip_address in finals.results[as_number].keys():
             try:
-                iae = helper_ip_address.get(ip_address)
+                iae = helper_ip_address.insert(ip_address)     # TODO: dovrebbe essere oslo una get??
             except DoesNotExist:
                 raise
             ine = helper_ip_network.insert_from_address_entity(iae)

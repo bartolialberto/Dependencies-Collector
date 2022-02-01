@@ -98,7 +98,7 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False, consider_tld=True) -> MultipleDnsZoneDependenciesResult:
+    def resolve_multiple_domains_dependencies(self, domain_list: List[str], reset_cache_per_elaboration=False) -> MultipleDnsZoneDependenciesResult:
         """
         This method resolves the zone dependencies of multiple domain names.
         If something goes wrong, exceptions are not raised but the error_logs of the result will be populated with what
@@ -119,7 +119,7 @@ class DnsResolver:
             try:
                 if reset_cache_per_elaboration:
                     self.cache.clear()
-                resolver_result = self.resolve_domain_dependencies(domain, consider_tld=consider_tld)
+                resolver_result = self.resolve_domain_dependencies(domain)
                 final_results.merge_single_resolver_result(domain, resolver_result)
             except InvalidDomainNameError as e:
                 final_results.error_logs.append(ErrorLog(e, domain, str(e)))
@@ -162,6 +162,7 @@ class DnsResolver:
         :return: A DnsMailServersDependenciesResult object.
         :rtype: DnsMailServersDependenciesResult
         """
+        """
         try:
             domain_name_utils.grammatically_correct(mail_domain)
         except InvalidDomainNameError:
@@ -170,6 +171,7 @@ class DnsResolver:
             except InvalidDomainNameError as e:
                 print(f"!!! {str(e)} !!!")
                 raise
+        """
         result = DnsMailServersDependenciesResult()
         try:
             mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
@@ -181,10 +183,7 @@ class DnsResolver:
             result.add_mail_server(RRecord.parse_mail_server_from_value(value))
         return result
 
-    # HIPOTHESIS USED:
-    # - CNAME RR can have only one value
-    # - Can't exist more than 1 CNAME RR with the same name
-    def resolve_domain_dependencies(self, domain: str, consider_tld=True) -> DnsZoneDependenciesResult:
+    def resolve_domain_dependencies(self, domain: str) -> DnsZoneDependenciesResult:
         """
         This method resolves the zone dependencies of a domain name.
 
@@ -248,8 +247,8 @@ class DnsResolver:
         zone_dependencies_per_nameserver, zone_dependencies_per_zone = self.extract_zone_name_dependencies(zone_list)
         direct_zone_name = self.extract_direct_zone_name(domain, zone_list)
 
-        if not consider_tld:
-            zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver)
+        if self.tld_list is not None:
+            zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, direct_zone_name = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, direct_zone_name)
 
         print(
             f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
@@ -621,12 +620,12 @@ class DnsResolver:
         raise ValueError
 
     @classmethod
-    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, List[str]], zone_dependencies_per_nameserver: Dict[str, List[str]]) -> Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]:
+    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, List[str]], zone_dependencies_per_nameserver: Dict[str, List[str]], direct_zone_name: str) -> Tuple[
+        List[Zone], Dict[str, List[str]], Dict[str, List[str]], str]:
         """
         This method removes TLDs from all data structures used as parameters.
         It needs also (as a parameter) a list of TLDs. The format of each TLD should be (example):
                 com.
-
         :param tld_list: The list of TLDs.
         :type tld_list: List[str]
         :param zone_list: The Zone object list of dependency.
@@ -635,6 +634,8 @@ class DnsResolver:
         :type zone_dependencies_per_zone: Dict[str, List[str]]
         :param zone_dependencies_per_nameserver: The zone name dependencies per name server dictionary.
         :type zone_dependencies_per_nameserver: Dict[str, List[str]]
+        :param direct_zone_name: The direct zone name.
+        :type direct_zone_name: str
         :return: All the parameters 'filtered' from TLDs as a tuple.
         :rtype: Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]
         """
@@ -658,6 +659,11 @@ class DnsResolver:
                 if zn not in tld_list:
                     filtered_zone_dependencies_per_nameserver[nameserver].append(zn)
 
+        filtered_direct_zone_name = direct_zone_name
+        for zone_name in tld_list:
+            if domain_name_utils.equals(zone_name, direct_zone_name):
+                filtered_direct_zone_name = None
+
         # if zone_dependencies key contains only a tld as value, now that list of values is empty...
         # So key must be removed
         keys_to_be_removed = set()
@@ -672,4 +678,4 @@ class DnsResolver:
                 keys_to_be_removed.add(nameserver)
         for key in keys_to_be_removed:
             filtered_zone_dependencies_per_nameserver.pop(key)
-        return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver
+        return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver, filtered_direct_zone_name

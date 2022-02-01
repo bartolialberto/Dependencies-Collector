@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from utils import file_utils, domain_name_utils
 
 
@@ -122,7 +123,7 @@ class TLDPageScraper:
         """
         try:
             result = file_utils.search_for_filename_in_subdirectory('input', filename, project_root_folder)
-        except FileNotFoundError:
+        except FilenameNotFoundError:
             raise
         file = result[0]
         tlds = list()

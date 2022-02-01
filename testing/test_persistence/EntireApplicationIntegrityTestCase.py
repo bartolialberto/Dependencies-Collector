@@ -1,3 +1,4 @@
+import copy
 import unittest
 from pathlib import Path
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
@@ -26,7 +27,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        # cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
+        cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
         cls.input_websites = [
             'google.it/doodles',
             'www.youtube.it/feed/explore',
@@ -38,6 +39,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             'https://www.dei.unipd.it/content/dipartimento/presentazione',
             'https://mail.dei.unipd.it/horde5/login.php'
         ]
+        cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
         cls.input_mail_domains = [
             'gmail.com',
             'outlook.com'
@@ -289,6 +291,46 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             self.assertEqual(elaboration_script_server_https, db_script_server_https)
         print(f"Reached this print means everything went well")
         print("------- [14] END SCRIPT SITE LANDING INTEGRITY TEST -------")
+
+    def test_15_ip_address_access_path_integrity(self):
+        print("\n------- [15] START IP ADDRESS ACCESS PATH INTEGRITY TEST -------")
+        for web_site in self.resolvers.landing_web_sites_results.keys():
+            landing_res = self.resolvers.landing_web_sites_results[web_site]
+            # HTTPS
+            if landing_res.https is not None:
+                iaes, dnes = helper_domain_name.resolve_access_path(landing_res.https.server, get_only_first_address=False)
+                db_https_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
+                db_https_access_path = list(map(lambda dne: dne.string, dnes))
+            else:
+                db_https_ip_addresses = None
+                db_https_access_path = None
+            if landing_res.https is not None:
+                elaboration_https_access_path = copy.deepcopy(landing_res.https.access_path)
+                elaboration_https_ip_addresses = set(map(lambda ip: ip.exploded, landing_res.https.ips))
+            else:
+                elaboration_https_access_path = None
+                elaboration_https_ip_addresses = None
+
+            # HTTP
+            if landing_res.http is not None:
+                iaes, dnes = helper_domain_name.resolve_access_path(landing_res.http.server, get_only_first_address=False)
+                db_http_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
+                db_http_access_path = list(map(lambda dne: dne.string, dnes))
+            else:
+                db_http_ip_addresses = None
+                db_http_access_path = None
+            if landing_res.http is not None:
+                elaboration_http_access_path = copy.deepcopy(landing_res.http.access_path)
+                elaboration_http_ip_addresses = set(map(lambda ip: ip.exploded, landing_res.http.ips))
+            else:
+                elaboration_http_access_path = None
+                elaboration_http_ip_addresses = None
+            self.assertSetEqual(elaboration_https_ip_addresses, db_https_ip_addresses)
+            self.assertSetEqual(elaboration_http_ip_addresses, db_http_ip_addresses)
+            self.assertListEqual(elaboration_https_access_path, db_https_access_path)
+            self.assertListEqual(elaboration_http_access_path, db_http_access_path)
+        print(f"Reached this print means everything went well")
+        print("------- [15] END IP ADDRESS ACCESS PATH INTEGRITY TEST -------")
 
     @classmethod
     def tearDownClass(cls) -> None:
