@@ -5,7 +5,7 @@ from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from persistence import helper_application_results, helper_domain_name, helper_name_server, helper_zone, \
     helper_web_site, helper_web_server, helper_mail_domain, helper_mail_server, helper_script, helper_script_server
 from persistence.BaseModel import db, project_root_directory_name
-from utils import domain_name_utils
+from utils import domain_name_utils, url_utils
 
 
 class EntireApplicationIntegrityTestCase(unittest.TestCase):
@@ -26,8 +26,22 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
-        cls.input_mail_domains = ['gmail.com', 'outlook.com']
+        # cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
+        cls.input_websites = [
+            'google.it/doodles',
+            'www.youtube.it/feed/explore',
+            'https://dia.units.it/it/dipartimento',
+            'https://www2.units.it/sportellolavoro/pagine/pagina/contatti-e-orari/75/2',
+            'https://www.units.it/studenti/servizi-online/didattica-a-distanz',
+            'https://login.microsoftonline.com/common/oauth2/logout',
+            'http://www.darklyrics.com/',
+            'https://www.dei.unipd.it/content/dipartimento/presentazione',
+            'https://mail.dei.unipd.it/horde5/login.php'
+        ]
+        cls.input_mail_domains = [
+            'gmail.com',
+            'outlook.com'
+        ]
         complete_unresolved_database = True
         consider_tld = False
         execute_rov_scraping = False
@@ -54,7 +68,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [1] START EVERY DOMAIN NAME PRESENCE TEST -------")
         tmp = helper_domain_name.get_everyone()
         db_domain_names = set(map(lambda dne: dne.string, tmp))
-        elaboration_domain_names = set(self.resolvers.total_dns_results.zone_dependencies_per_domain_name.keys())
+        elaboration_domain_names = set(map(lambda dn: domain_name_utils.insert_trailing_point(dn), self.resolvers.total_dns_results.zone_dependencies_per_domain_name.keys()))
         for web_site in self.resolvers.landing_web_sites_results.keys():
             web_site_domain_name = domain_name_utils.deduct_domain_name(web_site)
             web_site_domain_name = domain_name_utils.insert_trailing_point(web_site_domain_name)
@@ -200,7 +214,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [11] START EVERY WEB SITE PRESENCE TEST -------")
         tmp = helper_web_site.get_everyone()
         db_web_sites = set(map(lambda wse: wse.url.string, tmp))
-        elaboration_web_sites = set(self.input_websites)
+        elaboration_web_sites = set(map(lambda ws: url_utils.deduct_second_component(ws), self.input_websites))
         self.assertSetEqual(elaboration_web_sites, db_web_sites)
         print(f"Reached this print means everything went well")
         print("------- [x] END EVERY WEB SITE PRESENCE TEST -------")
