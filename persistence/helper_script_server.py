@@ -49,14 +49,14 @@ def get_from_string_script_site(script_site_param: str, https: bool, first_only:
         raise
     if first_only:
         query = ScriptSiteLandsAssociation.select() \
-            .where((ScriptSiteLandsAssociation.script_site == sse), (ScriptSiteLandsAssociation.https == https))\
+            .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))\
             .limit(1)
         for row in query:
-            return row.web_server
+            return row.script_server
         raise DoesNotExist
     else:
         query = ScriptSiteLandsAssociation.select()\
-            .where((ScriptSiteLandsAssociation.script_site == sse), (ScriptSiteLandsAssociation.https == https))
+            .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
         result = list()
         for row in query:
             result.append(row.script_server)

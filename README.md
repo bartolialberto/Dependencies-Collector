@@ -44,7 +44,7 @@ Directory named `input` in the project root directory (PRD). This directory shou
 
 1) the geckodriver executable file (not the archive); more specifically the application will search for a file named
 `geckodriver.exe` in the `input` folder.
-2) a `tsv` file describing the association between network ranges and autonomous systems. If no `tsv` file is found in
+2) a `.tsv` file describing the association between network ranges and autonomous systems. If no `tsv` file is found in
 this folder, then it will be downloaded from https://iptoasn.com/ (see that web site for a description of the format of
 this file).
 3) a text file `web_pages.txt` containing all the website HTTP URLs you want to use as input, one per line (if this file
@@ -52,6 +52,11 @@ is not present then a default content hardwired in the code will be used); appli
 contain protocol.
 4) a text file `mail_domains.txt` with one mail domain in each line (if this file is not present then a default content
 hardwired in the code will be used)
+5) a text file `tlds.txt` with all the TLDs to consider (one per line with trailing point, example: `com.`) when the
+application is set to not consider them, so the application needs a list of all the zone names to remove. If the file is
+missing and the flag to not consider TLDs is set, the application will scrape the most recent list from a dedicated web
+page and at the end of the application execution will export all TLDs in the `input` folder following the format
+mentioned above.
 
 If the `output` folder contains a text file `dns_cache.csv` (produced by a previous execution of the tool) then the
 content of this file will be used for initializing the DNS cache of the DNS resolver module. Otherwise, the DNS cache
