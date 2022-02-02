@@ -121,9 +121,9 @@ class ASResolverResultForROVPageScraping:
                 self.results[entry_ip_as_database.as_number][ip_address] = ASResolverValueForROVPageScraping(server, server_type, entry_ip_as_database, ip_range_tsv)
 
         for ip_address in as_results.no_ip_range_tsv_results.keys():
-            server = as_results.complete_results[ip_address][0]
-            server_type = as_results.complete_results[ip_address][1]
-            entry_ip_as_database = as_results.complete_results[ip_address][2]
+            server = as_results.no_ip_range_tsv_results[ip_address][0]
+            server_type = as_results.no_ip_range_tsv_results[ip_address][1]
+            entry_ip_as_database = as_results.no_ip_range_tsv_results[ip_address][2]
             try:
                 self.results[entry_ip_as_database.as_number]
                 try:
