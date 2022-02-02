@@ -1,6 +1,5 @@
 import copy
-from pathlib import Path
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict
 import dns.resolver
 from dns.name import Name
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
@@ -18,7 +17,7 @@ from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 from exceptions.UnknownReasonError import UnknownReasonError
-from utils import domain_name_utils, list_utils, email_address_utils
+from utils import domain_name_utils, list_utils
 
 
 class DnsResolver:
@@ -162,16 +161,6 @@ class DnsResolver:
         :return: A DnsMailServersDependenciesResult object.
         :rtype: DnsMailServersDependenciesResult
         """
-        """
-        try:
-            domain_name_utils.grammatically_correct(mail_domain)
-        except InvalidDomainNameError:
-            try:
-                email_address_utils.grammatically_correct(mail_domain)
-            except InvalidDomainNameError as e:
-                print(f"!!! {str(e)} !!!")
-                raise
-        """
         result = DnsMailServersDependenciesResult()
         try:
             mx_values, mx_aliases = self.do_query(mail_domain, TypesRR.MX)
@@ -195,13 +184,6 @@ class DnsResolver:
         :return: A DnsZoneDependenciesResult object.
         :rtype: DnsZoneDependenciesResult
         """
-        """
-        try:
-            domain_name_utils.grammatically_correct(domain)
-        except InvalidDomainNameError:
-            raise
-        """
-
         error_logs = list()
         start_cache_length = len(self.cache.cache)
         elaboration_domains = domain_name_utils.get_subdomains_name_list(domain, root_included=True, parameter_included=True)
@@ -353,9 +335,9 @@ class DnsResolver:
         domain_name = copy.deepcopy(domain_name_path[-1])
         error_logs_to_be_added = list()
         try:
-            rr_answer, rr_cnames = self.cache.resolve_path(domain_name, TypesRR.NS, as_string=False)
+            rr_answer = self.cache.lookup_first(domain_name, TypesRR.NS)
             print(f"Depends on zone: {rr_answer.name}\t\t\t[NON-AUTHORITATIVE]")
-        except NoAvailablePathError:
+        except NoRecordInCacheError:
             try:
                 rr_answer, rr_cnames = self.do_query(domain_name, TypesRR.NS)
                 print(f"Depends on zone: {rr_answer.name}")

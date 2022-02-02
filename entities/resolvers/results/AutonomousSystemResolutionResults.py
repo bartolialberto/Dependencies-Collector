@@ -112,5 +112,5 @@ class AutonomousSystemResolutionResults:
                 other.no_as_results[ip_address][0],
                 other.no_as_results[ip_address][1])
         for server in other.unresolved_servers.keys():
-            self.add_unresolved_server(server, other.no_as_results[server])
+            self.add_unresolved_server(server, other.unresolved_servers[server])
 

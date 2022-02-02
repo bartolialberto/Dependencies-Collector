@@ -12,7 +12,7 @@ class MultipleDnsMailServerDependenciesResult:
 
     Attributes
     ----------
-    dependencies : Dict[str, DnsMailServersDependenciesResult]
+    dependencies : Dict[str, DnsMailServersDependenciesResult] or None
         Such dictionary.
     error_logs : List[ErrorLog]
         A list of error logs occurred during resolving.
@@ -25,14 +25,14 @@ class MultipleDnsMailServerDependenciesResult:
         self.dependencies = dict()
         self.error_logs = list()
 
-    def add_dependency(self, mail_domain: str, mail_servers_dependency: DnsMailServersDependenciesResult):
+    def add_dependency(self, mail_domain: str, mail_servers_dependency: DnsMailServersDependenciesResult or None):
         """
-        This method adds a new mail domain resolution.
+        This method adds a new mail domain resolution. None value is used to indicate that the resolving went wrong.
 
         :param mail_domain: A mail domain.
         :type mail_domain: str
         :param mail_servers_dependency: A DnsMailServersDependenciesResult object.
-        :type mail_servers_dependency: DnsMailServersDependenciesResult
+        :type mail_servers_dependency: DnsMailServersDependenciesResult or None
         """
         self.dependencies[mail_domain] = mail_servers_dependency
 

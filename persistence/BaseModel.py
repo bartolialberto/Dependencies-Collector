@@ -319,7 +319,7 @@ class DirectZoneAssociation(BaseModel):
 
 class MailDomainComposedAssociation(BaseModel):
     mail_domain = ForeignKeyField(MailDomainEntity)
-    mail_server = ForeignKeyField(MailServerEntity)
+    mail_server = ForeignKeyField(MailServerEntity, null=True)
 
     def __str__(self):
         return f"<mail_domain={self.mail_domain}, mail_server={self.mail_server}>"

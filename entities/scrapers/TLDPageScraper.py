@@ -129,9 +129,12 @@ class TLDPageScraper:
         tlds = list()
         try:
             f = open(str(file), "r")
-            for line in f:
-                # tlds.append(domain_name_utils.insert_trailing_point(line[1:]))
-                tlds.append(line)
+            try:
+                for line in f:
+                    # tlds.append(domain_name_utils.insert_trailing_point(line[1:]))
+                    tlds.append(line)
+            except ValueError:
+                pass        # TODO: for arabic-asian strings...
             f.close()
         except ValueError:
             raise

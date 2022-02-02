@@ -20,9 +20,10 @@ from exceptions.UnknownReasonError import UnknownReasonError
 from persistence import helper_domain_name, helper_access, helper_alias, helper_ip_address, helper_autonomous_system, \
     helper_ip_range_tsv, helper_network_numbers, helper_rov, helper_prefixes_table, helper_ip_range_rov, \
     helper_ip_address_depends, helper_web_server, helper_web_site_lands, helper_ip_network, helper_script_server, \
-    helper_script_site_lands, helper_script_withdraw, helper_script, helper_script_site
-from persistence.BaseModel import NameServerEntity, IpAddressDependsAssociation, WebSiteLandsAssociation,\
-    ScriptWithdrawAssociation, ScriptSiteLandsAssociation
+    helper_script_site_lands, helper_script_withdraw, helper_script, helper_script_site, helper_mail_domain_composed, \
+    helper_mail_server
+from persistence.BaseModel import NameServerEntity, IpAddressDependsAssociation, WebSiteLandsAssociation, \
+    ScriptWithdrawAssociation, ScriptSiteLandsAssociation, MailDomainComposedAssociation
 from utils import network_utils, url_utils, file_utils, csv_utils
 
 
@@ -66,6 +67,7 @@ class DatabaseEntitiesCompleter:
         ssla_http_list = list()
         iad_list = list()
         swas_list = list()
+        mdca_list = list()
         for unresolved_entity in unresolved_entities:
             if unresolved_entity.cause == ResolvingErrorCauses.NAME_SERVER_WITHOUT_ACCESS_PATH:
                 nse_list.append(unresolved_entity.entity)
@@ -81,6 +83,8 @@ class DatabaseEntitiesCompleter:
                 iad_list.append(unresolved_entity.entity)
             elif unresolved_entity.cause == ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT:
                 swas_list.append(unresolved_entity.entity)
+            elif unresolved_entity.cause == ResolvingErrorCauses.IMPOSSIBLE_TO_RESOLVE_MAIL_SERVERS:
+                mdca_list.append(unresolved_entity.entity)
         self.do_complete_unresolved_name_servers(nse_list)
         self.do_complete_unresolved_web_sites_landing(wsla_https_list, is_https=True)
         self.do_complete_unresolved_web_sites_landing(wsla_http_list, is_https=False)
@@ -88,6 +92,7 @@ class DatabaseEntitiesCompleter:
         self.do_complete_unresolved_script_sites_landing(ssla_http_list, False)
         self.do_complete_unresolved_ip_address_depends_association(iad_list)
         self.do_complete_not_withdrawn_scripts(swas_list)
+        self.do_complete_unresolved_mail_servers(mdca_list)
 
     def do_complete_unresolved_name_servers(self, nses: List[NameServerEntity]) -> None:
         print(f"\nSTART UNRESOLVED NAME SERVERS ACCESS PATH RESOLVING")
@@ -268,6 +273,25 @@ class DatabaseEntitiesCompleter:
             except selenium.common.exceptions.WebDriverException:
                 continue
         print(f"END UNRESOLVED SCRIPT RESOLUTION")
+
+    def do_complete_unresolved_mail_servers(self, mdcas: List[MailDomainComposedAssociation]):
+        print(f"\n\nSTART UNRESOLVED MAIL SERVERS RESOLUTION")
+        if len(mdcas) == 0:
+            print(f"Nothing to do.\nEND UNRESOLVED MAIL SERVERS RESOLUTION")
+            return
+        for mdca in mdcas:
+            mde = mdca.mail_domain
+            mail_domain = mde.name.string
+            try:
+                result = self.resolvers_wrapper.dns_resolver.resolve_mail_domain(mail_domain)
+            except (DomainNonExistentError, NoAnswerError, UnknownReasonError):
+                continue
+            for mail_server in result.mail_servers:
+                print(f"--> for mail domain: {mail_domain} resolved new mail server: {mail_server}")
+                mse, mse_dne = helper_mail_server.insert(mail_server)
+                helper_mail_domain_composed.insert(mde, mse)
+            mdca.delete_instance()
+        print(f"END UNRESOLVED MAIL SERVERS RESOLUTION")
 
     @staticmethod
     def dump_unresolved_entities(unresolved_entities: Set[UnresolvedEntityWrapper], separator: str, project_root_directory=Path.cwd()) -> None:

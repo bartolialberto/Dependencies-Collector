@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
+from main import get_input_websites, get_input_mail_domains, get_input_application_flags
 from persistence import helper_application_results, helper_domain_name, helper_name_server, helper_zone, \
     helper_web_site, helper_web_server, helper_mail_domain, helper_mail_server, helper_script, helper_script_server
 from persistence.BaseModel import db, project_root_directory_name
@@ -10,6 +11,9 @@ from utils import domain_name_utils, url_utils
 
 
 class EntireApplicationIntegrityTestCase(unittest.TestCase):
+    complete_unresolved_database = None
+    execute_rov_scraping = None
+    consider_tld = None
     input_mail_domains = None
     input_websites = None
     headless_browser_is_instantiated = None
@@ -26,32 +30,15 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        # PARAMETERS
-        cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
-        cls.input_websites = [
-            'google.it/doodles',
-            'www.youtube.it/feed/explore',
-            'https://dia.units.it/it/dipartimento',
-            'https://www2.units.it/sportellolavoro/pagine/pagina/contatti-e-orari/75/2',
-            'https://www.units.it/studenti/servizi-online/didattica-a-distanz',
-            'https://login.microsoftonline.com/common/oauth2/logout',
-            'http://www.darklyrics.com/',
-            'https://www.dei.unipd.it/content/dipartimento/presentazione',
-            'https://mail.dei.unipd.it/horde5/login.php'
-        ]
-        cls.input_websites = ['google.it/doodles', 'www.youtube.it/feed/explore']
-        cls.input_mail_domains = [
-            'gmail.com',
-            'outlook.com'
-        ]
-        complete_unresolved_database = True
-        consider_tld = False
-        execute_rov_scraping = False
-        # SET UP
         PRD = EntireApplicationIntegrityTestCase.get_project_root_folder()
-        cls.resolvers = ApplicationResolversWrapper(consider_tld, execute_rov_scraping, project_root_directory=PRD)
+        # PARAMETERS
+        cls.input_websites = get_input_websites(project_root_directory=PRD)
+        cls.input_mail_domains = get_input_mail_domains(project_root_directory=PRD)
+        cls.complete_unresolved_database, cls.consider_tld, cls.execute_rov_scraping = get_input_application_flags()
+        # SET UP
+        cls.resolvers = ApplicationResolversWrapper(cls.consider_tld, cls.execute_rov_scraping, project_root_directory=PRD)
         cls.headless_browser_is_instantiated = True
-        if complete_unresolved_database:
+        if cls.complete_unresolved_database:
             print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
             completer = DatabaseEntitiesCompleter(cls.resolvers)
             unresolved_entities = helper_application_results.get_unresolved_entities()
@@ -302,14 +289,14 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
                 db_https_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
                 db_https_access_path = list(map(lambda dne: dne.string, dnes))
             else:
-                db_https_ip_addresses = None
-                db_https_access_path = None
+                db_https_ip_addresses = set()
+                db_https_access_path = list()
             if landing_res.https is not None:
                 elaboration_https_access_path = copy.deepcopy(landing_res.https.access_path)
                 elaboration_https_ip_addresses = set(map(lambda ip: ip.exploded, landing_res.https.ips))
             else:
-                elaboration_https_access_path = None
-                elaboration_https_ip_addresses = None
+                elaboration_https_access_path = list()
+                elaboration_https_ip_addresses = set()
 
             # HTTP
             if landing_res.http is not None:
@@ -317,14 +304,14 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
                 db_http_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
                 db_http_access_path = list(map(lambda dne: dne.string, dnes))
             else:
-                db_http_ip_addresses = None
-                db_http_access_path = None
+                db_http_ip_addresses = set()
+                db_http_access_path = list()
             if landing_res.http is not None:
                 elaboration_http_access_path = copy.deepcopy(landing_res.http.access_path)
                 elaboration_http_ip_addresses = set(map(lambda ip: ip.exploded, landing_res.http.ips))
             else:
-                elaboration_http_access_path = None
-                elaboration_http_ip_addresses = None
+                elaboration_http_access_path = list()
+                elaboration_http_ip_addresses = set()
             self.assertSetEqual(elaboration_https_ip_addresses, db_https_ip_addresses)
             self.assertSetEqual(elaboration_http_ip_addresses, db_http_ip_addresses)
             self.assertListEqual(elaboration_https_access_path, db_https_access_path)

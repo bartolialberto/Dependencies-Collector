@@ -105,6 +105,7 @@ class ApplicationResolversWrapper:
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             raise Exception
+        self.tlds_loaded_from_web_page = False
         if not consider_tld:
             self.tlds = None
             # attempt loading TLDs from file
@@ -132,7 +133,7 @@ class ApplicationResolversWrapper:
         self.dns_resolver = DnsResolver(self.tlds)
         self.landing_resolver = LandingResolver(self.dns_resolver)
         try:
-            self.dns_resolver.cache.load_csv_from_output_folder()
+            self.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=project_root_directory)
         except (ValueError, FilenameNotFoundError, OSError) as exc:
             print(f"!!! {str(exc)} !!!")
         tsv_db_is_updated = file_utils.is_tsv_database_updated()

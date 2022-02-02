@@ -13,7 +13,8 @@ class ResolvingErrorCauses(Enum):
     NO_HTTPS_LANDING_FOR_SCRIPT_SITE = 4,
     NO_HTTP_LANDING_FOR_SCRIPT_SITE = 5,
     INCOMPLETE_DEPENDENCIES_FOR_ADDRESS = 6,
-    IMPOSSIBLE_TO_WITHDRAW_SCRIPT = 7,      # TODO
+    IMPOSSIBLE_TO_WITHDRAW_SCRIPT = 7,
+    IMPOSSIBLE_TO_RESOLVE_MAIL_SERVERS = 8,      # TODO
 
     def __str__(self):
         """
@@ -36,5 +37,7 @@ class ResolvingErrorCauses(Enum):
             return 'INCOMPLETE_DEPENDENCIES_FOR_ADDRESS'
         elif self == ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT:
             return 'IMPOSSIBLE_TO_WITHDRAW_SCRIPT'
+        elif self == ResolvingErrorCauses.IMPOSSIBLE_TO_RESOLVE_MAIL_SERVERS:
+            return 'IMPOSSIBLE_TO_RESOLVE_MAIL_SERVERS'
         else:
             raise ValueError

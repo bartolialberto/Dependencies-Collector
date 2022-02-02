@@ -11,7 +11,7 @@ from persistence.BaseModel import db
 from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
 
 
-def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore')) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[str]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
     They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is
@@ -25,7 +25,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
-    lines = get_input_generic_file('web_pages.txt', default_websites)
+    lines = get_input_generic_file('web_pages.txt', default_websites, project_root_directory=project_root_directory)
     values = list()
     for line in lines:
         try:
@@ -37,7 +37,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     return values
 
 
-def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) -> List[str]:
+def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), project_root_directory=Path.cwd()) -> List[str]:
     """
     Start of the application: getting the mail domains, and returning them as a list of string.
     They can be set from command line and from a file name mail_domains.txt put in the input folder in which each mail
@@ -51,13 +51,13 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com')) ->
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
-    lines = get_input_generic_file('mail_domains.txt', default_mail_domains)
+    lines = get_input_generic_file('mail_domains.txt', default_mail_domains, project_root_directory=project_root_directory)
     for i, value in enumerate(lines):
         print(f"> [{i+1}/{len(lines)}]: {value}")
     return lines
 
 
-def get_input_generic_file(input_filename: str, default_values: tuple) -> List[str]:
+def get_input_generic_file(input_filename: str, default_values: tuple, project_root_directory=Path.cwd()) -> List[str]:
     """
     Auxiliary method that parses input from the filename parameter in the 'input' folder of the application.
     Also it can be set a default collection of values if the file is not not present.
@@ -72,7 +72,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple) -> List[s
     result_list = list()
     search_result = None
     try:
-        search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename)
+        search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename, project_root_directory)
     except FilenameNotFoundError:
         print(f"> No '{input_filename}' file found in 'input' folder found.")
         print(f"> Starting application with default values as sample:")

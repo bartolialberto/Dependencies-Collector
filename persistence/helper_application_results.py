@@ -157,9 +157,12 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
 def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResult) -> None:
     for mail_domain in results.dependencies.keys():
         mde, dne_mde = helper_mail_domain.insert(mail_domain)
-        for mail_server in results.dependencies[mail_domain].mail_servers:
-            mse, dne_mse = helper_mail_server.insert(mail_server)
-            helper_mail_domain_composed.insert(mde, mse)
+        if results.dependencies[mail_domain] is None:
+            helper_mail_domain_composed.insert(mde, None)
+        else:
+            for mail_server in results.dependencies[mail_domain].mail_servers:
+                mse, dne_mse = helper_mail_server.insert(mail_server)
+                helper_mail_domain_composed.insert(mde, mse)
 
 
 def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str, ScriptDependenciesResult], script_script_site_dependencies: Dict[MainPageScript, Set[str]]) -> None:
@@ -340,6 +343,11 @@ def get_unresolved_entities() -> set:
     swas = helper_script_withdraw.get_unresolved()
     swas_set = UnresolvedEntityWrapper.create_from_set(swas, ResolvingErrorCauses.IMPOSSIBLE_TO_WITHDRAW_SCRIPT)
     total_results = total_results.union(swas_set)
+
+    # getting mail domain with unresolved mail servers
+    mdcas = helper_mail_domain_composed.get_unresolved()
+    mdcas_set = UnresolvedEntityWrapper.create_from_set(mdcas, ResolvingErrorCauses.IMPOSSIBLE_TO_RESOLVE_MAIL_SERVERS)
+    total_results = total_results.union(mdcas_set)
 
     # errori non gestiti??
 
