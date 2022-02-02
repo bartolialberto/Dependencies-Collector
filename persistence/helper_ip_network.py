@@ -1,7 +1,8 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
-from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity
+from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity, DomainNameEntity, \
+    AccessAssociation
 from utils import network_utils
 
 
@@ -52,3 +53,13 @@ def get_of(iae: ipaddress.IPv4Address) -> IpNetworkEntity:
     for row in query:
         return row.ip_network
     raise DoesNotExist
+
+
+def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[IpNetworkEntity]:
+    query = IpAddressDependsAssociation.select() \
+        .join(AccessAssociation, on=(IpAddressDependsAssociation.ip_address == AccessAssociation.ip_address)) \
+        .where(AccessAssociation.domain_name == dne)
+    result = set()
+    for row in query:
+        result.add(row.ip_network)
+    return result

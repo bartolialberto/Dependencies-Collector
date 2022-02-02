@@ -149,15 +149,6 @@ def deduct_http_url(domain_name: str, as_https=True) -> str:
             return "https://" + temp + "/"
         else:
             return "http://" + temp + "/"
-        """
-        if is_grammatically_correct(temp):
-            if as_https:
-                return "https://"+temp+"/"
-            else:
-                return "http://"+temp+"/"
-        else:
-            raise InvalidDomainNameError(temp)
-        """
 
 
 def eliminate_trailing_point(domain_name: str) -> str:
@@ -283,3 +274,22 @@ def is_contained_in_list(domain_names: List[str], domain_name: str) -> bool:
         if equals(domain_name, dn):
             return True
     return False
+
+
+def is_tld(domain_name: str) -> bool:
+    if domain_name == '.':
+        return True
+    point_count = domain_name.count('.')
+    if point_count == 0:
+        return True
+    elif point_count == 1:
+        split_domain_name = domain_name.split('.')
+        if split_domain_name[0] != '' and split_domain_name[1] == '':
+            return True
+        elif split_domain_name[0] == '' and split_domain_name[1] != '':
+            return True
+        else:
+            return False
+    else:
+        return False
+

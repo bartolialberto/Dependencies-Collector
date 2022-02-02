@@ -39,15 +39,12 @@ class DnsQueryTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name = 'c.ns.c10r.facebook.com.'
-        cls.domain_name = 'j.root-servers.net'
-        cls.domain_name = 'idp-cineca.units.it.'
-        cls.domain_name = 'login.microsoftonline.com.'
+        cls.domain_name = 'platform.twitter.com.'
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION
         PRD = DnsQueryTestCase.get_project_root_folder()
-        cls.dns_resolver = DnsResolver(None)
+        cls.dns_resolver = DnsResolver(True)
         if cls.import_cache_from_output_folder:
             try:
                 cls.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=PRD)

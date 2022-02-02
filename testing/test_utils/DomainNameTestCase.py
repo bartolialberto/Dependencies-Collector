@@ -46,6 +46,26 @@ class DomainNameTestCase(unittest.TestCase):
         print(f"Result: {result}")
         print(f"------- [3] END INSERTING TRAILING POINT TEST -------")
 
+    def test_4_eliminate_trailing_point(self):
+        print(f"\n------- [4] START ELIMINATING TRAILING POINT TEST -------")
+        # PARAMETERS
+        domain_name = 'it..'
+        # ELABORATION
+        result = domain_name_utils.eliminate_trailing_point(domain_name)
+        print(f"Domain name: {domain_name}")
+        print(f"Result: {result}")
+        print(f"------- [4] END ELIMINATING TRAILING POINT TEST -------")
+
+    def test_4_is_tld(self):
+        print(f"\n------- [3] START QUERYING IF IT IS TLD TEST -------")
+        # PARAMETERS
+        domain_name = 'units.it.'
+        # ELABORATION
+        result = domain_name_utils.is_tld(domain_name)
+        print(f"Domain name: {domain_name}")
+        print(f"Result: {result}")
+        print(f"------- [3] END QUERYING IF IT IS TLD TEST -------")
+
 
 if __name__ == '__main__':
     unittest.main()

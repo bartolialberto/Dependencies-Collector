@@ -7,7 +7,7 @@ class MailServerDependenciesQueryTestCase(unittest.TestCase):
     def test_1_get_mail_servers_of_mail_domain(self):
         print(f"\n------- [1] START GETTING DEPENDENCIES OF MAIL DOMAIN QUERY -------")
         # PARAMETER
-        mail_domain = 'gmail.com'
+        mail_domain = 'pec.it.'
         # QUERY
         try:
             mses = helper_mail_server.get_every_of(mail_domain)
@@ -16,7 +16,7 @@ class MailServerDependenciesQueryTestCase(unittest.TestCase):
         print(f"Parameter: {mail_domain}")
         print(f"Mail server dependencies of mail domain: {mail_domain}")
         for i, mse in enumerate(mses):
-            print(f"mail_server[{i+1}/{len(mses)}] = {mse.name}")
+            print(f"mail_server[{i+1}/{len(mses)}] = {mse.name.string}")
         print(f"------- [1] END GETTING DEPENDENCIES OF MAIL DOMAIN QUERY -------")
 
     def test_1_get_mail_domains_from_mail_server(self):

@@ -140,6 +140,9 @@ class RRecord:
             raise ValueError
         else:
             result = list()
-            for i, domain_name in enumerate(domain_names[::2]):
-                result.append(RRecord(domain_names[i], TypesRR.CNAME, domain_names[i+1]))
+            prev_domain_name = domain_names[0]
+            for domain_name in domain_names[1:]:
+                result.append(RRecord(prev_domain_name, TypesRR.CNAME, domain_name))
+                prev_domain_name = domain_name
+
             return result

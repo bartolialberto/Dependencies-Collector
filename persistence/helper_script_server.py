@@ -1,8 +1,8 @@
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from persistence import helper_domain_name, helper_script_site, helper_web_site
 from persistence.BaseModel import ScriptServerEntity, ScriptSiteLandsAssociation, ScriptHostedOnAssociation, \
-    ScriptWithdrawAssociation, DomainNameEntity
+    ScriptWithdrawAssociation, DomainNameEntity, WebSiteEntity, ScriptSiteEntity
 from utils import domain_name_utils
 
 
@@ -30,6 +30,10 @@ def get_from_string_web_site(web_site: str):
         wse = helper_web_site.get(web_site)
     except DoesNotExist:
         raise
+    return get_from_entity_web_site(wse)
+
+
+def get_from_entity_web_site(wse: WebSiteEntity) -> Set[ScriptServerEntity]:
     query = ScriptSiteLandsAssociation.select()\
         .join(ScriptHostedOnAssociation, on=(ScriptSiteLandsAssociation.script_site == ScriptHostedOnAssociation.script_site))\
         .join(ScriptWithdrawAssociation, on=(ScriptHostedOnAssociation.script == ScriptWithdrawAssociation.script))\
@@ -40,24 +44,40 @@ def get_from_string_web_site(web_site: str):
     return result
 
 
-def get_from_string_script_site(script_site_param: str, https: bool, first_only: bool) -> List[ScriptServerEntity] or ScriptServerEntity:
-    sse = None
-    query = None
+def get_from_entity_script_site(sse: ScriptSiteEntity) -> Set[ScriptServerEntity]:
+    query = ScriptSiteLandsAssociation.select()\
+        .where(ScriptSiteLandsAssociation.script_site == sse)
+    result = set()
+    for row in query:
+        result.add(row.script_server)
+    return result
+
+
+def get_from_string_script_site_and_scheme(script_site: str, https: bool) -> ScriptServerEntity:
+    try:
+        sse = helper_script_site.get(script_site)
+    except DoesNotExist:
+        raise
+    return get_from_entity_script_site_and_scheme(sse, https)
+
+
+def get_from_entity_script_site_and_scheme(sse: ScriptSiteEntity, https: bool) -> ScriptServerEntity:
+    try:
+        ssla = ScriptSiteLandsAssociation.get((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
+    except DoesNotExist:
+        raise
+    return ssla.script_server
+
+
+def get_all_from_string_script_site_and_scheme(script_site_param: str, https: bool) -> List[ScriptServerEntity]:
+    """ Query probably useful only for tests. """
     try:
         sse = helper_script_site.get(script_site_param)
     except DoesNotExist:
         raise
-    if first_only:
-        query = ScriptSiteLandsAssociation.select() \
-            .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))\
-            .limit(1)
-        for row in query:
-            return row.script_server
-        raise DoesNotExist
-    else:
-        query = ScriptSiteLandsAssociation.select()\
-            .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
-        result = list()
-        for row in query:
-            result.append(row.script_server)
-        return result
+    query = ScriptSiteLandsAssociation.select()\
+        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
+    result = list()
+    for row in query:
+        result.append(row.script_server)
+    return result

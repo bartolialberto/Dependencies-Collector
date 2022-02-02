@@ -106,7 +106,7 @@ def __inner_resolve_zone_from_path(dne: DomainNameEntity, result: List[DomainNam
         return zna.zone, result
     except DoesNotExist:
         try:
-            alias_dne = helper_alias.get_from_entity_domain_name(dne)
+            alias_dne = helper_alias.get_alias_from_entity(dne)
             return __inner_resolve_zone_from_path(alias_dne, result)
         except DoesNotExist:
             raise
@@ -131,7 +131,7 @@ def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
             except NoAvailablePathError:
                 raise
             prev = nse.name.string
-            for a_dne in a_dnes:
+            for a_dne in a_dnes[1:]:
                 zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
                 prev = a_dne.string
             zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
@@ -211,13 +211,31 @@ def get_zone_dependencies_of_zone_name(zone_name: str) -> Set[ZoneEntity]:
     return result
 
 
-def get_direct_zone_object_of(domain_name: str) -> Zone:
-    try:
-        dne = helper_domain_name.get(domain_name)
-    except DoesNotExist:
-        raise
+def get_direct_zone_object_of(domain_name_param: DomainNameEntity or str) -> Zone:
+    if isinstance(domain_name_param, DomainNameEntity):
+        dne = domain_name_param
+    else:
+        try:
+            dne = helper_domain_name.get(domain_name_param)
+        except DoesNotExist:
+            raise
     try:
         dza = DirectZoneAssociation.get(DirectZoneAssociation.domain_name == dne)
     except DoesNotExist:
         raise
     return get_zone_object_from_zone_name(dza.zone.name)
+
+
+def get_direct_zone_of(domain_name_param: DomainNameEntity or str) -> ZoneEntity:
+    if isinstance(domain_name_param, DomainNameEntity):
+        dne = domain_name_param
+    else:
+        try:
+            dne = helper_domain_name.get(domain_name_param)
+        except DoesNotExist:
+            raise
+    try:
+        dza = DirectZoneAssociation.get((DirectZoneAssociation.domain_name == dne) & (DirectZoneAssociation.zone.is_null(False)))
+    except DoesNotExist:
+        raise
+    return dza.zone

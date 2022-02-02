@@ -4,6 +4,8 @@ RR CHE PREVEDE 1 CNAME NELL'access path: www.youtube.com
 RR CHE PREVEDE 2 CNAME NELL'access path: idp-cineca.units.it.
 RR CHE PREVEDE 2 CNAME NELL'access path: login.microsoftonline.com.
 
+RR CHE PREVEDE 5 CNAME NELL'access path: platform.twitter.com.
+
 ZONA CHE PREVEDE UN CNAME NEL name resolution path: cdn-auth.digidentity.eu.
 
 ZONA CHE PREVEDE 2 NAME SERVER CON INDIRIZZO IP UGUALE: twitter.com

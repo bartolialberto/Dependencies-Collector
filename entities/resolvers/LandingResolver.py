@@ -41,8 +41,8 @@ class LandingResolver:
         :rtype: Dict[str, LandingSiteResult]
         """
         final_results = dict()
-        for site in sites:
-            print(f"Trying to resolve landing page of site: {site}")
+        for i, site in enumerate(sites):
+            print(f"Trying to resolve landing page of site[{i+1}/{len(sites)}]: {site}")
             resolver_result = self.resolve_site(site)
             final_results[site] = resolver_result
 

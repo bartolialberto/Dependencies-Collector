@@ -4,15 +4,6 @@ from persistence import helper_web_site, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
 from utils import domain_name_utils
 
-"""
-def insert(lpe: LandingPageEntity) -> WebServerEntity:
-    domain_name = domain_name_utils.deduct_domain_name(lpe.url)
-    url = helper_url.insert()
-    de = helper_domain_name.insert(domain_name)
-    wse, created = WebServerEntity.get_or_create(name=de)
-    return wse
-"""
-
 
 def insert(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     dn = domain_name_utils.insert_trailing_point(name)
@@ -34,7 +25,25 @@ def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
     return wse, dne
 
 
-def get_from(website_param: str or WebSiteEntity, https: bool, first_only: bool) -> List[WebServerEntity] or WebServerEntity:
+def get_from_entity_web_site(wse: WebSiteEntity) -> Set[WebServerEntity]:
+    query = WebSiteLandsAssociation.select() \
+        .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.web_server.is_null(False)))
+    result = set()
+    for row in query:
+        result.add(row.web_server)
+    return result
+
+
+def get_from_entity_web_site_and_scheme(wse: WebSiteEntity, https: bool) -> Set[WebServerEntity]:
+    query = WebSiteLandsAssociation.select() \
+        .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.https == https) & (WebSiteLandsAssociation.web_server.is_null(False)))
+    result = set()
+    for row in query:
+        result.add(row.web_server)
+    return result
+
+
+def get_from_web_site_and_scheme(website_param: str or WebSiteEntity, https: bool, first_only: bool) -> List[WebServerEntity] or WebServerEntity:
     wse = None
     query = None
     if isinstance(website_param, WebSiteEntity):
@@ -46,14 +55,14 @@ def get_from(website_param: str or WebSiteEntity, https: bool, first_only: bool)
             raise
     if first_only:
         query = WebSiteLandsAssociation.select() \
-            .where((WebSiteLandsAssociation.web_site == wse), (WebSiteLandsAssociation.https == https))\
+            .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.https == https) & (WebSiteLandsAssociation.web_server.is_null(False)))\
             .limit(1)
         for row in query:
             return row.web_server
         raise DoesNotExist
     else:
         query = WebSiteLandsAssociation.select()\
-            .where((WebSiteLandsAssociation.web_site == wse), (WebSiteLandsAssociation.https == https))
+            .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.https == https) & (WebSiteLandsAssociation.web_server.is_null(False)))
         result = list()
         for row in query:
             result.append(row.web_server)

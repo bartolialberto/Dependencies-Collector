@@ -27,13 +27,7 @@ def get(name_server: str) -> Tuple[NameServerEntity, DomainNameEntity]:
         raise
 
 
-def get_all_from_zone_name(zone_name: str) -> Set[NameServerEntity]:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
-    try:
-        ze = helper_zone.get(zn)
-    except DoesNotExist:
-        raise
-
+def get_all_from_zone_entity(ze: ZoneEntity) -> Set[NameServerEntity]:
     query = NameServerEntity.select()\
         .join_from(NameServerEntity, ZoneComposedAssociation)\
         .where(ZoneComposedAssociation.zone == ze)
@@ -42,6 +36,15 @@ def get_all_from_zone_name(zone_name: str) -> Set[NameServerEntity]:
     for row in query:
         result.add(row)
     return result
+
+
+def get_all_from_zone_name(zone_name: str) -> Set[NameServerEntity]:
+    zn = domain_name_utils.insert_trailing_point(zone_name)
+    try:
+        ze = helper_zone.get(zn)
+    except DoesNotExist:
+        raise
+    return get_all_from_zone_entity(ze)
 
 
 def get_all_from_ip_address(address: str) -> List[NameServerEntity]:

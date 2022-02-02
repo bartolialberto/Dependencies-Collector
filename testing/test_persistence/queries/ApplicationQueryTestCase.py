@@ -1,7 +1,7 @@
 import unittest
 from peewee import DoesNotExist
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_application_queries
+from persistence import helper_application_queries, helper_web_site
 
 
 class ApplicationQueryTestCase(unittest.TestCase):
@@ -11,7 +11,11 @@ class ApplicationQueryTestCase(unittest.TestCase):
         web_site = 'www.youtube.it/feed/explore'
         # QUERY
         print(f"Parameter: web site = {web_site}")
-        zes = helper_application_queries.get_all_zone_dependencies_from_web_site(web_site)
+        try:
+            wse = helper_web_site.get(web_site)
+        except DoesNotExist as e:
+            self.fail(f"!!! {str(e)} !!")
+        zes = helper_application_queries.get_all_zone_dependencies_from_web_site(wse)
         for i, ze in enumerate(zes):
             print(f"zone dependency[{i + 1}]: {str(ze.name)}")
         print(f"------- [1] END GETTING ALL ZONE DEPENDENCIES OF WEB SITE QUERY -------")

@@ -2,20 +2,15 @@ from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_ip_address, helper_alias
+from persistence import helper_ip_address, helper_alias, helper_web_site_domain_name, helper_script_site_domain_name
 from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity, \
-    AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation
+    AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation, WebSiteEntity, \
+    ScriptSiteEntity
 from utils import domain_name_utils
 
 
 def insert(name: str) -> DomainNameEntity:
     dn = domain_name_utils.insert_trailing_point(name)
-    """
-    try:
-        domain_name_utils.grammatically_correct(dn)     # TODO: una volta modificato il metodo s-commentare
-    except InvalidDomainNameError:
-        raise
-    """
     dne, created = DomainNameEntity.get_or_create(string=dn)
     return dne
 
@@ -62,15 +57,13 @@ def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[
     except DoesNotExist:
         pass
     try:
-        adnes = helper_alias.get_all_aliases_from_entity(dne)
+        adne = helper_alias.get_alias_from_entity(dne)
     except NoAliasFoundError:
         raise NoAvailablePathError(dne.string)
-    for adne in adnes:
-        try:
-            return __inner_resolve_access_path(adne, chain_dne)
-        except NoAvailablePathError:
-            pass
-    raise DoesNotExist
+    try:
+        return __inner_resolve_access_path(adne, chain_dne)
+    except NoAvailablePathError:
+        raise
 
 
 def get_all_that_depends_on_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
@@ -91,6 +84,22 @@ def get_all_from_entity_autonomous_system(ase: AutonomousSystemEntity) -> Set[Do
     for row in query:
         result.add(row.domain_name)
     return result
+
+
+def get_from_entity_web_site(wse: WebSiteEntity) -> DomainNameEntity:
+    try:
+        wsdna = helper_web_site_domain_name.get_from_entity_web_site(wse)
+    except DoesNotExist:
+        raise
+    return wsdna.domain_name
+
+
+def get_from_entity_script_site(sse: ScriptSiteEntity) -> DomainNameEntity:
+    try:
+        ssdna = helper_script_site_domain_name.get_from_entity_script_site(sse)
+    except DoesNotExist:
+        raise
+    return ssdna.domain_name
 
 
 def get_everyone() -> Set[DomainNameEntity]:

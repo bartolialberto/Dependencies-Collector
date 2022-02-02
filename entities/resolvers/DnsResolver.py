@@ -16,6 +16,7 @@ from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
+from exceptions.NotWantedTLDError import NotWantedTLDError
 from exceptions.UnknownReasonError import UnknownReasonError
 from utils import domain_name_utils, list_utils
 
@@ -30,25 +31,23 @@ class DnsResolver:
     Attributes
     ----------
     resolver : DnsResolver
-        The real and complete DNS resolver from the dnpython module.
+        The real and complete DNS resolver from the dnspython module.
     cache : LocalDnsResolverCache
         The cache used to handle requests.
-    tld_list : List[str] or None
-        The list of Top-Level Domains to use when the application is executed with the intention of exclude them.
-        The format of each tld is: no starting point only trailing point.
-                example: com.
-        It can be set to None to avoid any confrontation.
+    consider_tld : bool
+        Flag that tells if the resolver has to consider TLDs. This means that when a TLD is encountered in the
+        elaboration, it is avoided and from the its name servers it is not deducted any other domain name to elaborate.
     """
-    def __init__(self, tld_list: List[str] or None):
+    def __init__(self, consider_tld: bool):
         """
         Instantiate this DnsResolver object.
 
-        :param tld_list: A list of Top-Level Domains or None
-        :type tld_list: List[str] or None
+        :param consider_tld: Flag that tells if the resolver has to consider TLDs.
+        :type consider_tld: bool
         """
         self.resolver = dns.resolver.Resolver()
         self.cache = LocalDnsResolverCache()
-        self.tld_list = tld_list
+        self.consider_tld = consider_tld
 
     def do_query(self, name: str, type_rr: TypesRR) -> Tuple[RRecord, List[RRecord]]:
         """
@@ -108,16 +107,15 @@ class DnsResolver:
         :param reset_cache_per_elaboration: Flag that indicates if cache should be cleared after each domain name
         resolving. Useful only for testing.
         :type reset_cache_per_elaboration: bool
-        :param consider_tld: Flag that indicates if Top-Level Domains should be considered.
-        :type consider_tld: bool
         :return: A MultipleDnsZoneDependenciesResult object.
         :rtype: MultipleDnsZoneDependenciesResult
         """
         final_results = MultipleDnsZoneDependenciesResult()
-        for domain in domain_list:
+        for i, domain in enumerate(domain_list):
             try:
                 if reset_cache_per_elaboration:
                     self.cache.clear()
+                print(f"Looking at zone dependencies for domain[{i+1}/{len(domain_list)}]: {domain} ..")
                 resolver_result = self.resolve_domain_dependencies(domain)
                 final_results.merge_single_resolver_result(domain, resolver_result)
             except InvalidDomainNameError as e:
@@ -137,8 +135,8 @@ class DnsResolver:
         :rtype: MultipleDnsMailServerDependenciesResult
         """
         final_results = MultipleDnsMailServerDependenciesResult()
-        for mail_domain in mail_domains:
-            print(f"Resolving mail domain: {mail_domain}")
+        for i, mail_domain in enumerate(mail_domains):
+            print(f"Resolving mail domain[{i+1}/{len(mail_domains)}]: {mail_domain}")
             try:
                 resolver_result = self.resolve_mail_domain(mail_domain)
                 final_results.add_dependency(mail_domain, resolver_result)
@@ -178,8 +176,6 @@ class DnsResolver:
 
         :param domain: A domain name.
         :type domain: str
-        :param consider_tld: Flag that indicates if Top-Level Domains should be considered.
-        :type consider_tld: bool
         :raise InvalidDomainNameError: If domain name parameter is not a well-formatted domain name.
         :return: A DnsZoneDependenciesResult object.
         :rtype: DnsZoneDependenciesResult
@@ -191,7 +187,6 @@ class DnsResolver:
             raise InvalidDomainNameError(domain)  # giusto???
         zone_list = list()  # si va a popolare con ogni iterazione
         print(f"Cache has {start_cache_length} entries.")
-        print(f"Looking at zone dependencies for: {domain} ..")
         for current_domain in elaboration_domains:
             # is domain a nameserver with aliases?
             try:
@@ -217,6 +212,8 @@ class DnsResolver:
                 zone, names_to_be_elaborated, error_logs_to_be_added = self.resolve_zone(names_path_param)
                 for log in error_logs_to_be_added:
                     error_logs.append(log)
+            except NotWantedTLDError:
+                continue
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
                 error_logs.append(ErrorLog(e, current_domain, str(e)))
                 continue
@@ -227,14 +224,11 @@ class DnsResolver:
             list_utils.append_with_no_duplicates(zone_list, zone)
 
         zone_dependencies_per_nameserver, zone_dependencies_per_zone = self.extract_zone_name_dependencies(zone_list)
-        direct_zone_name = self.extract_direct_zone_name(domain, zone_list)
-
-        if self.tld_list is not None:
-            zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, direct_zone_name = self._remove_tld(self.tld_list, zone_list, zone_dependencies_per_zone, zone_dependencies_per_nameserver, direct_zone_name)
-
-        print(
-            f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
-
+        try:
+            direct_zone_name = self.extract_direct_zone_name(domain, zone_list)
+        except ValueError:
+            direct_zone_name = None
+        print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_list, direct_zone_name, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
     def resolve_web_site_domain_name(self, web_site_domain_name: str) -> Tuple[RRecord, List[RRecord]]:
@@ -336,10 +330,14 @@ class DnsResolver:
         error_logs_to_be_added = list()
         try:
             rr_answer = self.cache.lookup_first(domain_name, TypesRR.NS)
+            if self.consider_tld == False and domain_name_utils.is_tld(domain_name):
+                raise NotWantedTLDError
             print(f"Depends on zone: {rr_answer.name}\t\t\t[NON-AUTHORITATIVE]")
         except NoRecordInCacheError:
             try:
                 rr_answer, rr_cnames = self.do_query(domain_name, TypesRR.NS)
+                if self.consider_tld == False and domain_name_utils.is_tld(domain_name):
+                    raise NotWantedTLDError
                 print(f"Depends on zone: {rr_answer.name}")
                 self.cache.add_entry(rr_answer)
                 self.cache.add_entries(rr_cnames)
@@ -600,64 +598,3 @@ class DnsResolver:
             if current_domain in zone_name_dependencies:
                 return current_domain
         raise ValueError
-
-    @classmethod
-    def _remove_tld(cls, tld_list: List[str], zone_list: List[Zone], zone_dependencies_per_zone: Dict[str, List[str]], zone_dependencies_per_nameserver: Dict[str, List[str]], direct_zone_name: str) -> Tuple[
-        List[Zone], Dict[str, List[str]], Dict[str, List[str]], str]:
-        """
-        This method removes TLDs from all data structures used as parameters.
-        It needs also (as a parameter) a list of TLDs. The format of each TLD should be (example):
-                com.
-        :param tld_list: The list of TLDs.
-        :type tld_list: List[str]
-        :param zone_list: The Zone object list of dependency.
-        :type zone_list: List[Zone]
-        :param zone_dependencies_per_zone: The zone name dependencies per zone name dictionary.
-        :type zone_dependencies_per_zone: Dict[str, List[str]]
-        :param zone_dependencies_per_nameserver: The zone name dependencies per name server dictionary.
-        :type zone_dependencies_per_nameserver: Dict[str, List[str]]
-        :param direct_zone_name: The direct zone name.
-        :type direct_zone_name: str
-        :return: All the parameters 'filtered' from TLDs as a tuple.
-        :rtype: Tuple[List[Zone], Dict[str, List[str]], Dict[str, List[str]]]
-        """
-        filtered_zone_list = list(filter(lambda z: z.name not in tld_list, zone_list))
-
-        filtered_zone_dependencies_per_zone = dict()
-        for zone_name in zone_dependencies_per_zone.keys():
-            if zone_name not in tld_list:
-                filtered_zone_dependencies_per_zone[zone_name] = list()
-        for zone_name, list_zone_names in filtered_zone_dependencies_per_zone.items():
-            for zn in zone_dependencies_per_zone[zone_name]:
-                if zn not in tld_list:
-                    filtered_zone_dependencies_per_zone[zone_name].append(zn)
-
-        filtered_zone_dependencies_per_nameserver = dict()
-        for nameserver in zone_dependencies_per_nameserver.keys():
-            if nameserver not in tld_list:
-                filtered_zone_dependencies_per_nameserver[nameserver] = list()
-        for nameserver, list_zone_names in filtered_zone_dependencies_per_nameserver.items():
-            for zn in zone_dependencies_per_nameserver[nameserver]:
-                if zn not in tld_list:
-                    filtered_zone_dependencies_per_nameserver[nameserver].append(zn)
-
-        filtered_direct_zone_name = direct_zone_name
-        for zone_name in tld_list:
-            if domain_name_utils.equals(zone_name, direct_zone_name):
-                filtered_direct_zone_name = None
-
-        # if zone_dependencies key contains only a tld as value, now that list of values is empty...
-        # So key must be removed
-        keys_to_be_removed = set()
-        for zone_name in filtered_zone_dependencies_per_zone.keys():
-            if len(filtered_zone_dependencies_per_zone[zone_name]) == 0:
-                keys_to_be_removed.add(zone_name)
-        for key in keys_to_be_removed:
-            filtered_zone_dependencies_per_zone.pop(key)
-        keys_to_be_removed = set()
-        for nameserver in filtered_zone_dependencies_per_nameserver.keys():
-            if len(filtered_zone_dependencies_per_nameserver[nameserver]) == 0:
-                keys_to_be_removed.add(nameserver)
-        for key in keys_to_be_removed:
-            filtered_zone_dependencies_per_nameserver.pop(key)
-        return filtered_zone_list, filtered_zone_dependencies_per_zone, filtered_zone_dependencies_per_nameserver, filtered_direct_zone_name

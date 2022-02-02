@@ -271,7 +271,6 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
                 raise
             ine = helper_ip_network.insert_from_address_entity(iae)
             server = finals.results[as_number][ip_address].server
-            server_type = finals.results[as_number][ip_address].server_type
             ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
             row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
             # TODO
@@ -298,16 +297,15 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
         try:
             iae = helper_ip_address.get(ip_address)
         except DoesNotExist:
-            raise
-        server = finals.no_as_results[ip_address][0]
-        server_type = finals.no_as_results[ip_address][1]
-        # TODO
-        # dne = helper_domain_name.get(server)
-        # helper_access.insert(dne, iae)
-    for server in finals.unresolved_servers.keys():
-        server_type = finals.unresolved_servers[server]
-        # TODO
-        # dne = helper_domain_name.get(server)
+            iae = helper_ip_address.insert(ip_address)     # should never happen
+        ine = helper_ip_network.insert_from_address_entity(iae)
+        helper_ip_address_depends.insert(iae, ine, None, None)
+
+    # they can be only name servers and in the insert_zone_object method invoked from the insert_dns_results, this
+    # error is already persisted in the DB
+    # for server in finals.unresolved_servers:
+        #
+
 
 
 def get_unresolved_entities() -> set:

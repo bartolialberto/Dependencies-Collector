@@ -1,3 +1,4 @@
+import copy
 import ipaddress
 from pathlib import Path
 from typing import List, Dict, Tuple, Set
@@ -15,7 +16,6 @@ from entities.resolvers.results.MultipleDnsMailServerDependenciesResult import M
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from entities.scrapers.ROVPageScraper import ROVPageScraper
-from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
 from entities.error_log.ErrorLogger import ErrorLogger
@@ -40,18 +40,16 @@ class ApplicationResolversWrapper:
 
     Attributes
     ----------
-    tlds : List[str]
-        The TLDs list.
-    tlds_loaded_from_web_page : bool
-        The flag that is set if the TLDs are scraped from the web page.
+    consider_tld : bool
+        A flag that decides if TLDs should be considered in the zone dependencies.
     execute_rov_scraping : bool
         A flag that decides if ROVPage scraping will be done.
+    headless_browser_is_instantiated : bool
+        A boolean that tells if the headless browser is instantiated.
     landing_resolver : LandingResolver
         Instance of a LandingResolver object.
     headless_browser : FirefoxHeadlessWebDriver
         Instance of a FirefoxHeadlessWebDriver object.
-    _tld_scraper : TLDPageScraper or None
-        Instance of a TLDPageScraper object or None.
     dns_resolver : DnsResolver
         Instance of a DnsResolver object.
     ip_as_database : IpAsDatabase
@@ -100,37 +98,15 @@ class ApplicationResolversWrapper:
         :type project_root_directory: Path
         """
         self.execute_rov_scraping = execute_rov_scraping
+        self.consider_tld = consider_tld
+        self.headless_browser_is_instantiated = False
         try:
             self.headless_browser = FirefoxHeadlessWebDriver(project_root_directory=project_root_directory)
         except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
             print(f"!!! {str(e)} !!!")
             raise Exception
-        self.tlds_loaded_from_web_page = False
-        if not consider_tld:
-            self.tlds = None
-            # attempt loading TLDs from file
-            try:
-                self.tlds = TLDPageScraper.import_txt_from_input_folder('tlds.txt', project_root_directory)
-                print(f"> TLDs import from file in input folder completed. {len(self.tlds)} TLDs parsed.")
-                self.tlds_loaded_from_web_page = False
-            except (FilenameNotFoundError, FileNotFoundError, ValueError, PermissionError, OSError):
-                self.tlds = None
-            # scraping TLDs from web page
-            if self.tlds is None:
-                self._tld_scraper = TLDPageScraper(self.headless_browser)
-                try:
-                    self.tlds = self._tld_scraper.scrape_tld()
-                    self.tlds_loaded_from_web_page = True
-                except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
-                    print(f"!!! {str(e)} !!!")
-                    raise Exception
-                print(f"> TLDs scraping completed. {len(self.tlds)} TLDs parsed.")
-        else:
-            print(f"> No TLDs scraping executed.")
-            self._tld_scraper = None
-            self.tlds = None
-            self.tlds_loaded_from_web_page = False
-        self.dns_resolver = DnsResolver(self.tlds)
+        self.headless_browser_is_instantiated = True
+        self.dns_resolver = DnsResolver(self.consider_tld)
         self.landing_resolver = LandingResolver(self.dns_resolver)
         try:
             self.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=project_root_directory)
@@ -188,7 +164,7 @@ class ApplicationResolversWrapper:
         :rtype: List[str]
         """
         current_dns_results = self.do_dns_resolving(domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results, ServerTypes.WEBSERVER)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results)
         self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
         # extracting
@@ -210,12 +186,16 @@ class ApplicationResolversWrapper:
         :param domain_names: A list of web sites.
         :type domain_names: List[str]
         """
-        new_domain_names = list()
+        new_domain_names = copy.deepcopy(domain_names)
         for domain_name in domain_names:
-            if domain_name not in self.total_dns_results.zone_dependencies_per_domain_name.keys():
-                new_domain_names.append(domain_name)
-        current_dns_results = self.do_dns_resolving(domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results,  ServerTypes.SCRIPTSERVER)
+            for domain_name_in_total_results in self.total_dns_results.zone_dependencies_per_domain_name.keys():
+                if domain_name_utils.equals(domain_name, domain_name_in_total_results):
+                    try:
+                        new_domain_names.remove(domain_name)
+                    except ValueError:
+                        pass        # should never happen
+        current_dns_results = self.do_dns_resolving(new_domain_names)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results)
 
         # merging results
         self.total_dns_results.merge(current_dns_results)
@@ -291,7 +271,7 @@ class ApplicationResolversWrapper:
         print("END DNS DEPENDENCIES RESOLVER")
         return results
 
-    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[str, LandingSiteResult], landing_site_type: ServerTypes) -> AutonomousSystemResolutionResults:
+    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[str, LandingSiteResult]) -> AutonomousSystemResolutionResults:
         """
         This method executes IP-AS resolving from the DNS resolving results.
 
@@ -311,24 +291,24 @@ class ApplicationResolversWrapper:
                         rr_a = zone.resolve_name_server_access_path(nameserver)
                     except NoAvailablePathError:
                         print(f"!!! NO RESOLVED IP ADDRESS FROM name server: {nameserver} !!!")
-                        results.add_unresolved_server(nameserver, ServerTypes.NAMESERVER)
+                        results.add_unresolved_server(nameserver)
                         continue        # should never happen...
                     for ip_string in rr_a.values:
                         ip = ipaddress.IPv4Address(ip_string)        # no exception catch needed
                         try:
                             entry = self.ip_as_database.resolve_range(ip)
                         except (AutonomousSystemNotFoundError, ValueError) as e:
-                            results.add_no_as_result(ip, nameserver, ServerTypes.NAMESERVER)
+                            results.add_no_as_result(ip, nameserver)
                             print(f"!!! {str(e)} !!!")
                             continue
                         try:
                             ip_range_tsv, networks = entry.get_network_of_ip(ip)
                             print(f"----> for {ip.compressed} ({nameserver}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
-                            results.add_complete_result(ip, nameserver, ServerTypes.NAMESERVER, entry, ip_range_tsv)
+                            results.add_complete_result(ip, nameserver, entry, ip_range_tsv)
                         except ValueError as exc:
                             print(f"----> for {ip.compressed} ({nameserver}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.compressed, f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
-                            results.add_no_ip_range_tsv_result(ip, nameserver, ServerTypes.NAMESERVER, entry)
+                            results.add_no_ip_range_tsv_result(ip, nameserver, entry)
         print()
         for i, site in enumerate(landing_results.keys()):
             print(f"Handling site[{i+1}/{len(landing_results.keys())}]: {site}")
@@ -342,14 +322,14 @@ class ApplicationResolversWrapper:
                             ip_range_tsv, networks = entry.get_network_of_ip(ip)
                             print(
                                 f"----> for {ip.compressed} [HTTPS] ({https_result.server}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
-                            results.add_complete_result(ip, https_result.server, landing_site_type, entry, ip_range_tsv)
+                            results.add_complete_result(ip, https_result.server, entry, ip_range_tsv)
                         except ValueError as exc:
                             print(f"----> for {ip.compressed} [HTTPS] ({https_result.server}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.exploded, str(exc)))
-                            results.add_no_ip_range_tsv_result(ip, https_result.server, landing_site_type, entry)
+                            results.add_no_ip_range_tsv_result(ip, https_result.server, entry)
                     except AutonomousSystemNotFoundError as e:
                         self.error_logger.add_entry(ErrorLog(e, ip.exploded, str(e)))
-                        results.add_no_as_result(ip, https_result.server, landing_site_type)
+                        results.add_no_as_result(ip, https_result.server)
                         print(f"----> for {ip.compressed} [HTTPS] ({https_result.server}) no AS found")
             else:
                 print(f"--> [HTTPS] didn't land anywhere.")
@@ -360,14 +340,14 @@ class ApplicationResolversWrapper:
                         try:
                             ip_range_tsv, networks = entry.get_network_of_ip(ip)
                             print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
-                            results.add_complete_result(ip, http_result.server, landing_site_type, entry, ip_range_tsv)
+                            results.add_complete_result(ip, http_result.server, entry, ip_range_tsv)
                         except ValueError as exc:
                             print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) found AS record: [{str(entry)}]")
                             self.error_logger.add_entry(ErrorLog(exc, ip.exploded, str(exc)))
-                            results.add_no_ip_range_tsv_result(ip, http_result.server, landing_site_type, entry)
+                            results.add_no_ip_range_tsv_result(ip, http_result.server, entry)
                     except AutonomousSystemNotFoundError as e:
                         self.error_logger.add_entry(ErrorLog(e, ip.exploded, str(e)))
-                        results.add_no_as_result(ip, http_result.server, landing_site_type)
+                        results.add_no_as_result(ip, http_result.server)
                         print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) no AS found")
             else:
                 print(f"--> [HTTP] didn't land anywhere.")
@@ -384,8 +364,8 @@ class ApplicationResolversWrapper:
         """
         print("\n\nSTART SCRIPT DEPENDENCIES RESOLVER")
         script_dependencies_result = dict()
-        for website in self.landing_web_sites_results.keys():
-            print(f"Searching script dependencies for website: {website}")
+        for j, website in enumerate(self.landing_web_sites_results.keys()):
+            print(f"Searching script dependencies for website[{j+1}/{len(self.landing_web_sites_results.keys())}]: {website}")
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
 
@@ -463,8 +443,8 @@ class ApplicationResolversWrapper:
         :rtype: ASResolverResultForROVPageScraping
         """
         print("\n\nSTART ROV PAGE SCRAPING")
-        for as_number in reformat.results.keys():
-            print(f"Loading page for AS{as_number}")
+        for i, as_number in enumerate(reformat.results.keys()):
+            print(f"Loading page [{i+1}/{reformat.results.keys()}] for AS{as_number}")
             try:
                 self.rov_page_scraper.load_as_page(as_number)
             except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError, selenium.common.exceptions.WebDriverException) as exc:
@@ -475,11 +455,10 @@ class ApplicationResolversWrapper:
                 continue
             for ip_address in reformat.results[as_number].keys():
                 server = reformat.results[as_number][ip_address].server
-                server_type = reformat.results[as_number][ip_address].server_type
                 try:
                     row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_address))  # non gestisco ValueError perché non può accadere qua
                     reformat.results[as_number][ip_address].insert_rov_entry(row)
-                    print(f"--> for {ip_address} ({server_type.to_string()}: {server}) found row: {str(row)}")
+                    print(f"--> for {ip_address}: {server}) found row: {str(row)}")
                 except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {str(exc)} !!!")
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi

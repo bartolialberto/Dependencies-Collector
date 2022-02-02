@@ -140,7 +140,6 @@ if __name__ == "__main__":
         # entities
         print("********** START APPLICATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld, execute_rov_scraping)
-        headless_browser_is_instantiated = True
         # complete unresolved database is flag is set to
         if complete_unresolved_database:
             print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
@@ -162,10 +161,6 @@ if __name__ == "__main__":
         # export dns cache and error_logs
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
-        if not consider_tld:
-            if resolvers.tlds_loaded_from_web_page:
-                resolvers.export_tlds_to_input_folder()
-                print("> TLDs scraped are exported in the 'input' folder as file 'tlds.txt'")
     except Exception as e:
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
@@ -173,7 +168,7 @@ if __name__ == "__main__":
         print(f"!!! str: {str(e)} !!!")
     finally:
         # closing
-        if headless_browser_is_instantiated:
+        if resolvers.headless_browser_is_instantiated:
             resolvers.headless_browser.close()
         db.close()
     print("********** APPLICATION END **********")

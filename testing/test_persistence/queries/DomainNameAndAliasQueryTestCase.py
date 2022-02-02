@@ -1,29 +1,14 @@
 import unittest
 from peewee import DoesNotExist
-from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_domain_name, helper_alias
+from persistence import helper_domain_name
 
 
 class DomainNameAndAliasQueryTestCase(unittest.TestCase):
-    def test_01_query_aliases_from_domain_name(self):
-        print(f"\n------- [1] QUERY ALIASES FROM DOMAIN NAME -------")
+    def test_1_query_access_path_from_domain_name(self):
+        print(f"\n------- [1] QUERY ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
-        domain_name = 'www.youtube.com'
-        # QUERY
-        print(f"Parameter: {domain_name}")
-        try:
-            dnes = helper_alias.get_all_aliases_from_name(domain_name)
-            for i, dne in enumerate(dnes):
-                print(f"alias[{i + 1}/{len(dnes)}]: {dne.string}")
-        except (DoesNotExist, NoAliasFoundError) as e:
-            print(f"!!! {str(e)} !!!")
-        print(f"------- [1] END QUERY ALIASES FROM DOMAIN NAME -------")
-
-    def test_02_query_access_path_from_domain_name(self):
-        print(f"\n------- [2] QUERY ACCESS PATH FROM DOMAIN NAME -------")
-        # PARAMETER
-        domain_name = 'www.youtube.com'
+        domain_name = 'platform.twitter.com.'
         # QUERY
         print(f"Parameter: {domain_name}")
         try:
@@ -39,7 +24,7 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
                 print(f"!!! {str(e)} !!!")
         except DoesNotExist as exc:
             print(f"!!! {str(exc)} !!!")
-        print(f"------- [2] END QUERY ACCESS PATH FROM DOMAIN NAME -------")
+        print(f"------- [1] END QUERY ACCESS PATH FROM DOMAIN NAME -------")
 
 
 if __name__ == '__main__':

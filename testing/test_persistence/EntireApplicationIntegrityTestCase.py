@@ -227,7 +227,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [13] START WEB SITE LANDING INTEGRITY TEST -------")
         for web_site in self.resolvers.landing_web_sites_results.keys():
             # HTTPS
-            wse = helper_web_server.get_from(web_site, True, first_only=True)
+            wse = helper_web_server.get_from_web_site_and_scheme(web_site, True, first_only=True)
             if wse is None:
                 db_web_server_https = None
             else:
@@ -237,7 +237,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             else:
                 elaboration_web_server_https = self.resolvers.landing_web_sites_results[web_site].https.server
             # HTTP
-            wse = helper_web_server.get_from(web_site, False, first_only=True)
+            wse = helper_web_server.get_from_web_site_and_scheme(web_site, False, first_only=True)
             if wse is None:
                 db_web_server_http = None
             else:
@@ -255,7 +255,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [14] START SCRIPT SITE LANDING INTEGRITY TEST -------")
         for script_site in self.resolvers.landing_script_sites_results.keys():
             # HTTPS
-            sse = helper_script_server.get_from_string_script_site(script_site, True, first_only=True)
+            sse = helper_script_server.get_from_string_script_site_and_scheme(script_site, True)
             if sse is None:
                 db_script_server_https = None
             else:
@@ -265,7 +265,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             else:
                 elaboration_script_server_https = self.resolvers.landing_script_sites_results[script_site].https.server
             # HTTP
-            sse = helper_script_server.get_from_string_script_site(script_site, False, first_only=True)
+            sse = helper_script_server.get_from_string_script_site_and_scheme(script_site, False)
             if sse is None:
                 db_script_server_http = None
             else:

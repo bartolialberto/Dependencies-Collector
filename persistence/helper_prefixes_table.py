@@ -1,4 +1,3 @@
-from typing import Set, Tuple
 from persistence.BaseModel import PrefixesTableAssociation, ROVEntity, AutonomousSystemEntity, \
     IpRangeROVEntity
 

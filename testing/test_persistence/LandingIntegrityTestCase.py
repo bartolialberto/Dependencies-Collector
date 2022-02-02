@@ -88,7 +88,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
 
             print(f"Result for: {website} through database:")
             try:
-                wse_https_s = helper_web_server.get_from(website, True, first_only=False)
+                wse_https_s = helper_web_server.get_from_web_site_and_scheme(website, True, first_only=False)
                 if len(wse_https_s) > 1:
                     self.fail(f"ERROR: more than 1 web server found for web site: {website}, on https? {True}")
                 else:
@@ -96,7 +96,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
             except DoesNotExist:
                 wse_https = None
             try:
-                wse_http_s = helper_web_server.get_from(website, False, first_only=False)
+                wse_http_s = helper_web_server.get_from_web_site_and_scheme(website, False, first_only=False)
                 if len(wse_http_s) > 1:
                     self.fail(f"ERROR: more than 1 web server found for web site: {website}, on https? {False}")
                 else:
@@ -159,7 +159,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
 
             print(f"Result for: {script_site} through database:")
             try:
-                wse_https_s = helper_script_server.get_from_string_script_site(script_site, True, first_only=False)
+                wse_https_s = helper_script_server.get_all_from_string_script_site_and_scheme(script_site, True)
                 if len(wse_https_s) > 1:
                     self.fail(f"ERROR: more than 1 script server found for script site: {script_site}, on https? {True}")
                 else:
@@ -167,7 +167,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
             except DoesNotExist:
                 wse_https = None
             try:
-                wse_http_s = helper_script_server.get_from_string_script_site(script_site, False, first_only=False)
+                wse_http_s = helper_script_server.get_all_from_string_script_site_and_scheme(script_site, False)
                 if len(wse_http_s) > 1:
                     self.fail(f"ERROR: more than 1 script server found for script site: {script_site}, on https? {False}")
                 else:

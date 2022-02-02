@@ -10,17 +10,24 @@ def insert(dne: DomainNameEntity, adne: DomainNameEntity) -> AliasAssociation:
     return aa
 
 
-def get_from_entity_domain_name(dne: DomainNameEntity) -> DomainNameEntity:
-    query = AliasAssociation.select() \
-        .join(DomainNameEntity, on=(AliasAssociation.name == dne))\
-        .limit(1)
-    if len(query) == 0:
-        raise DoesNotExist
-    for row in query:
-        return row.alias
+def get_alias_from_entity(dne: DomainNameEntity) -> DomainNameEntity:
+    try:
+        aa = AliasAssociation.get(AliasAssociation.name == dne)
+    except DoesNotExist:
+        raise
+    return aa.alias
+
+
+def get_alias_from_string(domain_name: str) -> DomainNameEntity:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    return get_alias_from_entity(dne)
 
 
 def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
+    """ Query probably useful only for tests. """
     result = set()
     query = AliasAssociation.select() \
         .join(DomainNameEntity, on=(AliasAssociation.name == dne))
@@ -33,6 +40,7 @@ def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
 
 
 def get_all_aliases_from_name(domain_name: str) -> Set[DomainNameEntity]:
+    """ Query probably useful only for tests. """
     try:
         dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
