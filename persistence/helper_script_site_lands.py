@@ -17,7 +17,7 @@ def get_all_from_script_site_string(url: str) -> List[ScriptSiteLandsAssociation
     result = list()
     query = ScriptSiteLandsAssociation.select()\
         .join_from(ScriptSiteLandsAssociation, ScriptSiteEntity)\
-        .where(ScriptSiteLandsAssociation.script_site == sse)
+        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.script_server.is_null(False)))
     for row in query:
         result.append(row)
     return result
@@ -27,7 +27,7 @@ def get_all_from_script_site_entity(sse: ScriptSiteEntity) -> List[ScriptSiteLan
     result = list()
     query = ScriptSiteLandsAssociation.select()\
         .join_from(ScriptSiteLandsAssociation, ScriptSiteEntity)\
-        .where(ScriptSiteLandsAssociation.script_site == sse)
+        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.script_server.is_null(False)))
     for row in query:
         result.append(row)
     return result
@@ -46,7 +46,8 @@ def get_all_from_entity_script_site_and_scheme(sse: ScriptSiteEntity, https: boo
     result = list()
     query = ScriptSiteLandsAssociation.select()\
         .where((ScriptSiteLandsAssociation.script_site == sse) &
-            (ScriptSiteLandsAssociation.https == https))
+            (ScriptSiteLandsAssociation.https == https) &
+            (ScriptSiteLandsAssociation.script_server.is_null(False)))
     for row in query:
         result.append(row)
     return result

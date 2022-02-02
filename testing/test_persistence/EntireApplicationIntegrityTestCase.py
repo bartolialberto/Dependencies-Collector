@@ -1,6 +1,9 @@
 import copy
 import unittest
 from pathlib import Path
+
+from peewee import DoesNotExist
+
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from main import get_input_websites, get_input_mail_domains, get_input_application_flags
@@ -143,8 +146,11 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_07_zone_dependencies_per_zone_name_integrity(self):
         print("\n------- [7] START EVERY DOMAIN NAME DIRECT ZONE INTEGRITY TEST -------")
         for domain_name in self.resolvers.total_dns_results.direct_zone_name_per_domain_name.keys():
-            tmp = helper_zone.get_direct_zone_object_of(domain_name)
-            db_zone_name = tmp.name
+            try:
+                tmp = helper_zone.get_direct_zone_object_of(domain_name)
+                db_zone_name = tmp.name
+            except DoesNotExist:
+                db_zone_name = None
             elaboration_zone_name = self.resolvers.total_dns_results.direct_zone_name_per_domain_name[domain_name]
             self.assertEqual(elaboration_zone_name, db_zone_name)
         print(f"Reached this print means everything went well")
@@ -227,7 +233,10 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [13] START WEB SITE LANDING INTEGRITY TEST -------")
         for web_site in self.resolvers.landing_web_sites_results.keys():
             # HTTPS
-            wse = helper_web_server.get_from_web_site_and_scheme(web_site, True, first_only=True)
+            try:
+                wse = helper_web_server.get_from_web_site_and_scheme(web_site, True, first_only=True)
+            except DoesNotExist:
+                wse = None
             if wse is None:
                 db_web_server_https = None
             else:
@@ -237,7 +246,10 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             else:
                 elaboration_web_server_https = self.resolvers.landing_web_sites_results[web_site].https.server
             # HTTP
-            wse = helper_web_server.get_from_web_site_and_scheme(web_site, False, first_only=True)
+            try:
+                wse = helper_web_server.get_from_web_site_and_scheme(web_site, False, first_only=True)
+            except DoesNotExist:
+                wse = None
             if wse is None:
                 db_web_server_http = None
             else:

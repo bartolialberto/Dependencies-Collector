@@ -24,7 +24,7 @@ def get_all_from_string_website(website: str) -> List[WebSiteLandsAssociation]:
 def get_all_from_entity_web_site(wse: WebSiteEntity) -> List[WebSiteLandsAssociation]:
     result = list()
     query = WebSiteLandsAssociation.select()\
-        .where(WebSiteLandsAssociation.web_site == wse)
+        .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.web_server.is_null(False)))
     for row in query:
         result.append(row)
     return result
@@ -42,7 +42,8 @@ def get_all_from_entity_web_site_and_scheme(wse: WebSiteEntity, https: bool) -> 
     result = list()
     query = WebSiteLandsAssociation.select()\
         .where((WebSiteLandsAssociation.web_site == wse) &
-               (WebSiteLandsAssociation.https == https))
+               (WebSiteLandsAssociation.https == https) &
+               (WebSiteLandsAssociation.web_server.is_null(False)))
     for row in query:
         result.append(row)
     return result
@@ -72,7 +73,8 @@ def delete_all_from_entity_web_site(wse: WebSiteEntity):
 def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity) -> None:
     query = WebSiteLandsAssociation.update(web_server=new_w_server_e) \
         .where((WebSiteLandsAssociation.web_site == wsla.web_site) &
-               (WebSiteLandsAssociation.https == wsla.https))
+               (WebSiteLandsAssociation.https == wsla.https) &
+               (WebSiteLandsAssociation.web_server.is_null(False)))
     query.execute()
 
 

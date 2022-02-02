@@ -220,7 +220,7 @@ def get_direct_zone_object_of(domain_name_param: DomainNameEntity or str) -> Zon
         except DoesNotExist:
             raise
     try:
-        dza = DirectZoneAssociation.get(DirectZoneAssociation.domain_name == dne)
+        dza = DirectZoneAssociation.get((DirectZoneAssociation.domain_name == dne) & (DirectZoneAssociation.zone.is_null(False)))
     except DoesNotExist:
         raise
     return get_zone_object_from_zone_name(dza.zone.name)

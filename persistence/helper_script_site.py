@@ -30,7 +30,7 @@ def get_from_string_web_site(web_site: str) -> Set[ScriptSiteEntity]:
 def get_from_entity_web_site(wse: WebSiteEntity) -> Set[ScriptSiteEntity]:
     query = ScriptHostedOnAssociation.select()\
         .join(ScriptWithdrawAssociation, on=(ScriptHostedOnAssociation.script == ScriptWithdrawAssociation.script))\
-        .where(ScriptWithdrawAssociation.web_site == wse)
+        .where((ScriptWithdrawAssociation.web_site == wse) & (ScriptWithdrawAssociation.script.is_null(False)))
     result = set()
     for row in query:
         result.add(row.script_site)

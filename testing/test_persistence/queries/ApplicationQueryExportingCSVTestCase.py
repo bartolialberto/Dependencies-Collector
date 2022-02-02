@@ -36,6 +36,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        # PARAMETER
         cls.sub_folder = 'output'
         cls.separator = ','
 
@@ -63,6 +64,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     ases.add(ns_ase)
             row = [ze.name, str(len(nses)), str(len(ines)), str(len(ases))]
             rows.append(row)
+        # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
@@ -98,6 +100,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     pass          # could be a TLD that are not considered
             for zone_name in zone_name_dependencies_of_wse:
                 rows.append([wse.url.string, zone_name])
+        # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
@@ -133,6 +136,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 zone_name_dependencies_of_mde.add(mail_server_server_direct_zone_name)
             for zone_name in zone_name_dependencies_of_mde:
                 rows.append([mde.name.string, zone_name])
+        # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
@@ -153,6 +157,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 self.fail(f"!!! {str(e)} !!!")
             for ze in ze_dependencies:
                 rows.append([wse.url.string, ze.name])
+        # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
@@ -173,6 +178,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 self.fail(f"!!! {str(e)} !!!")
             for ze in ze_dependencies:
                 rows.append([mde.name.string, ze.name])
+        # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)

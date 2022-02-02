@@ -1,9 +1,7 @@
 import ipaddress
-from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 
 
-# TODO: docs
 class AutonomousSystemResolutionResults:
     """
     This class represents the result from the IpAsDatabase resolving after an IP address input.
@@ -26,11 +24,11 @@ class AutonomousSystemResolutionResults:
 
     Attributes
     ----------
-    complete_results : Dict[str, Tuple[str, ServerTypes, EntryIpAsDatabase, ipaddress.IPv4Network]]
+    complete_results : Dict[str, Tuple[str, EntryIpAsDatabase, ipaddress.IPv4Network]]
         The dictionary that contains all the completely resolved servers.
-    no_ip_range_tsv_results : Dict[str, Tuple[str, ServerTypes, EntryIpAsDatabase]]
+    no_ip_range_tsv_results : Dict[str, Tuple[str, EntryIpAsDatabase]]
         The dictionary that contains all the almost completely resolved servers (no IP range TSV).
-    no_as_results : Dict[str, Tuple[str, ServerTypes]]
+    no_as_results : Dict[str, str]
         The dictionary that contains all not-resolved servers.
     unresolved_servers : Set[str]
         The dictionary that contains all the servers that doesn't have an IP address.
@@ -46,24 +44,60 @@ class AutonomousSystemResolutionResults:
         self.unresolved_servers = set()
 
     def add_complete_result(self, ip_address: ipaddress.IPv4Address, server: str, entry: EntryIpAsDatabase, ip_range_tsv: ipaddress.IPv4Network) -> None:
+        """
+        This method adds a complete result.
+
+        :param ip_address: An IP address.
+        :type ip_address: ipaddress.IPv4Address
+        :param server: A server name.
+        :type server: str
+        :param entry: An entry of the .tsv database.
+        :type entry: EntryIpAsDatabase
+        :param ip_range_tsv:
+        :type ip_range_tsv: ipaddress.IPv4Network
+        """
         try:
             self.complete_results[ip_address.exploded] = (server, entry, ip_range_tsv)
         except KeyError:
             self.complete_results[ip_address.exploded] = (server, entry, ip_range_tsv)
 
     def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: str, entry: EntryIpAsDatabase) -> None:
+        """
+        This method adds an almost complete result that lacks the IP .tsv range resolution.
+
+        :param ip_address: An IP address.
+        :type ip_address: ipaddress.IPv4Address
+        :param server: A server name.
+        :type server: str
+        :param entry: An entry of the .tsv database.
+        :type entry: EntryIpAsDatabase
+        """
         try:
             self.no_ip_range_tsv_results[ip_address.exploded] = (server, entry)
         except KeyError:
             self.no_ip_range_tsv_results[ip_address.exploded] = (server, entry)
 
     def add_no_as_result(self, ip_address: ipaddress.IPv4Address, server: str) -> None:
+        """
+        This method adds an unresolved (in the .tsv database) result.
+
+        :param ip_address: An IP address.
+        :type ip_address: ipaddress.IPv4Address
+        :param server: A server name.
+        :type server: str
+        """
         try:
             self.no_as_results[ip_address.exploded] = server
         except KeyError:
             self.no_as_results[ip_address.exploded] = server
 
     def add_unresolved_server(self, server: str) -> None:
+        """
+        This method adds an unresolved result (no IP address).
+
+        :param server: A server name.
+        :type server: str
+        """
         self.unresolved_servers.add(server)
 
     def merge(self, other: 'AutonomousSystemResolutionResults'):        # FORWARD DECLARATIONS (REFERENCES)

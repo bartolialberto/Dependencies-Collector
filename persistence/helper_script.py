@@ -17,7 +17,7 @@ def get_from(web_site: str) -> List[ScriptEntity]:
     except DoesNotExist:
         raise
     query = ScriptWithdrawAssociation.select()\
-        .where(ScriptWithdrawAssociation.web_site == wse)
+        .where((ScriptWithdrawAssociation.web_site == wse) & (ScriptWithdrawAssociation.script.is_null(False)))
     result = list()
     for row in query:
         result.append(row.script)
@@ -31,7 +31,7 @@ def get_from_with_scheme(web_site: str, https: bool) -> Set[ScriptEntity]:
     except DoesNotExist:
         raise
     query = ScriptWithdrawAssociation.select()\
-        .where((ScriptWithdrawAssociation.https == https) & (ScriptWithdrawAssociation.web_site == wse))
+        .where((ScriptWithdrawAssociation.https == https) & (ScriptWithdrawAssociation.web_site == wse) & (ScriptWithdrawAssociation.script.is_null(False)))
     result = set()
     for row in query:
         result.add(row.script)

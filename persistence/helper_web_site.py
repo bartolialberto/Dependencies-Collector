@@ -41,7 +41,7 @@ def get_all_from_entity_script_server(sse: ScriptServerEntity) -> Set[WebSiteEnt
 
 def get_all_from_entity_web_server(wse: WebServerEntity) -> Set[WebSiteEntity]:
     query = WebSiteLandsAssociation.select()\
-        .where(WebSiteLandsAssociation.web_server == wse)
+        .where((WebSiteLandsAssociation.web_server == wse) & (WebSiteLandsAssociation.web_server.is_null(False)))
     result = set()
     for row in query:
         result.add(row.web_site)

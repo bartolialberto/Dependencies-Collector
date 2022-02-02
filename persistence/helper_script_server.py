@@ -46,7 +46,7 @@ def get_from_entity_web_site(wse: WebSiteEntity) -> Set[ScriptServerEntity]:
 
 def get_from_entity_script_site(sse: ScriptSiteEntity) -> Set[ScriptServerEntity]:
     query = ScriptSiteLandsAssociation.select()\
-        .where(ScriptSiteLandsAssociation.script_site == sse)
+        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.script_server.is_null(False)))
     result = set()
     for row in query:
         result.add(row.script_server)
@@ -63,7 +63,7 @@ def get_from_string_script_site_and_scheme(script_site: str, https: bool) -> Scr
 
 def get_from_entity_script_site_and_scheme(sse: ScriptSiteEntity, https: bool) -> ScriptServerEntity:
     try:
-        ssla = ScriptSiteLandsAssociation.get((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
+        ssla = ScriptSiteLandsAssociation.get((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https) & (ScriptSiteLandsAssociation.script_server.is_null(False)))
     except DoesNotExist:
         raise
     return ssla.script_server
@@ -76,7 +76,7 @@ def get_all_from_string_script_site_and_scheme(script_site_param: str, https: bo
     except DoesNotExist:
         raise
     query = ScriptSiteLandsAssociation.select()\
-        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https))
+        .where((ScriptSiteLandsAssociation.script_site == sse) & (ScriptSiteLandsAssociation.https == https) & (ScriptSiteLandsAssociation.script_server.is_null(False)))
     result = list()
     for row in query:
         result.append(row.script_server)

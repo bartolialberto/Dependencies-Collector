@@ -266,7 +266,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
         ase = helper_autonomous_system.insert(as_number, entry_as_database.as_description)
         for ip_address in finals.results[as_number].keys():
             try:
-                iae = helper_ip_address.insert(ip_address)     # TODO: dovrebbe essere oslo una get??
+                iae = helper_ip_address.insert(ip_address)     # TODO: dovrebbe essere solo una get??
             except DoesNotExist:
                 raise
             ine = helper_ip_network.insert_from_address_entity(iae)

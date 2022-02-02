@@ -3,7 +3,6 @@ import ipaddress
 from pathlib import Path
 from typing import List, Dict, Tuple, Set
 import selenium
-from entities.enums.ServerTypes import ServerTypes
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainPageScript
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
@@ -422,8 +421,8 @@ class ApplicationResolversWrapper:
                 http_landing_page = http_result.url
                 try:
                     http_scripts = self.script_resolver.search_script_application_dependencies(http_landing_page)
-                    for i, script in enumerate(https_scripts):
-                        print(f"script[{i+1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
+                    for i, script in enumerate(http_scripts):
+                        print(f"script[{i+1}/{len(http_scripts)}]: integrity={script.integrity}, src={script.src}")
                 except selenium.common.exceptions.WebDriverException as e:
                     print(f"!!! {str(e)} !!!")
                     http_scripts = None
@@ -444,7 +443,7 @@ class ApplicationResolversWrapper:
         """
         print("\n\nSTART ROV PAGE SCRAPING")
         for i, as_number in enumerate(reformat.results.keys()):
-            print(f"Loading page [{i+1}/{reformat.results.keys()}] for AS{as_number}")
+            print(f"Loading page [{i+1}/{len(reformat.results.keys())}] for AS{as_number}")
             try:
                 self.rov_page_scraper.load_as_page(as_number)
             except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError, selenium.common.exceptions.WebDriverException) as exc:

@@ -14,3 +14,5 @@ NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: youtube-ui.l.google.com.
 NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: www.tm.ak.prd.aadg.akadns.net.
 
 SERVER CHE LAVORA SOLO SU HTTP: www.darklyrics.com
+
+SCRIPT CON integrity TROVATO TRAMITE web site: www.sky.it/login

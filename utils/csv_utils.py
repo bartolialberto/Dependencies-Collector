@@ -1,6 +1,7 @@
 import csv
 
 
+# TODO: docs
 def return_personalized_dialect(separator=";"):
     try:
         result = csv.get_dialect('personalized')
