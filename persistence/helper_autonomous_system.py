@@ -1,7 +1,9 @@
 from typing import Set
 from peewee import DoesNotExist
+
+from persistence import helper_domain_name
 from persistence.BaseModel import AutonomousSystemEntity, IpRangeTSVEntity, NetworkNumbersAssociation, DomainNameEntity, \
-    AccessAssociation, IpAddressDependsAssociation
+    AccessAssociation, IpAddressDependsAssociation, IpAddressEntity
 
 
 def insert(as_number: int, description: str) -> AutonomousSystemEntity:
@@ -16,6 +18,16 @@ def get(as_number: int) -> AutonomousSystemEntity:
         raise
 
 
+def get_of_entity_ip_address(iae: IpAddressEntity) -> AutonomousSystemEntity:
+    query = NetworkNumbersAssociation.select()\
+        .join(IpAddressDependsAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
+        .where(IpAddressDependsAssociation.ip_address == iae)\
+        .limt(1)
+    for row in query:
+        return row.autonomous_system
+    raise DoesNotExist
+
+
 def get_of_entity_ip_range_tsv(irte: IpRangeTSVEntity) -> AutonomousSystemEntity:
     query = NetworkNumbersAssociation.select()\
         .where(NetworkNumbersAssociation.ip_range_tsv == irte)\
@@ -26,11 +38,9 @@ def get_of_entity_ip_range_tsv(irte: IpRangeTSVEntity) -> AutonomousSystemEntity
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AutonomousSystemEntity]:
-    query = NetworkNumbersAssociation.select()\
-        .join(IpAddressDependsAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
-        .join(AccessAssociation, on=(AccessAssociation.ip_address == IpAddressDependsAssociation.ip_address))\
-        .where(AccessAssociation.domain_name == dne)
+    iaes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
     result = set()
-    for row in query:
-        result.add(row.autonomous_system)
+    for iae in iaes:
+        ase = get_of_entity_ip_address(iae)
+        result.add(ase)
     return result

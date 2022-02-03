@@ -284,9 +284,9 @@ class ApplicationResolversWrapper:
         print("\n\nSTART IP-AS RESOLVER")
         results = AutonomousSystemResolutionResults()
         for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
-            print(f"Handling domain[{index_domain}]: {domain}")
+            print(f"Handling domain[{index_domain}/{len(dns_results.zone_dependencies_per_domain_name.keys())}]: {domain}")
             for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
-                print(f"--> Handling zone[{index_zone}]: {zone.name}")
+                print(f"--> Handling zone[{index_zone}/{len(dns_results.zone_dependencies_per_domain_name[domain])}]: {zone.name}")
                 for i, nameserver in enumerate(zone.nameservers):
                     try:
                         rr_a = zone.resolve_name_server_access_path(nameserver)

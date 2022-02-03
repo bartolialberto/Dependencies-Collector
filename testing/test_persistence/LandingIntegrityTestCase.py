@@ -37,7 +37,7 @@ class LandingIntegrityTestCase(unittest.TestCase):
         }
         # ELABORATION
         print(f"START WEB SITE LANDING")
-        dns_resolver = DnsResolver(None)
+        dns_resolver = DnsResolver(True)
         resolver = LandingResolver(dns_resolver)
         cls.web_sites_results = resolver.resolve_sites(web_site_list)
         print(f"END WEB SITE LANDING")

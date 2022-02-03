@@ -16,8 +16,8 @@ class ConvertCSVToTXTTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.csv_filename = 'websites_us'
-        cls.new_txt_filename = 'websites_us'
+        cls.csv_filename = 'websites_de'
+        cls.new_txt_filename = 'websites_de'
         cls.PRD = ConvertCSVToTXTTestCase.get_project_root_folder()
 
     def test_conversion(self):

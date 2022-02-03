@@ -184,6 +184,62 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
 
+    def test_6_query_number_of_dependencies_of_all_mail_domains(self):
+        print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
+        # PARAMETER
+        mdes = helper_mail_domain.get_everyone()
+        filename = 'query_number_of_dependencies_of_all_mail_domains'
+        # QUERY
+        print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
+        rows = list()
+        for mde in mdes:
+            ip_networks = set()
+            autonomous_systems = set()
+            try:
+                ip_addresses = helper_domain_name.resolve_access_path(mde.name, get_only_first_address=False)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+            print(f"DEBUG: #ip_addresses = {len(ip_addresses)}")
+            for iae in ip_addresses:
+                ine = helper_ip_network.get_of(iae)
+                ip_networks.add(ine)
+                ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                autonomous_systems.add(ase)
+            rows.append([mde.name.string, str(len(ip_addresses)), str(len(ip_networks)), str(len(autonomous_systems))])
+        # EXPORTING
+        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"--- END ---\n")
+
+    def test_7_query_number_of_dependencies_of_all_web_servers(self):
+        print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
+        # PARAMETER
+        wses = helper_web_server.get_everyone()
+        filename = 'query_number_of_dependencies_of_all_web_servers'
+        # QUERY
+        print(f"Parameters: {len(wses)} web servers retrieved from database.")
+        rows = list()
+        for wse in wses:
+            ip_networks = set()
+            autonomous_systems = set()
+            try:
+                ip_addresses, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+            print(f"DEBUG: #ip_addresses = {len(ip_addresses)}")
+            for iae in ip_addresses:
+                ine = helper_ip_network.get_of(iae)
+                ip_networks.add(ine)
+                ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                autonomous_systems.add(ase)
+            rows.append([wse.name.string, str(len(ip_addresses)), str(len(ip_networks)), str(len(autonomous_systems))])
+        # EXPORTING
+        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"--- END ---\n")
+
 
 if __name__ == '__main__':
     unittest.main()

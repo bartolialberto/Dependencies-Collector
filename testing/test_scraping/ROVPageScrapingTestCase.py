@@ -9,6 +9,7 @@ from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
+from persistence.BaseModel import project_root_directory_name
 
 
 class ROVPageScrapingTestCase(unittest.TestCase):
@@ -18,7 +19,7 @@ class ROVPageScrapingTestCase(unittest.TestCase):
     def get_project_root_folder() -> Path:
         current = Path.cwd()
         while True:
-            if current.name == 'LavoroTesi':
+            if current.name == project_root_directory_name:
                 return current
             else:
                 current = current.parent
@@ -36,7 +37,7 @@ class ROVPageScrapingTestCase(unittest.TestCase):
     def test_1_getting_the_entire_table(self):
         print(f"\n------- [1] START GETTING ENTIRE TABLE FROM AS PAGE -------")
         # PARAMETERS
-        as_number = 26415
+        as_number = 137
         # ELABORATION
         try:
             self.rov_page_scraper.load_as_page(as_number)

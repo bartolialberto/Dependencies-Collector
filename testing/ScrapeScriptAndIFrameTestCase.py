@@ -38,6 +38,7 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         url = 'http://127.0.0.1:3000/'
+        url = 'https://corriere.it/'
         # ELABORATION
         PRD = ScrapeScriptAndIFrameTestCase.get_project_root_folder()
         try:
