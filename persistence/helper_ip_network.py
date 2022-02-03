@@ -56,7 +56,7 @@ def get_of(iae: ipaddress.IPv4Address) -> IpNetworkEntity:
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[IpNetworkEntity]:
-    iaes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
+    iaes, dnes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
     result = set()
     for iae in iaes:
         try:

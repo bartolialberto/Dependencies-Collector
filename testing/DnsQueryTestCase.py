@@ -40,6 +40,8 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'platform.twitter.com.'
+        cls.domain_name = 'postacert.umbria.it.'
+        cls.domain_name = 'mx.cert.legalmail.it.'
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION

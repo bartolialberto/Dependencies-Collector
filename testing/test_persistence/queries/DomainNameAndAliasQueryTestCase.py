@@ -9,6 +9,7 @@ class DomainNameAndAliasQueryTestCase(unittest.TestCase):
         print(f"\n------- [1] QUERY ACCESS PATH FROM DOMAIN NAME -------")
         # PARAMETER
         domain_name = 'platform.twitter.com.'
+        domain_name = 'mx.cert.legalmail.it.'
         # QUERY
         print(f"Parameter: {domain_name}")
         try:

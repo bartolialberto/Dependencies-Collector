@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from typing import List
 from peewee import DoesNotExist
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_web_server, helper_zone, helper_web_site, helper_domain_name, helper_mail_domain, \
     helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries
 from persistence.BaseModel import project_root_directory_name
@@ -193,19 +194,35 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
         for mde in mdes:
-            ip_networks = set()
-            autonomous_systems = set()
             try:
-                ip_addresses = helper_domain_name.resolve_access_path(mde.name, get_only_first_address=False)
-            except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            print(f"DEBUG: #ip_addresses = {len(ip_addresses)}")
-            for iae in ip_addresses:
-                ine = helper_ip_network.get_of(iae)
-                ip_networks.add(ine)
-                ase = helper_autonomous_system.get_of_entity_ip_address(iae)
-                autonomous_systems.add(ase)
-            rows.append([mde.name.string, str(len(ip_addresses)), str(len(ip_networks)), str(len(autonomous_systems))])
+                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mde.name)
+            except DoesNotExist:
+                print("SHOULDN'T HAPPEN")
+                continue
+            addresses = set()
+            networks = set()
+            autonomous_systems = set()
+            for ze in zes:
+                try:
+                    nses = helper_name_server.get_all_from_zone_entity(ze)
+                except DoesNotExist as e:
+                    self.fail(f"!!! {str(e)} !!!")
+                for nse in nses:
+                    try:
+                        ns_iaes, ns_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
+                    except (DoesNotExist, NoAvailablePathError) as exc:
+                        print(f"--> {str(exc)}")
+                        continue
+                    for ns_iae in ns_iaes:
+                        addresses.add(ns_iae)
+                        ine = helper_ip_network.get_of(ns_iae)
+                        networks.add(ine)
+                        try:
+                            ns_ase = helper_autonomous_system.get_of_entity_ip_address(ns_iae)
+                            autonomous_systems.add(ns_ase)
+                        except DoesNotExist:
+                            pass
+            rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)

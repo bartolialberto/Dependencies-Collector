@@ -22,7 +22,7 @@ def get_of_entity_ip_address(iae: IpAddressEntity) -> AutonomousSystemEntity:
     query = NetworkNumbersAssociation.select()\
         .join(IpAddressDependsAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
         .where(IpAddressDependsAssociation.ip_address == iae)\
-        .limt(1)
+        .limit(1)
     for row in query:
         return row.autonomous_system
     raise DoesNotExist
@@ -38,7 +38,7 @@ def get_of_entity_ip_range_tsv(irte: IpRangeTSVEntity) -> AutonomousSystemEntity
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AutonomousSystemEntity]:
-    iaes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
+    iaes, dnes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
     result = set()
     for iae in iaes:
         ase = get_of_entity_ip_address(iae)
