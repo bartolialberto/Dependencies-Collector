@@ -17,6 +17,7 @@ from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
 from exceptions.NotWantedTLDError import NotWantedTLDError
+from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
 from exceptions.UnknownReasonError import UnknownReasonError
 from utils import domain_name_utils, list_utils
 
@@ -204,7 +205,7 @@ class DnsResolver:
             except NoAvailablePathError:
                 names_path_param = [current_domain]
                 pass
-            except (DomainNonExistentError, UnknownReasonError) as e:
+            except (DomainNonExistentError, UnknownReasonError, ReachedMaximumRecursivePathThresholdError) as e:
                 error_logs.append(ErrorLog(e, current_domain, str(e)))
                 names_path_param = [current_domain]
 
@@ -264,6 +265,7 @@ class DnsResolver:
         :type name: str
         :param parameter_included: Decide if in the result list the parameter should be considered.
         :type parameter_included: bool
+        :raise ReachedMaximumRecursivePathThresholdError: If the CNAME query consists in an endless cycle.
         :raise DomainNonExistentError: If during the CNAME query happens such error.
         :raise UnknownReasonError: If during the CNAME query happens such error.
         :raise NoAvailablePathError: If there's no path for name parameter.
@@ -271,8 +273,10 @@ class DnsResolver:
         :rtype: List[str]
         """
         try:
-            names = self.__inner_resolve_cname(name, None)
-        except (DomainNonExistentError, UnknownReasonError):
+            names = self.__inner_resolve_cname(name, None, count_invocations_threshold=1000)
+        except ReachedMaximumRecursivePathThresholdError:
+            raise ReachedMaximumRecursivePathThresholdError(name)
+        except (DomainNonExistentError, UnknownReasonError, ReachedMaximumRecursivePathThresholdError):
             raise
         if len(names) == 1:     # only the parameter
             raise NoAvailablePathError(name)
@@ -281,16 +285,22 @@ class DnsResolver:
                 names.remove(name)
             return names
 
-    def __inner_resolve_cname(self, name: str, path: List[str] or None) -> List[str]:
+    def __inner_resolve_cname(self, name: str, path: List[str] or None, count_invocations_threshold=1000, count_invocations=0) -> List[str]:
         """
-        Recursive auxiliary method in 'resolve_cname' method.
+        Recursive auxiliary method used in the 'resolve_cname' method.
 
         :param name: A domain name.
         :type name: str
         :param path: Result carried through all recursive invocations. None value corresponds to the initial seed.
         :type path: List[str] or None
+        :param count_invocations: Number of recursive invocations of the method. 0 is the initial value obviously.
+        :type count_invocations: int
+        :param count_invocations_threshold: Threshold that sets the number beyond which it is considered that the
+        resolution consists in a endless cycle.
+        :type count_invocations_threshold: int
+        :raise ReachedMaximumRecursivePathThresholdError: If the CNAME query consists in an endless cycle.
         :raise DomainNonExistentError: If during the CNAME query happens such error.
-        :raise UnknownReasonError: If during the CNAME query happens such error.
+        :raise UnknownReasonError: If during the CNAME query happens a error that goes beyond the technical ones.
         :return: The path of alias.
         :rtype: List[str]
         """
@@ -298,6 +308,9 @@ class DnsResolver:
             path = list()
         else:
             pass
+        count_invocations = count_invocations + 1
+        if count_invocations >= count_invocations_threshold:
+            raise ReachedMaximumRecursivePathThresholdError(name)
         path.append(name)
         try:
             rr_answer = self.cache.lookup_first(name, TypesRR.CNAME)
@@ -309,7 +322,7 @@ class DnsResolver:
                 return path
             except (DomainNonExistentError, UnknownReasonError):
                 raise
-        return self.__inner_resolve_cname(rr_answer.get_first_value(), path)
+        return self.__inner_resolve_cname(rr_answer.get_first_value(), path, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
 
     def resolve_zone(self, domain_name_path: List[str]) -> Tuple[Zone, List[str], List[ErrorLog]]:
         """

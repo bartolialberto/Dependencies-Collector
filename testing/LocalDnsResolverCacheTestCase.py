@@ -36,7 +36,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         PRD = LocalDnsResolverCacheTestCase.get_project_root_folder()
         cls.cache = LocalDnsResolverCache()
         try:
-            cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder+'.csv', PRD)
+            cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder+'.csv', take_snapshot=False, project_root_directory=PRD)
         except FilenameNotFoundError as e:
             print(f"!!! {str(e)} !!!")
             exit(-1)

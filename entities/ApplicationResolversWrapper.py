@@ -76,7 +76,7 @@ class ApplicationResolversWrapper:
     total_rov_page_scraper_results : ASResolverResultForROVPageScraping
         Results for and from ROVPage scraping.
     """
-    def __init__(self, consider_tld: bool, execute_rov_scraping: bool, project_root_directory=Path.cwd()):
+    def __init__(self, consider_tld: bool, execute_rov_scraping: bool, project_root_directory=Path.cwd(), take_snapshot=True):
         """
         Initialize all components from scratch.
         Here is checked the presence of the geckodriver executable and the presence of the .tsv database.
@@ -95,6 +95,8 @@ class ApplicationResolversWrapper:
         :type execute_rov_scraping: bool
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
+        :param take_snapshot: Flag that sets if the DNS resolver should take temporary snapshots of its execution.
+        :type take_snapshot: bool
         """
         self.execute_rov_scraping = execute_rov_scraping
         self.consider_tld = consider_tld
@@ -108,7 +110,7 @@ class ApplicationResolversWrapper:
         self.dns_resolver = DnsResolver(self.consider_tld)
         self.landing_resolver = LandingResolver(self.dns_resolver)
         try:
-            self.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=project_root_directory)
+            self.dns_resolver.cache.load_csv_from_output_folder(take_snapshot=take_snapshot, project_root_directory=project_root_directory)
         except (ValueError, FilenameNotFoundError, OSError) as exc:
             print(f"!!! {str(exc)} !!!")
         tsv_db_is_updated = file_utils.is_tsv_database_updated()
@@ -457,7 +459,7 @@ class ApplicationResolversWrapper:
                 try:
                     row = self.rov_page_scraper.get_network_if_present(ipaddress.ip_address(ip_address))  # non gestisco ValueError perché non può accadere qua
                     reformat.results[as_number][ip_address].insert_rov_entry(row)
-                    print(f"--> for {ip_address}: {server}) found row: {str(row)}")
+                    print(f"--> for {ip_address}: ({server}) found row: {str(row)}")
                 except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {str(exc)} !!!")
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi

@@ -1,9 +1,7 @@
 import copy
 import unittest
 from pathlib import Path
-
 from peewee import DoesNotExist
-
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from main import get_input_websites, get_input_mail_domains, get_input_application_flags
@@ -39,7 +37,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         cls.input_mail_domains = get_input_mail_domains(project_root_directory=PRD)
         cls.complete_unresolved_database, cls.consider_tld, cls.execute_rov_scraping = get_input_application_flags()
         # SET UP
-        cls.resolvers = ApplicationResolversWrapper(cls.consider_tld, cls.execute_rov_scraping, project_root_directory=PRD)
+        cls.resolvers = ApplicationResolversWrapper(cls.consider_tld, cls.execute_rov_scraping, project_root_directory=PRD, take_snapshot=False)
         cls.headless_browser_is_instantiated = True
         if cls.complete_unresolved_database:
             print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
@@ -64,34 +62,43 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         for web_site in self.resolvers.landing_web_sites_results.keys():
             web_site_domain_name = domain_name_utils.deduct_domain_name(web_site)
             web_site_domain_name = domain_name_utils.insert_trailing_point(web_site_domain_name)
-            elaboration_domain_names.add(web_site_domain_name)
+            self.assertIn(web_site_domain_name, db_domain_names)
+            # elaboration_domain_names.add(web_site_domain_name)
             landing_res = self.resolvers.landing_web_sites_results[web_site]
             if landing_res.https is not None:
                 for dn in landing_res.https.access_path:
-                    elaboration_domain_names.add(dn)
+                    self.assertIn(dn, db_domain_names)
+                    # elaboration_domain_names.add(dn)
             if landing_res.http is not None:
                 for dn in landing_res.http.access_path:
-                    elaboration_domain_names.add(dn)
+                    self.assertIn(dn, db_domain_names)
+                    # elaboration_domain_names.add(dn)
         for script_site in self.resolvers.landing_script_sites_results.keys():
             script_site_domain_name = domain_name_utils.deduct_domain_name(script_site)
             script_site_domain_name = domain_name_utils.insert_trailing_point(script_site_domain_name)
-            elaboration_domain_names.add(script_site_domain_name)
+            self.assertIn(script_site_domain_name, db_domain_names)
+            # elaboration_domain_names.add(script_site_domain_name)
             landing_res = self.resolvers.landing_script_sites_results[script_site]
             if landing_res.https is not None:
                 for dn in landing_res.https.access_path:
-                    elaboration_domain_names.add(dn)
+                    self.assertIn(dn, db_domain_names)
+                    # elaboration_domain_names.add(dn)
             if landing_res.http is not None:
                 for dn in landing_res.http.access_path:
-                    elaboration_domain_names.add(dn)
+                    self.assertIn(dn, db_domain_names)
+                    # elaboration_domain_names.add(dn)
         for mail_domain in self.input_mail_domains:
             md = domain_name_utils.insert_trailing_point(mail_domain)
-            elaboration_domain_names.add(md)
+            self.assertIn(md, db_domain_names)
+            # elaboration_domain_names.add(md)
         for mail_domain in self.resolvers.mail_domains_results.dependencies.keys():
             for mail_server in self.resolvers.mail_domains_results.dependencies[mail_domain].mail_servers:
-                elaboration_domain_names.add(mail_server)
+                self.assertIn(mail_server, db_domain_names)
+                # elaboration_domain_names.add(mail_server)
         for name_server in self.resolvers.total_dns_results.zone_name_dependencies_per_name_server.keys():
-            elaboration_domain_names.add(name_server)
-        self.assertSetEqual(elaboration_domain_names, db_domain_names)
+            self.assertIn(name_server, db_domain_names)
+            # elaboration_domain_names.add(name_server)
+        # self.assertSetEqual(elaboration_domain_names, db_domain_names)
         print(f"Reached this print means everything went well")
         print("------- [1] END EVERY DOMAIN NAME PRESENCE TEST -------")
 
@@ -100,7 +107,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         tmp = helper_name_server.get_everyone()
         db_name_servers = set(map(lambda nse: nse.name.string, tmp))
         elaboration_name_servers = set(self.resolvers.total_dns_results.zone_name_dependencies_per_name_server.keys())
-        self.assertSetEqual(elaboration_name_servers, db_name_servers)
+        for name_server in elaboration_name_servers:
+            self.assertIn(name_server, db_name_servers)
+        # self.assertSetEqual(elaboration_name_servers, db_name_servers)
         print(f"Reached this print means everything went well")
         print("------- [2] END EVERY NAME SERVER PRESENCE TEST -------")
 
@@ -109,7 +118,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         tmp = helper_zone.get_everyone()
         db_zones = set(map(lambda ze: ze.name, tmp))
         elaboration_zones = set(self.resolvers.total_dns_results.zone_name_dependencies_per_zone.keys())
-        self.assertSetEqual(elaboration_zones, db_zones)
+        for zone_name in elaboration_zones:
+            self.assertIn(zone_name, db_zones)
+        # self.assertSetEqual(elaboration_zones, db_zones)
         print(f"Reached this print means everything went well")
         print("------- [3] END EVERY ZONE PRESENCE TEST -------")
 
@@ -161,7 +172,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         tmp = helper_mail_domain.get_everyone()
         db_mail_domains = set(map(lambda mde: mde.name.string, tmp))
         elaboration_mail_domains = set(map(lambda md: domain_name_utils.insert_trailing_point(md), self.input_mail_domains))
-        self.assertEqual(elaboration_mail_domains, db_mail_domains)
+        for mail_domain in elaboration_mail_domains:
+            self.assertIn(mail_domain, db_mail_domains)
+        # self.assertEqual(elaboration_mail_domains, db_mail_domains)
         print(f"Reached this print means everything went well")
         print("------- [8] END EVERY MAIL DOMAIN PRESENCE TEST -------")
 
@@ -171,7 +184,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             tmp = helper_mail_server.get_every_of(mail_domain)
             db_mail_servers = set(map(lambda mse: mse.name.string, tmp))
             elaboration_mail_servers = set(self.resolvers.mail_domains_results.dependencies[mail_domain].mail_servers)
-            self.assertEqual(elaboration_mail_servers, db_mail_servers)
+            for mail_server in elaboration_mail_servers:
+                self.assertIn(mail_server, db_mail_servers)
+            # self.assertEqual(elaboration_mail_servers, db_mail_servers)
         print(f"Reached this print means everything went well")
         print("------- [9] END EVERY MAIL DEPENDENCIES INTEGRITY TEST -------")
 
@@ -210,7 +225,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         tmp = helper_web_site.get_everyone()
         db_web_sites = set(map(lambda wse: wse.url.string, tmp))
         elaboration_web_sites = set(map(lambda ws: url_utils.deduct_second_component(ws), self.input_websites))
-        self.assertSetEqual(elaboration_web_sites, db_web_sites)
+        for web_site in elaboration_web_sites:
+            self.assertIn(web_site, db_web_sites)
+        # self.assertSetEqual(elaboration_web_sites, db_web_sites)
         print(f"Reached this print means everything went well")
         print("------- [x] END EVERY WEB SITE PRESENCE TEST -------")
 
@@ -222,10 +239,10 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         for web_site in self.resolvers.landing_web_sites_results.keys():
             landing_res = self.resolvers.landing_web_sites_results[web_site]
             if landing_res.https is not None:
-                elaboration_web_servers.add(landing_res.https.server)
+                self.assertIn(landing_res.https.server, db_web_servers)
             if landing_res.http is not None:
-                elaboration_web_servers.add(landing_res.http.server)
-        self.assertSetEqual(elaboration_web_servers, db_web_servers)
+                self.assertIn(landing_res.http.server, db_web_servers)
+        # self.assertSetEqual(elaboration_web_servers, db_web_servers)
         print(f"Reached this print means everything went well")
         print("------- [12] END EVERY WEB SERVERS PRESENCE TEST -------")
 

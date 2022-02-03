@@ -49,7 +49,7 @@ class ApplicationQueryTestCase(unittest.TestCase):
     def test_4_query_all_autonomous_systems_from_a_zone_name(self):
         print(f"\n------- [4] START GETTING AUTONOMOUS SYSTEM FROM ZONE NAME QUERY -------")
         # PARAMETER
-        zone_name = 'nstld.com'
+        zone_name = 'youtube.com'
         # QUERY
         print(f"Parameter: zone name = {zone_name}")
         try:
@@ -63,7 +63,7 @@ class ApplicationQueryTestCase(unittest.TestCase):
     def test_5_query_all_zone_names_from_autonomous_system_number(self):
         print(f"\n------- [5] START GETTING ZONE NAMES FROM AUTONOMOUS SYSTEM QUERY -------")
         # PARAMETER
-        autonomous_system_number = 10515
+        autonomous_system_number = 15169
         # QUERY
         print(f"Parameter: AS number = {autonomous_system_number}")
         try:

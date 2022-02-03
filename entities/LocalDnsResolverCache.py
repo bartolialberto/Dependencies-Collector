@@ -287,7 +287,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def load_csv_from_output_folder(self, filename='dns_cache', project_root_directory=Path.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=Path.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
         'dns_cache.csv' file from the output folder of the project root directory (if set correctly). So just invoking
@@ -301,6 +301,8 @@ class LocalDnsResolverCache:
 
         :param filename: Name of the cache file without extension. Default is 'dns_cache'.
         :type filename: str
+        :param take_snapshot: Flag that sets up the SNAPSHOT folder and creates a temporary snapshot.
+        :type take_snapshot: bool
         :param project_root_directory: Path of the project root.
         :type project_root_directory: Path
         :raise FilenameNotFoundError: If file with such filename doesn't exist.
@@ -316,7 +318,7 @@ class LocalDnsResolverCache:
         except FilenameNotFoundError:
             raise
         try:
-            self.load_csv(str(file))
+            self.load_csv(str(file), take_snapshot=take_snapshot)
         except ValueError:
             raise
         except PermissionError:

@@ -20,8 +20,10 @@ def get_all_zone_dependencies_from_web_site(wse: WebSiteEntity, from_script_site
 
     # from web landing
     w_server_es = helper_web_server.get_from_entity_web_site(wse)       # HTTPS and HTTP
-    for ze in w_server_es:
-        zone_dependencies.add(ze)
+    for w_server_e in w_server_es:
+        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(w_server_e)
+        for ze in zes:
+            zone_dependencies.add(ze)
 
     if from_script_sites:
         # from scripts
