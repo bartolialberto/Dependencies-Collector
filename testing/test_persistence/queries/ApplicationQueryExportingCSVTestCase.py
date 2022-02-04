@@ -195,33 +195,28 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         rows = list()
         for mde in mdes:
             try:
-                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mde.name)
+                mses = helper_mail_server.get_every_of(mde)
             except DoesNotExist:
-                print("SHOULDN'T HAPPEN")
+                print(f"NO MAIL SERVERS FOR {mde.name.string}")
                 continue
             addresses = set()
             networks = set()
             autonomous_systems = set()
-            for ze in zes:
+            for mse in mses:
                 try:
-                    nses = helper_name_server.get_all_from_zone_entity(ze)
-                except DoesNotExist as e:
-                    self.fail(f"!!! {str(e)} !!!")
-                for nse in nses:
+                    iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
+                except (DoesNotExist, NoAvailablePathError):
+                    print(f"{mse.name.string} IS NON-RESOLVABLE")
+                    continue
+                for iae in iaes:
+                    addresses.add(iae)
+                    ine = helper_ip_network.get_of(iae)
+                    networks.add(ine)
                     try:
-                        ns_iaes, ns_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
-                    except (DoesNotExist, NoAvailablePathError) as exc:
-                        print(f"--> {str(exc)}")
-                        continue
-                    for ns_iae in ns_iaes:
-                        addresses.add(ns_iae)
-                        ine = helper_ip_network.get_of(ns_iae)
-                        networks.add(ine)
-                        try:
-                            ns_ase = helper_autonomous_system.get_of_entity_ip_address(ns_iae)
-                            autonomous_systems.add(ns_ase)
-                        except DoesNotExist:
-                            pass
+                        ns_ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                        autonomous_systems.add(ns_ase)
+                    except DoesNotExist:
+                        pass
             rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
@@ -241,16 +236,21 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             ip_networks = set()
             autonomous_systems = set()
             try:
-                ip_addresses, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
-            except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            print(f"DEBUG: #ip_addresses = {len(ip_addresses)}")
-            for iae in ip_addresses:
+                iaes, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
+            except DoesNotExist:
+                print(f"{wse.name.string} IS NON-RESOLVABLE")
+                continue
+            print(f"DEBUG: #ip_addresses = {len(iaes)}")
+            for iae in iaes:
                 ine = helper_ip_network.get_of(iae)
                 ip_networks.add(ine)
-                ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                try:
+                    ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                except DoesNotExist:
+                    print(f"NO AS FOR ADDRESS {iae.exploded}")
+                    continue
                 autonomous_systems.add(ase)
-            rows.append([wse.name.string, str(len(ip_addresses)), str(len(ip_networks)), str(len(autonomous_systems))])
+            rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
