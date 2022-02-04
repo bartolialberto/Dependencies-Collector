@@ -1,12 +1,11 @@
+from typing import List, Tuple
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
-
-
-# TODO: docs
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from utils import domain_name_utils
 
 
+# TODO: docs
 class DnsMailServersDependenciesResult:
     """
     This class represents the result of mail server dependencies resolving.
@@ -62,7 +61,7 @@ class DnsMailServersDependenciesResult:
             raise ValueError
         self.aliases.append(rr)
 
-    def resolve_mail_server(self, mail_server: str) -> RRecord:
+    def resolve_mail_server(self, mail_server: str) -> Tuple[RRecord, List[RRecord]]:
         """
         This method resolves the nameserver into a valid IP address.
 
@@ -72,10 +71,26 @@ class DnsMailServersDependenciesResult:
         :return: The RR of type A.
         :rtype: RRecord
         """
+        try:
+            path = self.__inner_resolve_mail_server(mail_server, None)
+        except NoAvailablePathError:
+            raise
+        if len(path) == 1:
+            return path[0], list()
+        else:
+            return path[-1], path[0:-1]
+
+    def __inner_resolve_mail_server(self, name: str, result: List[RRecord] or None) -> List[RRecord]:
+        if result is None:
+            result = list()
+        else:
+            pass
         for rr in self.aliases:
-            if domain_name_utils.equals(rr.name, mail_server):
-                return self.resolve_mail_server(rr.get_first_value())
+            if domain_name_utils.equals(rr.name, name):
+                result.append(rr)
+                return self.__inner_resolve_mail_server(rr.get_first_value(), result)
         for rr in self.addresses:
-            if domain_name_utils.equals(rr.name, mail_server):
-                return rr
-        raise NoAvailablePathError(mail_server)
+            if domain_name_utils.equals(rr.name, name):
+                result.append(rr)
+                return result
+        raise NoAvailablePathError(name)

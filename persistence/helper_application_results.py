@@ -11,6 +11,7 @@ from entities.resolvers.results.MultipleDnsZoneDependenciesResult import Multipl
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from entities.resolvers.ScriptDependenciesResolver import MainPageScript
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_web_site, helper_web_site_lands, helper_web_server, helper_zone, helper_name_server, \
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \
@@ -163,6 +164,21 @@ def insert_mail_servers_resolving(results: MultipleDnsMailServerDependenciesResu
             for mail_server in results.dependencies[mail_domain].mail_servers:
                 mse, dne_mse = helper_mail_server.insert(mail_server)
                 helper_mail_domain_composed.insert(mde, mse)
+                try:
+                    rr_a, rr_cnames = results.dependencies[mail_domain].resolve_mail_server(mail_server)
+                except NoAvailablePathError:
+                    helper_access.insert(dne_mse, None)
+                    continue
+                access_dne = mse.name
+                for rr in rr_cnames:
+                    prev_dne = helper_domain_name.insert(rr.name)
+                    next_dne = helper_domain_name.insert(rr.get_first_value())
+                    helper_alias.insert(prev_dne, next_dne)
+                    access_dne = next_dne
+                for value in rr_a.values:
+                    iae = helper_ip_address.insert(value)
+                    helper_access.insert(access_dne, iae)
+
 
 
 def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[str, ScriptDependenciesResult], script_script_site_dependencies: Dict[MainPageScript, Set[str]]) -> None:

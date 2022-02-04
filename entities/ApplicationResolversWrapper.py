@@ -361,7 +361,7 @@ class ApplicationResolversWrapper:
                 if mail_domain_results is not None:
                     for mail_server in mail_domain_results.mail_servers:
                         try:
-                            rr_a = mail_domain_results.resolve_mail_server(mail_server)
+                            rr_a, rr_cnames = mail_domain_results.resolve_mail_server(mail_server)
                         except NoAvailablePathError:
                             results.add_unresolved_server(mail_server)
                             continue
