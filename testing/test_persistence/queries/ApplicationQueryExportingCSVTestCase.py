@@ -57,7 +57,10 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             ases = set()
             ines = set()
             for nse in nses:
-                ns_ines = helper_ip_network.get_of_entity_domain_name(nse.name)
+                try:
+                    ns_ines = helper_ip_network.get_of_entity_domain_name(nse.name)
+                except (DoesNotExist, NoAvailablePathError) as e:
+                    continue
                 for ns_ine in ns_ines:
                     ines.add(ns_ine)
                 ns_ases = helper_autonomous_system.get_of_entity_domain_name(nse.name)

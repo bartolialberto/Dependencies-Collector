@@ -78,7 +78,7 @@ class AddMailServerAccessPathTestCase(unittest.TestCase):
         for i, mse in enumerate(mses):
             try:
                 iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
-                iaes_string = set(map(lambda iae: iae.explded_notation, iaes))
+                iaes_string = set(map(lambda iae: iae.exploded_notation, iaes))
                 print(f"[{i+1}/{len(mses)}] {mse.name.string} ==> {str(iaes_string)}")
             except (DoesNotExist, NoAvailablePathError) as e:
                 print(f"!!! {str(e)} !!!")
