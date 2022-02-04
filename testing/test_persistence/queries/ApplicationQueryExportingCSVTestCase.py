@@ -193,11 +193,15 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
+        unresolved_mail_domain = 0
+        unresolved_mail_server = 0
+        no_as_for_ip_address = 0
         for mde in mdes:
             try:
                 mses = helper_mail_server.get_every_of(mde)
             except DoesNotExist:
                 print(f"NO MAIL SERVERS FOR {mde.name.string}")
+                unresolved_mail_domain = unresolved_mail_domain + 1
                 continue
             addresses = set()
             networks = set()
@@ -207,6 +211,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
                 except (DoesNotExist, NoAvailablePathError):
                     print(f"{mse.name.string} IS NON-RESOLVABLE")
+                    unresolved_mail_server = unresolved_mail_server + 1
                     continue
                 for iae in iaes:
                     addresses.add(iae)
@@ -216,8 +221,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         ns_ase = helper_autonomous_system.get_of_entity_ip_address(iae)
                         autonomous_systems.add(ns_ase)
                     except DoesNotExist:
-                        pass
+                        no_as_for_ip_address = no_as_for_ip_address + 1
             rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
+        print(f"UNRESOLVED MAIL DOMAINS = {unresolved_mail_domain}")
+        print(f"UNRESOLVED MAIL SERVERS = {unresolved_mail_server}")
+        print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -232,6 +240,8 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(wses)} web servers retrieved from database.")
         rows = list()
+        unresolved_web_server = 0
+        no_as_for_ip_address = 0
         for wse in wses:
             ip_networks = set()
             autonomous_systems = set()
@@ -239,8 +249,8 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 iaes, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
             except DoesNotExist:
                 print(f"{wse.name.string} IS NON-RESOLVABLE")
+                unresolved_web_server = unresolved_web_server + 1
                 continue
-            print(f"DEBUG: #ip_addresses = {len(iaes)}")
             for iae in iaes:
                 ine = helper_ip_network.get_of(iae)
                 ip_networks.add(ine)
@@ -248,9 +258,12 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     ase = helper_autonomous_system.get_of_entity_ip_address(iae)
                 except DoesNotExist:
                     print(f"NO AS FOR ADDRESS {iae.exploded}")
+                    no_as_for_ip_address = no_as_for_ip_address + 1
                     continue
                 autonomous_systems.add(ase)
             rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
+        print(f"UNRESOLVED WEB SERVER = {unresolved_web_server}")
+        print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)

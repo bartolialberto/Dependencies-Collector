@@ -7,6 +7,7 @@ from entities.resolvers.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.UnknownReasonError import UnknownReasonError
 from persistence import helper_mail_server, helper_domain_name, helper_access, helper_ip_address, helper_ip_network, \
     helper_ip_address_depends, helper_ip_range_tsv, helper_alias, helper_autonomous_system, helper_network_numbers
@@ -70,6 +71,19 @@ class AddMailServerAccessPathTestCase(unittest.TestCase):
                 helper_ip_address_depends.insert(iae, ine, irte, None)
                 ase = helper_autonomous_system.insert(entry.as_number, entry.as_description)
                 helper_network_numbers.insert(irte, ase)
+
+    def test_prints(self):
+        mses = helper_mail_server.get_everyone()
+        count_unresolved = 0
+        for i, mse in enumerate(mses):
+            try:
+                iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
+                iaes_string = set(map(lambda iae: iae.explded_notation, iaes))
+                print(f"[{i+1}/{len(mses)}] {mse.name.string} ==> {str(iaes_string)}")
+            except (DoesNotExist, NoAvailablePathError) as e:
+                print(f"!!! {str(e)} !!!")
+                count_unresolved = count_unresolved + 1
+        print(f"UNRESOLVED = {count_unresolved}")
 
 
 if __name__ == '__main__':
