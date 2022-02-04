@@ -37,7 +37,7 @@ class AddMailServerAccessPathTestCase(unittest.TestCase):
         mses = helper_mail_server.get_everyone()
         for mse in mses:
             try:
-                rr_a, rr_cnames = self.dns_resolver.resolve_web_site_domain_name(mse.name.string)
+                rr_a, rr_cnames = self.dns_resolver.resolve_access_path(mse.name.string)
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                 try:
                     aa = helper_access.get_of_entity_domain_name(mse.name)

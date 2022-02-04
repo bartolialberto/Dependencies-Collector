@@ -167,8 +167,21 @@ class DnsResolver:
             print(f"!!! {str(e)} !!!")
             raise
         for i, value in enumerate(mx_values.values):
-            print(f"mail server[{i+1}/{len(mx_values.values)}]: {RRecord.parse_mail_server_from_value(value)}")
-            result.add_mail_server(RRecord.parse_mail_server_from_value(value))
+            mail_server = RRecord.parse_mail_server_from_value(value)
+            result.add_mail_server(mail_server)
+            try:
+                rr_a, rr_cnames = self.resolve_access_path(mail_server)
+            except (NoAnswerError, UnknownReasonError, DomainNonExistentError):
+                print(f"mail server[{i+1}/{len(mx_values.values)}]: {mail_server} is UNRESOLVED")
+                continue
+                # TODO: should propagate to log in the error_logger
+            result.add_address(rr_a)
+            for rr in rr_cnames:
+                result.add_aliases(rr)
+            if len(rr_cnames) == 0:
+                print(f"mail server[{i + 1}/{len(mx_values.values)}]: {mail_server} ==> {str(rr_a.values)}")
+            else:
+                print(f"mail server[{i + 1}/{len(mx_values.values)}]: {mail_server} --> {len(rr_cnames)} aliases ==> {str(rr_a.values)}")
         return result
 
     def resolve_domain_dependencies(self, domain: str) -> DnsZoneDependenciesResult:
@@ -232,13 +245,16 @@ class DnsResolver:
         print(f"Dependencies recap: {len(zone_list)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_list, direct_zone_name, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
-    def resolve_web_site_domain_name(self, web_site_domain_name: str) -> Tuple[RRecord, List[RRecord]]:
+    def resolve_access_path(self, web_site_domain_name: str) -> Tuple[RRecord, List[RRecord]]:
         """
         This method resolves the domain name parameter (supposed to be extracted from an URL) in all the alias to
         follow before the IP address is resolved.
 
         :param web_site_domain_name: A domain name.
         :type web_site_domain_name: str
+        :raise NoAnswerError: If such error happen.
+        :raise DomainNonExistentError: If such error happen.
+        :raise UnknownReasonError: If such error happen.
         :return: A tuple containing first the A type RR answer, and then a list of CNAME type RR that represents the
         access path.
         :rtype: Tuple[RRecord, List[RRecord]]

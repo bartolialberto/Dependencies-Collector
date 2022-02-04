@@ -165,7 +165,7 @@ class ApplicationResolversWrapper:
         :rtype: List[str]
         """
         current_dns_results = self.do_dns_resolving(domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results, True)
         self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
         # extracting
@@ -196,7 +196,7 @@ class ApplicationResolversWrapper:
                     except ValueError:
                         pass        # should never happen
         current_dns_results = self.do_dns_resolving(new_domain_names)
-        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results)
+        current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_script_sites_results, False)
 
         # merging results
         self.total_dns_results.merge(current_dns_results)
@@ -272,9 +272,10 @@ class ApplicationResolversWrapper:
         print("END DNS DEPENDENCIES RESOLVER")
         return results
 
-    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[str, LandingSiteResult]) -> AutonomousSystemResolutionResults:
+    # TODO: docs
+    def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[str, LandingSiteResult], do_mail_domains: bool) -> AutonomousSystemResolutionResults:
         """
-        This method executes IP-AS resolving from the DNS resolving results.
+        This method executes IP-AS resolving.
 
         :param dns_results: The DNS resolving result.
         :type dns_results: MultipleDnsZoneDependenciesResult
@@ -352,6 +353,40 @@ class ApplicationResolversWrapper:
                         print(f"----> for {ip.compressed} [HTTP] ({http_result.server}) no AS found")
             else:
                 print(f"--> [HTTP] didn't land anywhere.")
+        if do_mail_domains:
+            print()
+            for i, mail_domain in enumerate(self.mail_domains_results.dependencies.keys()):
+                print(f"Handling mail_domain[{i+1}/{len(self.mail_domains_results.dependencies.keys())}]: {mail_domain}")
+                mail_domain_results = self.mail_domains_results.dependencies[mail_domain]
+                if mail_domain_results is not None:
+                    for mail_server in mail_domain_results.mail_servers:
+                        try:
+                            rr_a = mail_domain_results.resolve_mail_server(mail_server)
+                        except NoAvailablePathError:
+                            results.add_unresolved_server(mail_server)
+                            continue
+                        for ip_string in rr_a.values:
+                            ip = ipaddress.IPv4Address(ip_string)  # no exception catch needed
+                            try:
+                                entry = self.ip_as_database.resolve_range(ip)
+                            except (AutonomousSystemNotFoundError, ValueError) as e:
+                                results.add_no_as_result(ip, mail_server)
+                                print(f"!!! {str(e)} !!!")
+                                continue
+                            try:
+                                ip_range_tsv, networks = entry.get_network_of_ip(ip)
+                                print(
+                                    f"----> for {ip.compressed} ({mail_server}) found AS{str(entry.as_number)}: [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]. IP range tsv: {ip_range_tsv.compressed}")
+                                results.add_complete_result(ip, mail_server, entry, ip_range_tsv)
+                            except ValueError as exc:
+                                print(f"----> for {ip.compressed} ({mail_server}) found AS record: [{str(entry)}]")
+                                self.error_logger.add_entry(ErrorLog(exc, ip.compressed,
+                                                                     f"Impossible to compute belonging network from AS{str(entry.as_number)} IP range [{entry.start_ip_range.compressed} - {entry.end_ip_range.compressed}]"))
+                                results.add_no_ip_range_tsv_result(ip, mail_server, entry)
+                else:
+                    pass
+        else:
+            pass
         print("END IP-AS RESOLVER")
         return results
 

@@ -162,7 +162,7 @@ class LandingResolver:
         ip_set = set()
         web_server_domain_name = domain_name_utils.deduct_domain_name(landing_url, with_trailing_point=True)
         try:
-            rr_a, rr_cnames = self.dns_resolver.resolve_web_site_domain_name(web_server_domain_name)
+            rr_a, rr_cnames = self.dns_resolver.resolve_access_path(web_server_domain_name)
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
             raise
         for rr in rr_cnames:
