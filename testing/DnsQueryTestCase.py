@@ -41,7 +41,7 @@ class DnsQueryTestCase(unittest.TestCase):
         # PARAMETERS
         cls.domain_name = 'platform.twitter.com.'
         cls.domain_name = 'postacert.umbria.it.'
-        cls.domain_name = 'mx.cert.legalmail.it.'
+        cls.domain_name = 'posteid.poste.it.'
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION

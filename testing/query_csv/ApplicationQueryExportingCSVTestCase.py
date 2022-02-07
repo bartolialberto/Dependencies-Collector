@@ -108,7 +108,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             try:
                 web_site_dne = helper_domain_name.get_from_entity_web_site(wse)
             except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
+                continue
             zone_name_dependencies_of_wse = set()
             try:
                 web_site_direct_zone = helper_zone.get_direct_zone_of(web_site_dne)
@@ -125,6 +125,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     pass          # could be a TLD that are not considered
             for zone_name in zone_name_dependencies_of_wse:
                 rows.append([wse.url.string, zone_name])
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -179,12 +180,28 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         rows = list()
         rows.append(['web_site', 'zone_name'])
         for wse in wses:
+            w_server_es = helper_web_server.get_from_entity_web_site(wse)
             try:
-                ze_dependencies = helper_application_queries.get_all_zone_dependencies_from_web_site(wse, from_script_sites=False)
+                web_site_dne = helper_domain_name.get_from_entity_web_site(wse)
             except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            for ze in ze_dependencies:
-                rows.append([wse.url.string, ze.name])
+                continue
+            zone_name_dependencies_of_wse = set()
+            try:
+                web_site_direct_zones = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_dne)
+                for ze in web_site_direct_zones:
+                    zone_name_dependencies_of_wse.add(ze.name)
+            except DoesNotExist:
+                pass  # could be a TLD that are not considered
+            for w_server_e in w_server_es:
+                try:
+                    web_server_direct_zones = helper_zone.get_zone_dependencies_of_entity_domain_name(w_server_e.name)
+                    for ze in web_server_direct_zones:
+                        zone_name_dependencies_of_wse.add(ze.name)
+                except DoesNotExist:
+                    pass  # could be a TLD that are not considered
+            for zone_name in zone_name_dependencies_of_wse:
+                rows.append([wse.url.string, zone_name])
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -218,7 +235,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
         # PARAMETER
         mdes = helper_mail_domain.get_everyone()
-        filename = 'query_number_of_dependencies_of_all_mail_domains'
+        filename = 'mail_domains_dependencies'
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
@@ -265,7 +282,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
         # PARAMETER
         wses = helper_web_server.get_everyone()
-        filename = 'query_number_of_dependencies_of_all_web_servers'
+        filename = 'web_servers_dependencies'
         # QUERY
         print(f"Parameters: {len(wses)} web servers retrieved from database.")
         rows = list()

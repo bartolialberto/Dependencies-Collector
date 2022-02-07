@@ -10,6 +10,16 @@ from utils import file_utils, csv_utils
 
 
 class QueryTXTRRecordsTestCase(unittest.TestCase):
+    """
+    Takes the DB in the output folder and a file named every_mail_domain.csv that contains all mail domains (also in the
+    output folder). If the every_mail_domain.csv file is not found then all mail domains will be retrieved from the DB.
+    Then for each mail domain a TXT or mta-sts TXT DNS query it is computed.
+    The elaboration will complete and the .csv result file will be exported in the output folder.
+    If there was not the every_mail_domain.csv file at the start, it will be created and exported in the output folder.
+    To choose between one or the other DNS query type, please change the boolean value 'mtasts_query' as desired.
+    """
+    PRD = None
+
     @staticmethod
     def get_project_root_folder() -> Path:
         current = Path.cwd()
@@ -52,15 +62,16 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
         cls.mtasts_query = False
         # ELABORATION
         cls.my_resolver = dns.resolver.Resolver()
-        PRD = QueryTXTRRecordsTestCase.get_project_root_folder()
+        cls.PRD = QueryTXTRRecordsTestCase.get_project_root_folder()
         try:
-            file = file_utils.search_for_filename_in_subdirectory('output', 'every_mail_domain.csv', project_root_directory=PRD)
+            files = file_utils.search_for_filename_in_subdirectory('output', 'every_mail_domain.csv', project_root_directory=cls.PRD)
+            file = files[0]
         except FilenameNotFoundError:
             mdes = helper_mail_domain.get_everyone()
             rows = list()
             for mde in mdes:
                 rows.append([mde.name.string])
-            file = file_utils.set_file_in_folder('output', "every_mail_domain.csv", PRD)
+            file = file_utils.set_file_in_folder('output', "every_mail_domain.csv", cls.PRD)
             QueryTXTRRecordsTestCase.write_csv_file(file, ',', rows)
         finally:
             with open(str(file), newline='') as f:
@@ -79,9 +90,9 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
             txt_records.append((d[0], len(records), values))
 
         if self.mtasts_query:
-            new_file = file_utils.set_file_in_folder('output', 'TXT_mta-sts_mail_domains.csv')
+            new_file = file_utils.set_file_in_folder('output', 'TXT_mta-sts_mail_domains.csv', self.PRD)
         else:
-            new_file = file_utils.set_file_in_folder('output', 'TXT_mail_domains.csv')
+            new_file = file_utils.set_file_in_folder('output', 'TXT_mail_domains.csv', self.PRD)
         with open(str(new_file), 'w', newline='') as f:
             writer = csv.writer(f)
             if self.mtasts_query:

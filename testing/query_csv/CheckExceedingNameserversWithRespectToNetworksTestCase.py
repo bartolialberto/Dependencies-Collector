@@ -11,6 +11,9 @@ from utils import file_utils, network_utils
 
 
 class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
+    """ Put the exceeding_zone.csv file in the input folder """
+    networks = None
+    nameservers = None
     zone_names = None
 
     @staticmethod
@@ -30,11 +33,17 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
         except FilenameNotFoundError:
             raise
         file = files_result[0]
+        cls.nameservers = dict()
+        cls.networks = dict()
         cls.zone_names = list()
         f = open(file, "r")
-        for line in f:
-            split_line = line.split(',')
-            cls.zone_names.append(split_line[1])
+        for i, line in enumerate(f):
+            if i != 0:
+                # split_line[0] is row index
+                split_line = line.split(',')
+                cls.zone_names.append(split_line[1])
+                cls.nameservers[split_line[1]] = int(split_line[2])
+                cls.networks[split_line[1]] = int(split_line[3])
         f.close()
         cls.zone_names.pop(0)
 
@@ -42,14 +51,12 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
         dns_resolver = dns.resolver.Resolver()
         count_exceeding_zones = 0
         db_zone_names = list()
-        for zone_name in self.zone_names:
-            if zone_name == 'mail.protection.outlook.com.':
-                print('')
-                pass
+        for i, zone_name in enumerate(self.zone_names):
             try:
                 ze = helper_zone.get(zone_name)
             except DoesNotExist:
                 raise
+            print(f"zone[{i+1}/{len(self.zone_names)}]: {zone_name}  (#nameservers={self.nameservers[zone_name]} VS. #networks={self.networks[zone_name]})")
 
             # from DB
             try:
@@ -87,8 +94,8 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
                 ine = network_utils.get_predefined_network(address)
                 query_ines.add(ine)
 
-            print(f"zone: {zone_name} --> DB: (#nameservers={len(nses)} VS. #networks={len(db_ines)}, {len(db_ines) > len(nses)})")
-            print(f"zone: {zone_name}-->QUERY:(#nameservers={len(name_servers)} VS. #networks={len(query_ines)}, {len(query_ines) > len(name_servers)})")
+            print(f"--->  DB : (#nameservers={len(nses)} VS. #networks={len(db_ines)})")
+            print(f"--->QUERY:(#nameservers={len(name_servers)} VS. #networks={len(query_ines)})")
             if len(db_ines) > len(nses):
                 count_exceeding_zones = count_exceeding_zones + 1
                 db_zone_names.append(zone_name)
