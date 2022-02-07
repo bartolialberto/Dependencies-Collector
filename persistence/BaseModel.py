@@ -4,7 +4,9 @@ from peewee import SqliteDatabase
 from utils import file_utils
 
 
-project_root_directory_name = 'LavoroTesi'
+project_root_directory_name = 'Lavoro-Tesi'
+candidate_name_1 = 'LavoroTesi'
+candidate_name_2 = 'Lavoro-Tesi'
 cwd = None
 if Path.cwd().name == project_root_directory_name:
     cwd = Path.cwd()

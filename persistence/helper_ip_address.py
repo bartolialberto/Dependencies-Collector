@@ -1,7 +1,7 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
-from persistence import helper_domain_name, helper_name_server
+from persistence import helper_domain_name
 from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation
 
 
@@ -40,7 +40,7 @@ def get_first_of(domain_name_parameter: DomainNameEntity or str) -> IpAddressEnt
         except DoesNotExist:
             raise
     query = AccessAssociation.select()\
-        .where(AccessAssociation.domain_name == dne)\
+        .where((AccessAssociation.domain_name == dne) & (AccessAssociation.ip_address.is_null(False)))\
         .limit(1)
     for row in query:
         return row.ip_address
@@ -50,7 +50,7 @@ def get_first_of(domain_name_parameter: DomainNameEntity or str) -> IpAddressEnt
 def get_all_of(dne: DomainNameEntity) -> Set[IpAddressEntity]:
     result = set()
     query = AccessAssociation.select()\
-        .where(AccessAssociation.domain_name == dne)
+        .where((AccessAssociation.domain_name == dne) & (AccessAssociation.ip_address.is_null(False)))
     for row in query:
         result.add(row.ip_address)
     return result

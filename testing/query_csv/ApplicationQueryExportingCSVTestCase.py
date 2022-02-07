@@ -45,10 +45,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
         # PARAMETER
         zes = helper_zone.get_everyone()
-        filename = 'query_number_of_dependencies_of_all_zones'
+        filename = 'zone_infos'
         # QUERY
         print(f"Parameters: {len(zes)} zones retrieved from database.")
         rows = list()
+        rows.append(["zone_name", "#nameservers", "#networks", "#as"])
         for ze in zes:
             try:
                 nses = helper_name_server.get_all_from_zone_entity(ze)
@@ -56,18 +57,37 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 self.fail(f"!!! {str(e)} !!!")
             ases = set()
             ines = set()
+            should_consider = True
             for nse in nses:
                 try:
-                    ns_ines = helper_ip_network.get_of_entity_domain_name(nse.name)
-                except (DoesNotExist, NoAvailablePathError) as e:
-                    continue
-                for ns_ine in ns_ines:
-                    ines.add(ns_ine)
-                ns_ases = helper_autonomous_system.get_of_entity_domain_name(nse.name)
-                for ns_ase in ns_ases:
-                    ases.add(ns_ase)
-            row = [ze.name, str(len(nses)), str(len(ines)), str(len(ases))]
-            rows.append(row)
+                    iaes, path_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
+                except (DoesNotExist, NoAvailablePathError):
+                    should_consider = False
+                    break
+                for iae in iaes:
+                    try:
+                        ine = helper_ip_network.get_of(iae)
+                    except (DoesNotExist, NoAvailablePathError):
+                        raise
+                    ines.add(ine)
+                    try:
+                        ase = helper_autonomous_system.get_of_entity_ip_address(iae)
+                    except DoesNotExist:
+                        continue
+                    ases.add(ase)
+            if not should_consider:
+                continue
+            if len(nses) == 0:
+                # case in which zone's name servers were not resolved... So zone is not considered
+                print('')
+                pass
+            else:
+                rows.append([ze.name, str(len(nses)), str(len(ines)), str(len(ases))])
+            # if len(ines) > len(nses):
+                # print(f"ERROR: {ze.name} has more ines {len(ines)} than nses {len(nses)}")
+            if len(ases) > len(ines):
+                print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -78,10 +98,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY DIRECT ZONES FROM WEB SITES AND ASSOCIATED WEB SERVERS")
         # PARAMETER
         wses = helper_web_site.get_everyone()
-        filename = 'query_direct_zones_from_all_web_sites'
+        filename = 'web_sites_direct_zone_dependencies'
         # QUERY
         print(f"Parameters: {len(wses)} web sites retrieved from database.")
         rows = list()
+        rows.append(['web_site', 'zone_name'])
         for wse in wses:
             w_server_es = helper_web_server.get_from_entity_web_site(wse)
             try:
@@ -114,10 +135,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY DIRECT ZONES FROM MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
         # PARAMETER
         mdes = helper_mail_domain.get_everyone()
-        filename = 'query_direct_zones_from_all_mail_domains'
+        filename = 'mail_domains_direct_zone_dependencies'
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
+        rows.append(['mail_domain', 'zone_name'])
         for mde in mdes:
             mail_domain_dne = mde.name
             try:
@@ -140,6 +162,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 zone_name_dependencies_of_mde.add(mail_server_server_direct_zone_name)
             for zone_name in zone_name_dependencies_of_mde:
                 rows.append([mde.name.string, zone_name])
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -150,10 +173,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY ZONES FROM WEB SITES AND ASSOCIATED WEB SERVERS")
         # PARAMETER
         wses = helper_web_site.get_everyone()
-        filename = 'query_zones_from_all_web_sites'
+        filename = 'web_sites_zone_dependencies'
         # QUERY
         print(f"Parameters: {len(wses)} web sites retrieved from database.")
         rows = list()
+        rows.append(['web_site', 'zone_name'])
         for wse in wses:
             try:
                 ze_dependencies = helper_application_queries.get_all_zone_dependencies_from_web_site(wse, from_script_sites=False)
@@ -171,10 +195,11 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY ZONES FROM MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
         # PARAMETER
         mdes = helper_mail_domain.get_everyone()
-        filename = 'query_zones_from_all_mail_domains'
+        filename = 'mail_domains_zone_dependencies'
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
+        rows.append(["mail_domain", "zone_name"])
         for mde in mdes:
             try:
                 ze_dependencies = helper_application_queries.get_all_zone_dependencies_from_mail_domain(mde)
@@ -182,6 +207,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 self.fail(f"!!! {str(e)} !!!")
             for ze in ze_dependencies:
                 rows.append([mde.name.string, ze.name])
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
