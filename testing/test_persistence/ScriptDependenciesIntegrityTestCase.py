@@ -1,5 +1,4 @@
 import unittest
-from pathlib import Path
 from typing import Tuple, Dict, Set
 import selenium
 from peewee import DoesNotExist
@@ -10,8 +9,7 @@ from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesReso
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_script, helper_application_results, helper_web_site
-from persistence.BaseModel import project_root_directory_name
-from utils import url_utils
+from utils import url_utils, file_utils
 
 
 class ScriptDependenciesIntegrityTestCase(unittest.TestCase):
@@ -21,15 +19,6 @@ class ScriptDependenciesIntegrityTestCase(unittest.TestCase):
     resolver = None
     headless_browser = None
     web_sites = None
-
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
 
     @staticmethod
     def do_script_dependencies_resolving(script_resolver, landing_web_sites_results) -> Dict[str, ScriptDependenciesResult]:
@@ -147,7 +136,7 @@ class ScriptDependenciesIntegrityTestCase(unittest.TestCase):
             'www.youtube.com/feed/explore'
         }
         # ELABORATION
-        PRD = ScriptDependenciesIntegrityTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
         script_resolver = ScriptDependenciesResolver(cls.headless_browser)
         dns_resolver = DnsResolver(None)

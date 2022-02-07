@@ -1,21 +1,9 @@
-from pathlib import Path
 from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField, TextField
 from peewee import SqliteDatabase
 from utils import file_utils
 
 
-project_root_directory_name = 'Lavoro-Tesi'
-candidate_name_1 = 'LavoroTesi'
-candidate_name_2 = 'Lavoro-Tesi'
-cwd = None
-if Path.cwd().name == project_root_directory_name:
-    cwd = Path.cwd()
-elif Path.cwd().parent.name == project_root_directory_name:
-    cwd = Path.cwd().parent
-elif Path.cwd().parent.parent.name == project_root_directory_name:
-    cwd = Path.cwd().parent.parent
-else:
-    cwd = Path.cwd().parent.parent.parent
+cwd = file_utils.get_project_root_directory()
 db_file = file_utils.set_file_in_folder('output', 'results.sqlite', cwd)
 db_file.open(mode='a').close()
 db = SqliteDatabase(str(db_file))

@@ -1,24 +1,13 @@
 import unittest
-from pathlib import Path
-from persistence.BaseModel import project_root_directory_name
 from utils import file_utils
 
 
 class ConvertCSVToTXTTestCase(unittest.TestCase):
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.csv_filename = 'websites_de'
         cls.new_txt_filename = 'websites_de'
-        cls.PRD = ConvertCSVToTXTTestCase.get_project_root_folder()
+        cls.PRD = file_utils.get_project_root_directory()
 
     def test_conversion(self):
         new_lines = list()

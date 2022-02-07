@@ -5,7 +5,6 @@ from typing import List
 import dns.resolver
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from persistence import helper_mail_domain
-from persistence.BaseModel import project_root_directory_name
 from utils import file_utils, csv_utils
 
 
@@ -19,15 +18,6 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
     To choose between one or the other DNS query type, please change the boolean value 'mtasts_query' as desired.
     """
     PRD = None
-
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
 
     @staticmethod
     def write_csv_file(file: Path, separator: str, rows: List[List[str]]) -> None:
@@ -62,7 +52,8 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
         cls.mtasts_query = False
         # ELABORATION
         cls.my_resolver = dns.resolver.Resolver()
-        cls.PRD = QueryTXTRRecordsTestCase.get_project_root_folder()
+        cls.PRD = file_utils.get_project_root_directory()
+
         try:
             files = file_utils.search_for_filename_in_subdirectory('output', 'every_mail_domain.csv', project_root_directory=cls.PRD)
             file = files[0]

@@ -5,7 +5,7 @@ from entities.resolvers.LandingResolver import LandingResolver
 
 class LandingTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        dns_resolver = DnsResolver(None)
+        dns_resolver = DnsResolver(True)
         self.resolver = LandingResolver(dns_resolver)
         self.web_site_list = [
             'google.it/doodles',

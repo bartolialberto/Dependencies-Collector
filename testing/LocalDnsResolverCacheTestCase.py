@@ -1,9 +1,9 @@
 import unittest
-from pathlib import Path
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
+from utils import file_utils
 
 
 # EXAMPLES (aliases path)
@@ -19,21 +19,12 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
     cache_filename_in_output_folder = None
     cache = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == 'LavoroTesi':
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.cache_filename_in_output_folder = 'dns_cache'
         # ELABORATION
-        PRD = LocalDnsResolverCacheTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         cls.cache = LocalDnsResolverCache()
         try:
             cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder+'.csv', take_snapshot=False, project_root_directory=PRD)

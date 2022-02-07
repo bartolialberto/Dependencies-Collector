@@ -1,6 +1,5 @@
 import ipaddress
 import unittest
-from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.DnsResolver import DnsResolver
@@ -15,29 +14,20 @@ from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableNotPresentError import TableNotPresentError
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class ROVScrapingResolvingTestCase(unittest.TestCase):
     headless_browser = None
     domain_names = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_names = ['google.it']
         # ELABORATION
-        PRD = ROVScrapingResolvingTestCase.get_project_root_folder()
-        dns_resolver = DnsResolver(None)
+        PRD = file_utils.get_project_root_directory()
+        dns_resolver = DnsResolver(True)
         dns_results = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names)
         ip_as_resolver = IpAsDatabase(PRD)
         ip_as_results = AutonomousSystemResolutionResults()

@@ -6,7 +6,6 @@ from peewee import DoesNotExist
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_zone, helper_name_server, helper_domain_name, helper_ip_network
-from persistence.BaseModel import project_root_directory_name
 from utils import file_utils, network_utils
 
 
@@ -16,18 +15,9 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
     nameservers = None
     zone_names = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
-        PRD = CheckExceedingNameserversWithRespectToNetworksTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         try:
             files_result = file_utils.search_for_filename_in_subdirectory('input', 'exceeding_zone.csv', PRD)
         except FilenameNotFoundError:

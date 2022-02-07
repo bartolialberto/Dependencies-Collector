@@ -1,14 +1,13 @@
 import copy
 import unittest
-from pathlib import Path
 from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from main import get_input_websites, get_input_mail_domains, get_input_application_flags
 from persistence import helper_application_results, helper_domain_name, helper_name_server, helper_zone, \
     helper_web_site, helper_web_server, helper_mail_domain, helper_mail_server, helper_script, helper_script_server
-from persistence.BaseModel import db, project_root_directory_name
-from utils import domain_name_utils, url_utils
+from persistence.BaseModel import db
+from utils import domain_name_utils, url_utils, file_utils
 
 
 class EntireApplicationIntegrityTestCase(unittest.TestCase):
@@ -20,18 +19,9 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     headless_browser_is_instantiated = None
     resolvers = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
-        PRD = EntireApplicationIntegrityTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         # PARAMETERS
         cls.input_websites = get_input_websites(project_root_directory=PRD)
         cls.input_mail_domains = get_input_mail_domains(project_root_directory=PRD)

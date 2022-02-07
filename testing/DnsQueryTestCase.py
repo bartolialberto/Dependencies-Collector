@@ -1,6 +1,5 @@
 import unittest
 from datetime import datetime
-from pathlib import Path
 import dns
 from dns.name import Name
 from entities.resolvers.DnsResolver import DnsResolver
@@ -9,7 +8,7 @@ from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class DnsQueryTestCase(unittest.TestCase):
@@ -27,15 +26,6 @@ class DnsQueryTestCase(unittest.TestCase):
     domain_name = None
     dns_resolver = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
@@ -45,7 +35,7 @@ class DnsQueryTestCase(unittest.TestCase):
         cls.type = TypesRR.A
         cls.import_cache_from_output_folder = True
         # ELABORATION
-        PRD = DnsQueryTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         cls.dns_resolver = DnsResolver(True)
         if cls.import_cache_from_output_folder:
             try:

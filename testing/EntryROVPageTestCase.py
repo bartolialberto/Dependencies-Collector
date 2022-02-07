@@ -1,12 +1,12 @@
 import ipaddress
 import unittest
-from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.ROVPageScraper import ROVPageScraper
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
+from utils import file_utils
 
 
 class EntryROVPageTestCase(unittest.TestCase):
@@ -16,7 +16,8 @@ class EntryROVPageTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        headless_browser = FirefoxHeadlessWebDriver(project_root_directory=Path.cwd().parent)
+        PRD = file_utils.get_project_root_directory()
+        headless_browser = FirefoxHeadlessWebDriver(project_root_directory=PRD)
         cls.headless_browser = headless_browser
         cls.scraper = ROVPageScraper(headless_browser)
 

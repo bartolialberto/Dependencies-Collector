@@ -20,6 +20,7 @@ from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
 from persistence import helper_application_results, helper_ip_address, helper_name_server, helper_ip_network, \
     helper_autonomous_system, helper_rov, helper_prefixes_table, helper_ip_range_tsv, helper_ip_range_rov, helper_alias
+from utils import file_utils
 
 
 class IpAsAndROVIntegrityTestCase(unittest.TestCase):
@@ -33,15 +34,6 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
     dns_results = None
     domain_name_list = None
     headless_browser = None
-
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == 'LavoroTesi':
-                return current
-            else:
-                current = current.parent
 
     @staticmethod
     def do_ip_as_database_resolving(ip_as_resolver: IpAsDatabase, dns_results: MultipleDnsZoneDependenciesResult) -> AutonomousSystemResolutionResults:
@@ -113,8 +105,8 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
         # PARAMETERS
         cls.domain_name_list = ['unipd.it', 'google.it', 'youtube.it']
         # ELABORATION
-        PRD = IpAsAndROVIntegrityTestCase.get_project_root_folder()
-        dns_resolver = DnsResolver(None)
+        PRD = file_utils.get_project_root_directory()
+        dns_resolver = DnsResolver(True)
         cls.dns_results = dns_resolver.resolve_multiple_domains_dependencies(cls.domain_name_list)
         ip_as_resolver = IpAsDatabase(project_root_directory=PRD)
         ip_as_results = IpAsAndROVIntegrityTestCase.do_ip_as_database_resolving(ip_as_resolver, cls.dns_results)

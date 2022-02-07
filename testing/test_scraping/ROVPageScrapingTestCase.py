@@ -1,6 +1,5 @@
 import ipaddress
 import unittest
-from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.scrapers.ROVPageScraper import ROVPageScraper
@@ -9,24 +8,15 @@ from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class ROVPageScrapingTestCase(unittest.TestCase):
     headless_browser = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
-        PRD = ROVPageScrapingTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         try:
             cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
         except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:

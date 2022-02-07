@@ -3,12 +3,14 @@ import unittest
 from pathlib import Path
 from entities.resolvers.IpAsDatabase import IpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
+from utils import file_utils
 
 
 class EntryIpAsDatabaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.db = IpAsDatabase(project_root_directory=Path.cwd().parent)
+        PRD = file_utils.get_project_root_directory()
+        cls.db = IpAsDatabase(project_root_directory=PRD)
 
     def test_from_ip_addresses(self):
         print(f"\n------- [1] START GETTING NETWORK FROM ENTRY TEST -------")

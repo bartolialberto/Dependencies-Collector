@@ -6,6 +6,17 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 
 
+def get_project_root_directory() -> Path:
+    """
+    This method returns the Path object to the project root directory (PRD) regardless of which script is executed
+    (example: main.py file is executed or some test belonging to the /testing package)
+
+    :return: The project root directory Path object.
+    :rtype: Path
+    """
+    return Path(__file__).parent.parent
+
+
 def parse_file_path(string: str) -> Tuple[str, str]:
     """
     Split the pathname string into a pair (root, ext) such that root + ext == string, and the extension, ext, is empty

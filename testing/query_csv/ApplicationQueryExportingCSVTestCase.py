@@ -6,20 +6,10 @@ from peewee import DoesNotExist
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_web_server, helper_zone, helper_web_site, helper_domain_name, helper_mail_domain, \
     helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries
-from persistence.BaseModel import project_root_directory_name
 from utils import file_utils, csv_utils
 
 
 class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @staticmethod
     def write_csv_file(file: Path, separator: str, rows: List[List[str]]) -> None:
         try:
@@ -89,7 +79,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")

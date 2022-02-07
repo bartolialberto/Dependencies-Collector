@@ -6,20 +6,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from selenium.webdriver.support import expected_conditions as ec
+from utils import file_utils
 
 
 class RequestsTestCase(unittest.TestCase):
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == 'LavoroTesi':
-                return current
-            else:
-                current = current.parent
-
     def test_getting_all_tlds(self):
-        PRD = RequestsTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         headless_browser = FirefoxHeadlessWebDriver(project_root_directory=PRD)
         try:
             headless_browser.driver.get('https://www.iana.org/domains/root/db')

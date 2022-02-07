@@ -1,9 +1,8 @@
 import unittest
-from pathlib import Path
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class ScriptDependenciesResolvingTestCase(unittest.TestCase):
@@ -11,15 +10,6 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
     resolver = None
     headless_browser = None
     urls = None
-
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -29,7 +19,7 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
             'https://www.google.com/doodles'
         ]
         # ELABORATION
-        PRD = ScriptDependenciesResolvingTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
         cls.resolver = ScriptDependenciesResolver(cls.headless_browser)
         cls.results = dict()

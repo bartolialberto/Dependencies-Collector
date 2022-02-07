@@ -1,13 +1,7 @@
 import copy
 import unittest
-from pathlib import Path
-import selenium
 from entities.resolvers.DnsResolver import DnsResolver
-from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.scrapers.TLDPageScraper import TLDPageScraper
 from entities.error_log.ErrorLogger import ErrorLogger
-from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from persistence.BaseModel import project_root_directory_name
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -16,6 +10,9 @@ from persistence.BaseModel import project_root_directory_name
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
+from utils import file_utils
+
+
 class DnsResolvingTestCase(unittest.TestCase):
     """
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
@@ -48,15 +45,6 @@ class DnsResolvingTestCase(unittest.TestCase):
     domain_names = None
     dns_resolver = None
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
@@ -65,24 +53,8 @@ class DnsResolvingTestCase(unittest.TestCase):
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = True
         # ELABORATION
-        cls.PRD = DnsResolvingTestCase.get_project_root_folder()
-        if not cls.consider_tld:
-            try:
-                headless_browser = FirefoxHeadlessWebDriver(cls.PRD)
-            except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
-                print(f"!!! {str(e)} !!!")
-                return
-            cls.tld_scraper = TLDPageScraper(headless_browser)
-            try:
-                tlds = cls.tld_scraper.scrape_tld()
-            except (
-            selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
-                print(f"!!! {str(e)} !!!")
-                return
-            cls.dns_resolver = DnsResolver(tlds)
-            headless_browser.close()
-        else:
-            cls.dns_resolver = DnsResolver(None)
+        cls.PRD = file_utils.get_project_root_directory()
+        cls.dns_resolver = DnsResolver(cls.consider_tld)
         cls.dns_resolver.cache.clear()
         print("START DNS DEPENDENCIES RESOLVER")
         cls.dns_results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, reset_cache_per_elaboration=True, consider_tld=cls.consider_tld)

@@ -1,17 +1,13 @@
 import unittest
-from pathlib import Path
 import selenium
 from peewee import DoesNotExist
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from entities.scrapers.TLDPageScraper import TLDPageScraper
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAliasFoundError import NoAliasFoundError
-from persistence import helper_domain_name, helper_application_results, helper_name_server, helper_zone, helper_alias, \
-    helper_zone_links
-from persistence.BaseModel import project_root_directory_name
-from utils import domain_name_utils
+from persistence import helper_domain_name, helper_application_results, helper_name_server, helper_zone, helper_alias
+from utils import domain_name_utils, file_utils
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -38,15 +34,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     domain_name_list = None
     headless_browser_is_instantiated = False
 
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
@@ -56,7 +43,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
         cls.clear_cache_at_start = False
         cls.consider_tld = True
         # ELABORATION
-        PRD = DnsResolvingIntegrityTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         if cls.clear_cache_at_start:
             cls.dns_resolver.cache.clear()
         if cls.import_cache_from_output_folder:

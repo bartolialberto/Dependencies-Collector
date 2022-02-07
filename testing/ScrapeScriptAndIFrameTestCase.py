@@ -1,5 +1,4 @@
 import unittest
-from pathlib import Path
 from typing import List
 import selenium
 from selenium.webdriver.common.by import By
@@ -7,7 +6,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
@@ -16,15 +15,6 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
     PRD = None
     real_results = None
     debug_results = None
-
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
 
     @staticmethod
     def debug_search_all_scripts(headless_browser, url: str) -> List[WebElement]:
@@ -40,7 +30,7 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
         url = 'http://127.0.0.1:3000/'
         url = 'https://corriere.it/'
         # ELABORATION
-        PRD = ScrapeScriptAndIFrameTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         try:
             cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
         except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:

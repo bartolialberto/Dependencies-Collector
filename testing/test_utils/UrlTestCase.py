@@ -1,5 +1,4 @@
 import unittest
-
 from exceptions.InvalidUrlError import InvalidUrlError
 from utils import url_utils
 

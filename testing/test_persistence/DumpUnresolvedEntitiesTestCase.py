@@ -1,23 +1,13 @@
 import unittest
-from pathlib import Path
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from persistence import helper_application_results
-from persistence.BaseModel import project_root_directory_name
+from utils import file_utils
 
 
 class DumpUnresolvedEntitiesTestCase(unittest.TestCase):
-    @staticmethod
-    def get_project_root_folder() -> Path:
-        current = Path.cwd()
-        while True:
-            if current.name == project_root_directory_name:
-                return current
-            else:
-                current = current.parent
-
     @classmethod
     def setUpClass(cls) -> None:
-        cls.PRD = DumpUnresolvedEntitiesTestCase.get_project_root_folder()
+        cls.PRD = file_utils.get_project_root_directory()
 
     def test_1_dump_unresolved_entities(self):
         print(f"\n------- [1] START DUMPING UNRESOLVED ENTITIES TEST -------")
