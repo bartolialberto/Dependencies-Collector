@@ -1,5 +1,4 @@
 import unittest
-from pathlib import Path
 import dns.resolver
 from dns.name import Name
 from peewee import DoesNotExist
@@ -28,14 +27,13 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
         cls.zone_names = list()
         f = open(file, "r")
         for i, line in enumerate(f):
-            if i != 0:
+            if i != 0:  # for headers
                 # split_line[0] is row index
                 split_line = line.split(',')
                 cls.zone_names.append(split_line[1])
                 cls.nameservers[split_line[1]] = int(split_line[2])
                 cls.networks[split_line[1]] = int(split_line[3])
         f.close()
-        cls.zone_names.pop(0)
 
     def test_check_exceeding(self):
         dns_resolver = dns.resolver.Resolver()

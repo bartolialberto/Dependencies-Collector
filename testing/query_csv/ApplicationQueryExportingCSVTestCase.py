@@ -117,7 +117,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 rows.append([wse.url.string, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
@@ -155,7 +155,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 rows.append([mde.name.string, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
@@ -193,7 +193,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 rows.append([wse.url.string, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
@@ -216,7 +216,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 rows.append([mde.name.string, ze.name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
@@ -263,7 +263,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"UNRESOLVED MAIL SERVERS = {unresolved_mail_server}")
         print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
@@ -301,7 +301,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"UNRESOLVED WEB SERVER = {unresolved_web_server}")
         print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
         # EXPORTING
-        PRD = ApplicationQueryExportingCSVTestCase.get_project_root_folder()
+        PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
         print(f"--- END ---\n")
