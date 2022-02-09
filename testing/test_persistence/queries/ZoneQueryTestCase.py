@@ -25,13 +25,14 @@ class ZoneQueryTestCase(unittest.TestCase):
         print(f"\n------- [2] START GETTING ZONE OBJECT FROM ZONE NAME QUERY -------")
         # PARAMETER
         zone_name = 'cdn-auth.digidentity.eu'
+        zone_name = 'ttd.net.'
         # QUERY
         print(f"Parameter: {zone_name}")
         try:
-            zo, aliases_dne = helper_zone.get_zone_object_from_zone_name(zone_name)
+            zo = helper_zone.get_zone_object_from_zone_name(zone_name)
         except DoesNotExist as e:
             self.fail(str(e))
-        print(f"Resolved: {str(zo)}. More prints:")
+        print(f"Resolved: {zo.stamp_zone_name_resolution_path()}")
         for i, name_server in enumerate(zo.nameservers):
             print(f"nameserver[{i+1}/{len(zo.nameservers)}]: {zo.stamp_access_path(name_server)}")
         print(f"------- [2] START GETTING ZONE OBJECT FROM ZONE NAME QUERY -------")

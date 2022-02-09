@@ -395,10 +395,15 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         dz_name_servers.add(nse)
 
             # zones
+            zo_dict = dict()        # to save up time from too much queries
             for nse in name_servers:
                 zes = helper_zone.get_all_of_entity_name_server(nse)
                 for ze in zes:
-                    zo = helper_zone.get_zone_object_from_zone_entity(ze)
+                    try:
+                        zo = zo_dict[ze.name]
+                    except KeyError:
+                        zo = helper_zone.get_zone_object_from_zone_entity(ze)
+                        zo_dict[ze.name] = zo
                     try:
                         all_nse_in_ine = ApplicationQueryExportingCSVTestCase.are_all_name_servers_of_zone_object_in_network(zo, ine)
                     except NoAvailablePathError:
