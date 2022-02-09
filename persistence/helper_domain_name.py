@@ -5,7 +5,7 @@ from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_ip_address, helper_alias, helper_web_site_domain_name, helper_script_site_domain_name
 from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity, \
     AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation, WebSiteEntity, \
-    ScriptSiteEntity
+    ScriptSiteEntity, DirectZoneAssociation
 from utils import domain_name_utils
 
 
@@ -100,6 +100,15 @@ def get_from_entity_script_site(sse: ScriptSiteEntity) -> DomainNameEntity:
     except DoesNotExist:
         raise
     return ssdna.domain_name
+
+
+def get_from_direct_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
+    query = DirectZoneAssociation.select()\
+        .where(DirectZoneAssociation.zone == ze)
+    result = set()
+    for row in query:
+        result.add(row.domain_name)
+    return result
 
 
 def get_everyone() -> Set[DomainNameEntity]:

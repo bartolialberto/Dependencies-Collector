@@ -1,12 +1,16 @@
 import csv
+import ipaddress
 import unittest
 from pathlib import Path
 from typing import List
 from peewee import DoesNotExist
+from entities.Zone import Zone
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_web_server, helper_zone, helper_web_site, helper_domain_name, helper_mail_domain, \
-    helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries
-from utils import file_utils, csv_utils
+    helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries, \
+    helper_ip_address, helper_web_site_domain_name
+from persistence.BaseModel import IpNetworkEntity
+from utils import file_utils, csv_utils, network_utils
 
 
 class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
@@ -24,6 +28,24 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             raise
         except OSError:
             raise
+
+    @staticmethod
+    def are_all_name_servers_of_zone_object_in_network(zo: Zone, network_param: IpNetworkEntity) -> bool:
+        network = ipaddress.IPv4Network(network_param.compressed_notation)
+        all_addresses = set()
+        for name_server in zo.nameservers:
+            try:
+                rr_a = zo.resolve_name_server_access_path(name_server)
+            except NoAvailablePathError:
+                raise
+            for value in rr_a.values:
+                all_addresses.add(ipaddress.IPv4Address(value))
+        for address in all_addresses:
+            if network_utils.is_in_network(address, network):
+                pass
+            else:
+                return False
+        return True
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -46,15 +68,17 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
             ases = set()
+            iaes = set()
             ines = set()
             should_consider = True
             for nse in nses:
                 try:
-                    iaes, path_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
+                    nse_iaes, path_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
                 except (DoesNotExist, NoAvailablePathError):
                     should_consider = False
                     break
-                for iae in iaes:
+                for iae in nse_iaes:
+                    iaes.add(iae)
                     try:
                         ine = helper_ip_network.get_of(iae)
                     except (DoesNotExist, NoAvailablePathError):
@@ -72,7 +96,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 print('')
                 pass
             else:
-                rows.append([ze.name, str(len(nses)), str(len(ines)), str(len(ases))])
+                rows.append([ze.name, str(len(iaes)), str(len(ines)), str(len(ases))])
             # if len(ines) > len(nses):
                 # print(f"ERROR: {ze.name} has more ines {len(ines)} than nses {len(nses)}")
             if len(ases) > len(ines):
@@ -300,6 +324,110 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
         print(f"UNRESOLVED WEB SERVER = {unresolved_web_server}")
         print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
+        # EXPORTING
+        PRD = file_utils.get_project_root_directory()
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"--- END ---\n")
+
+    def test_8_query_networks_dependencies(self):
+        print(f"--- QUERY NETWORKS DEPENDENCIES")
+        # PARAMETER
+        ines = helper_ip_network.get_everyone()
+        filename = 'networks_dependencies'
+        # QUERY
+        print(f"Parameters: {len(ines)} IP networks retrieved from database.")
+        rows = list()
+        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#websites', '#maildomains'])
+        for ine in ines:
+            try:
+                ase = helper_autonomous_system.get_of_entity_ip_network(ine)
+            except DoesNotExist:
+                continue
+            try:
+                network_iaes = helper_ip_address.get_all_of_entity_network(ine)
+            except DoesNotExist:
+                raise       # should never happen
+            web_servers = set()
+            mail_servers = set()
+            name_servers = set()
+            dz_name_servers = set()
+            zones = set()
+            web_sites = set()
+            mail_domains = set()
+            for iae in network_iaes:
+                access_path_dnes = helper_ip_address.resolve_reversed_access_path(iae, add_dne_along_the_chain=True)
+                # webservers
+                for dne in access_path_dnes:
+                    try:
+                        wse, wse_dne = helper_web_server.get(dne.string)
+                        web_servers.add(wse)
+                    except DoesNotExist:
+                        pass
+                # mailservers
+                for dne in access_path_dnes:
+                    try:
+                        mse = helper_mail_server.get(dne.string)
+                        mail_servers.add(mse)
+                    except DoesNotExist:
+                        pass
+                # nameservers
+                for dne in access_path_dnes:
+                    try:
+                        nse, nse_dne = helper_name_server.get(dne.string)
+                        name_servers.add(nse)
+                    except DoesNotExist:
+                        pass
+
+            # dz_name_servers
+            zes = helper_zone.get_everyone_that_is_direct_zone()
+            for ze in zes:
+                try:
+                    nses = helper_name_server.get_all_from_zone_entity(ze)
+                except DoesNotExist:
+                    continue
+                for nse in nses:
+                    try:
+                        nse_ines = helper_ip_network.get_of_entity_domain_name(nse.name)
+                    except (DoesNotExist, NoAvailablePathError):
+                        continue
+                    if ine in nse_ines:
+                        dz_name_servers.add(nse)
+
+            # zones
+            for nse in name_servers:
+                zes = helper_zone.get_all_of_entity_name_server(nse)
+                for ze in zes:
+                    zo = helper_zone.get_zone_object_from_zone_entity(ze)
+                    try:
+                        all_nse_in_ine = ApplicationQueryExportingCSVTestCase.are_all_name_servers_of_zone_object_in_network(zo, ine)
+                    except NoAvailablePathError:
+                        all_nse_in_ine = False
+                    if all_nse_in_ine:
+                        zones.add(ze)
+            # websites
+            for ze in zones:
+                dnes = helper_domain_name.get_from_direct_zone(ze)
+                for dne in dnes:
+                    try:
+                        wsdnas = helper_web_site_domain_name.get_from_entity_domain_name(dne)
+                        for wsdna in wsdnas:
+                            web_sites.add(wsdna.web_site)
+                    except DoesNotExist:
+                        pass
+            # mail_domains
+            for ze in zones:
+                dnes = helper_domain_name.get_from_direct_zone(ze)
+                for dne in dnes:
+                    try:
+                        mde = helper_mail_domain.get(dne.string)
+                        mail_domains.add(mde)
+                    except DoesNotExist:
+                        pass
+            if len(dz_name_servers) > len(name_servers):
+                print(f"!!! ERROR !!!")
+            rows.append([ine.compressed_notation, ase.number, len(web_servers), len(mail_servers), len(name_servers), len(dz_name_servers), len(zones), len(web_sites), len(mail_domains)])
+        print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)

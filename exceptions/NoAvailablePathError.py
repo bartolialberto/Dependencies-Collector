@@ -1,10 +1,10 @@
 class NoAvailablePathError(Exception):
-    for_domain_name: str
+    for_param: str
 
-    def __init__(self, domain_name: str):
-        temp = f"No alias path found for name: {domain_name}"
+    def __init__(self, param: str):
+        temp = f"No alias path found for: {param}"
         self.message = temp
-        self.for_domain_name = domain_name
+        self.for_param = param
         BaseException.__init__(self, temp)
 
     def __str__(self):

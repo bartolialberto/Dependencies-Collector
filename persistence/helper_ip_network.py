@@ -1,6 +1,8 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
+
+from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_domain_name
 from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity, DomainNameEntity
 from utils import network_utils
@@ -56,7 +58,10 @@ def get_of(iae: ipaddress.IPv4Address) -> IpNetworkEntity:
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[IpNetworkEntity]:
-    iaes, dnes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
+    try:
+        iaes, dnes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
+    except (NoAvailablePathError, DoesNotExist):
+        raise
     result = set()
     for iae in iaes:
         try:

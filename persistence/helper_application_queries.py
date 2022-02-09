@@ -103,10 +103,11 @@ def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
     # from web site domain name
     for dne in dnes:
         try:
-            wsdna = helper_web_site_domain_name.get_from_entity_domain_name(dne)
+            wsdnas = helper_web_site_domain_name.get_from_entity_domain_name(dne)
         except DoesNotExist:
             continue
-        web_sites.add(wsdna.web_site)
+        for wsdna in wsdnas:
+            web_sites.add(wsdna.web_site)
         break       # should always be only 1
 
     # from scripts

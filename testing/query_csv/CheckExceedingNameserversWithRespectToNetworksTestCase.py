@@ -81,7 +81,6 @@ class CheckExceedingNameserversWithRespectToNetworksTestCase(unittest.TestCase):
             for address in addresses:
                 ine = network_utils.get_predefined_network(address)
                 query_ines.add(ine)
-
             print(f"--->  DB : (#nameservers={len(nses)} VS. #networks={len(db_ines)})")
             print(f"--->QUERY:(#nameservers={len(name_servers)} VS. #networks={len(query_ines)})")
             if len(db_ines) > len(nses):

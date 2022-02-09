@@ -1,3 +1,4 @@
+from typing import Set
 from peewee import DoesNotExist
 from persistence import helper_web_site, helper_domain_name
 from persistence.BaseModel import WebSiteEntity, DomainNameEntity, WebSiteDomainNameAssociation
@@ -24,7 +25,7 @@ def get_from_entity_web_site(wse: WebSiteEntity) -> WebSiteDomainNameAssociation
     return wsdna
 
 
-def get_from_string_domain_name(domain_name: str) -> WebSiteDomainNameAssociation:
+def get_from_string_domain_name(domain_name: str) -> Set[WebSiteDomainNameAssociation]:
     try:
         dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
@@ -32,9 +33,11 @@ def get_from_string_domain_name(domain_name: str) -> WebSiteDomainNameAssociatio
     return get_from_entity_domain_name(dne)
 
 
-def get_from_entity_domain_name(dne: DomainNameEntity) -> WebSiteDomainNameAssociation:
-    try:
-        wsdna = WebSiteDomainNameAssociation.get(WebSiteDomainNameAssociation.domain_name == dne)
-    except DoesNotExist:
-        raise
-    return wsdna
+def get_from_entity_domain_name(dne: DomainNameEntity) -> Set[WebSiteDomainNameAssociation]:
+    query = WebSiteDomainNameAssociation.select()\
+        .where(WebSiteDomainNameAssociation.domain_name == dne)
+    result = set()
+    for row in query:
+        result.add(row)
+    return result
+

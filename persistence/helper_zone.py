@@ -112,6 +112,7 @@ def __inner_resolve_zone_from_path(dne: DomainNameEntity, result: List[DomainNam
             raise
 
 
+# TODO: TEST ULTERIORI
 def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
     try:
         nses = helper_name_server.get_all_from_zone_name(ze.name)
@@ -122,6 +123,20 @@ def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
     zone_name_aliases = list()
     zone_name_addresses = list()
     for nse in nses:
+        try:
+            iaes, chain_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
+        except (DoesNotExist, NoAvailablePathError):
+            continue        # TODO
+        prev = nse.name.string
+        for a_dne in chain_dnes[1:]:
+            zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
+            prev = a_dne.string
+        ip_addresses = list(map(lambda iae: iae.exploded_notation, iaes))
+        zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, ip_addresses))
+
+
+
+        """
         try:
             iae = helper_ip_address.get_first_of(nse.name.string)
             zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
@@ -135,6 +150,7 @@ def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
                 zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
                 prev = a_dne.string
             zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
+        """
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())
 
 
@@ -158,6 +174,14 @@ def get_all_of_entity_name_server(nse: NameServerEntity) -> Set[ZoneEntity]:
     query = ZoneComposedAssociation.select()\
         .where(ZoneComposedAssociation.name_server == nse)
     result = set()
+    for row in query:
+        result.add(row.zone)
+    return result
+
+
+def get_everyone_that_is_direct_zone() -> Set[ZoneEntity]:
+    result = set()
+    query = DirectZoneAssociation.select()
     for row in query:
         result.add(row.zone)
     return result

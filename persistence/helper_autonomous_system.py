@@ -3,7 +3,7 @@ from peewee import DoesNotExist
 
 from persistence import helper_domain_name
 from persistence.BaseModel import AutonomousSystemEntity, IpRangeTSVEntity, NetworkNumbersAssociation, DomainNameEntity, \
-    AccessAssociation, IpAddressDependsAssociation, IpAddressEntity
+    AccessAssociation, IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity
 
 
 def insert(as_number: int, description: str) -> AutonomousSystemEntity:
@@ -22,6 +22,16 @@ def get_of_entity_ip_address(iae: IpAddressEntity) -> AutonomousSystemEntity:
     query = NetworkNumbersAssociation.select()\
         .join(IpAddressDependsAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
         .where(IpAddressDependsAssociation.ip_address == iae)\
+        .limit(1)
+    for row in query:
+        return row.autonomous_system
+    raise DoesNotExist
+
+
+def get_of_entity_ip_network(ine: IpNetworkEntity) -> AutonomousSystemEntity:
+    query = NetworkNumbersAssociation.select()\
+        .join(IpAddressDependsAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
+        .where(IpAddressDependsAssociation.ip_network == ine)\
         .limit(1)
     for row in query:
         return row.autonomous_system
