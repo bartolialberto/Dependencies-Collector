@@ -57,11 +57,18 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
         # PARAMETER
         zes = helper_zone.get_everyone()
+        # this flag tells if we have to export a zone name that we know it is a zone (NS RR was resolved) but each
+        # nameserver's A RR was not resolved. In that case the zone row will be added and for each field regarding the
+        # relative infos will present the string value: ND
+        only_complete_zones = False
+        unresolved_value = 'ND'
         filename = 'zone_infos'
         # QUERY
         print(f"Parameters: {len(zes)} zones retrieved from database.")
         rows = list()
         rows.append(["zone_name", "#nameservers", "#networks", "#as"])
+        count_complete_zones = 0
+        count_incomplete_zones = 0
         for ze in zes:
             try:
                 nses = helper_name_server.get_all_from_zone_entity(ze)
@@ -70,12 +77,12 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             ases = set()
             iaes = set()
             ines = set()
-            should_consider = True
+            is_unresolved = False
             for nse in nses:
                 try:
                     nse_iaes, path_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
                 except (DoesNotExist, NoAvailablePathError):
-                    should_consider = False
+                    is_unresolved = True
                     break
                 for iae in nse_iaes:
                     iaes.add(iae)
@@ -87,21 +94,22 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     try:
                         ase = helper_autonomous_system.get_of_entity_ip_address(iae)
                     except DoesNotExist:
-                        continue
+                        print('')
+                        continue        # TODO
                     ases.add(ase)
-            if not should_consider:
-                continue
-            if len(nses) == 0:
-                # case in which zone's name servers were not resolved... So zone is not considered
-                print('')
-                pass
+            if not only_complete_zones and is_unresolved:
+                rows.append([ze.name, unresolved_value, unresolved_value, unresolved_value])
+                count_incomplete_zones = count_incomplete_zones + 1
             else:
                 rows.append([ze.name, str(len(iaes)), str(len(ines)), str(len(ases))])
-            # if len(ines) > len(nses):
-                # print(f"ERROR: {ze.name} has more ines {len(ines)} than nses {len(nses)}")
+                count_complete_zones = count_complete_zones + 1
             if len(ases) > len(ines):
                 print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
         print(f"Written {len(rows)} rows.")
+        if not only_complete_zones:
+            print(f"---> {count_complete_zones} complete zones.")
+            print(f"---> {count_incomplete_zones} incomplete zones.")
+
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -122,7 +130,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             try:
                 web_site_dne = helper_domain_name.get_from_entity_web_site(wse)
             except DoesNotExist as e:
-                continue
+                raise
             zone_name_dependencies_of_wse = set()
             try:
                 web_site_direct_zone = helper_zone.get_direct_zone_of(web_site_dne)
@@ -253,6 +261,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
+        rows.append(['mail_domain', '#addresses', '#networks', '#as'])
         unresolved_mail_domain = 0
         unresolved_mail_server = 0
         no_as_for_ip_address = 0
@@ -300,6 +309,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(wses)} web servers retrieved from database.")
         rows = list()
+        rows.append(['web_server', '#addresses', '#networks', '#as'])
         unresolved_web_server = 0
         no_as_for_ip_address = 0
         for wse in wses:
