@@ -8,7 +8,7 @@ class ZoneQueryTestCase(unittest.TestCase):
         print(f"\n------- [1] START RESOLVING ZONE OBJECT FROM ZONE NAME QUERY -------")
         # PARAMETER
         zone_name = 'cdn-auth.digidentity.eu'
-        zone_name = 'ns14.net.'
+        zone_name = 'centrallondonforward.gov.uk.'
         # QUERY
         print(f"Parameter: {zone_name}")
         try:

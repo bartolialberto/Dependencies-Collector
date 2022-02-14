@@ -2,14 +2,14 @@ import csv
 import ipaddress
 import unittest
 from pathlib import Path
-from typing import List
+from typing import List, Set
 from peewee import DoesNotExist
 from entities.Zone import Zone
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_web_server, helper_zone, helper_web_site, helper_domain_name, helper_mail_domain, \
     helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries, \
     helper_ip_address, helper_web_site_domain_name
-from persistence.BaseModel import IpNetworkEntity
+from persistence.BaseModel import IpNetworkEntity, IpAddressEntity
 from utils import file_utils, csv_utils, network_utils
 
 
@@ -28,6 +28,16 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             raise
         except OSError:
             raise
+
+    @staticmethod
+    def are_all_ip_addresses_in_ip_network(ip_addresses: Set[IpAddressEntity], ip_network: IpNetworkEntity) -> bool:
+        network = ipaddress.IPv4Network(ip_network.compressed_notation)
+        for iae in ip_addresses:
+            if network_utils.is_in_network(ipaddress.IPv4Address(iae.exploded_notation), network):
+                pass
+            else:
+                return False
+        return True
 
     @staticmethod
     def are_all_name_servers_of_zone_object_in_network(zo: Zone, network_param: IpNetworkEntity) -> bool:
@@ -52,6 +62,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # PARAMETER
         cls.sub_folder = 'output'
         cls.separator = ','
+        cls.unresolved_value = 'ND'
 
     def test_1_query_number_of_dependencies_of_all_zones(self):
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
@@ -61,7 +72,6 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # nameserver's A RR was not resolved. In that case the zone row will be added and for each field regarding the
         # relative infos will present the string value: ND
         only_complete_zones = False
-        unresolved_value = 'ND'
         filename = 'zone_infos'
         # QUERY
         print(f"Parameters: {len(zes)} zones retrieved from database.")
@@ -98,7 +108,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         continue        # TODO
                     ases.add(ase)
             if not only_complete_zones and is_unresolved:
-                rows.append([ze.name, unresolved_value, unresolved_value, unresolved_value])
+                rows.append([ze.name, self.unresolved_value, self.unresolved_value, self.unresolved_value])
                 count_incomplete_zones = count_incomplete_zones + 1
             else:
                 rows.append([ze.name, str(len(iaes)), str(len(ines)), str(len(ases))])
@@ -109,7 +119,6 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         if not only_complete_zones:
             print(f"---> {count_complete_zones} complete zones.")
             print(f"---> {count_incomplete_zones} incomplete zones.")
-
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -258,20 +267,20 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # PARAMETER
         mdes = helper_mail_domain.get_everyone()
         filename = 'mail_domains_dependencies'
+        only_complete_mail_domain = False
         # QUERY
         print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
         rows = list()
-        rows.append(['mail_domain', '#addresses', '#networks', '#as'])
-        unresolved_mail_domain = 0
-        unresolved_mail_server = 0
-        no_as_for_ip_address = 0
+        rows.append(['mail_domain', '#mailservers', '#networks', '#as'])
+        count_unresolved_mail_domain = 0
+        count_resolved_mail_domain = 0
         for mde in mdes:
+            is_unresolved = False
             try:
                 mses = helper_mail_server.get_every_of(mde)
             except DoesNotExist:
-                print(f"NO MAIL SERVERS FOR {mde.name.string}")
-                unresolved_mail_domain = unresolved_mail_domain + 1
-                continue
+                is_unresolved = True
+                mses = set()
             addresses = set()
             networks = set()
             autonomous_systems = set()
@@ -279,9 +288,8 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 try:
                     iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
                 except (DoesNotExist, NoAvailablePathError):
-                    print(f"{mse.name.string} IS NON-RESOLVABLE")
-                    unresolved_mail_server = unresolved_mail_server + 1
-                    continue
+                    is_unresolved = True
+                    break
                 for iae in iaes:
                     addresses.add(iae)
                     ine = helper_ip_network.get_of(iae)
@@ -290,11 +298,18 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         ns_ase = helper_autonomous_system.get_of_entity_ip_address(iae)
                         autonomous_systems.add(ns_ase)
                     except DoesNotExist:
-                        no_as_for_ip_address = no_as_for_ip_address + 1
-            rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
-        print(f"UNRESOLVED MAIL DOMAINS = {unresolved_mail_domain}")
-        print(f"UNRESOLVED MAIL SERVERS = {unresolved_mail_server}")
-        print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
+                        is_unresolved = True
+                        break
+            if not only_complete_mail_domain and is_unresolved:
+                rows.append([mde.name.string, self.unresolved_value, self.unresolved_value, self.unresolved_value])
+                count_unresolved_mail_domain = count_unresolved_mail_domain + 1
+            else:
+                rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
+                count_resolved_mail_domain = count_resolved_mail_domain + 1
+        print(f"Written {len(rows)} rows.")
+        if not only_complete_mail_domain:
+            print(f"---> {count_resolved_mail_domain} complete mail domains.")
+            print(f"---> {count_unresolved_mail_domain} incomplete mail domains.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -306,21 +321,23 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # PARAMETER
         wses = helper_web_server.get_everyone()
         filename = 'web_servers_dependencies'
+        only_complete_web_server = False
         # QUERY
         print(f"Parameters: {len(wses)} web servers retrieved from database.")
         rows = list()
         rows.append(['web_server', '#addresses', '#networks', '#as'])
-        unresolved_web_server = 0
-        no_as_for_ip_address = 0
+        count_unresolved_web_server = 0
+        count_resolved_web_server = 0
         for wse in wses:
+            is_unresolved = False
             ip_networks = set()
             autonomous_systems = set()
             try:
                 iaes, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
             except DoesNotExist:
                 print(f"{wse.name.string} IS NON-RESOLVABLE")
-                unresolved_web_server = unresolved_web_server + 1
-                continue
+                is_unresolved = True
+                iaes = set()
             for iae in iaes:
                 ine = helper_ip_network.get_of(iae)
                 ip_networks.add(ine)
@@ -328,12 +345,19 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     ase = helper_autonomous_system.get_of_entity_ip_address(iae)
                 except DoesNotExist:
                     print(f"NO AS FOR ADDRESS {iae.exploded}")
-                    no_as_for_ip_address = no_as_for_ip_address + 1
-                    continue
+                    is_unresolved = True
+                    break
                 autonomous_systems.add(ase)
-            rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
-        print(f"UNRESOLVED WEB SERVER = {unresolved_web_server}")
-        print(f"NO AS FOR IP ADDRESS = {no_as_for_ip_address}")
+            if not only_complete_web_server and is_unresolved:
+                rows.append([wse.name.string, self.unresolved_value, self.unresolved_value, self.unresolved_value])
+                count_unresolved_web_server = count_unresolved_web_server + 1
+            else:
+                rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
+                count_resolved_web_server = count_resolved_web_server + 1
+        print(f"Written {len(rows)} rows.")
+        if not only_complete_web_server:
+            print(f"---> {count_resolved_web_server} complete web servers.")
+            print(f"---> {count_unresolved_web_server} incomplete web servers.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
@@ -348,7 +372,10 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(ines)} IP networks retrieved from database.")
         rows = list()
-        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#websites', '#maildomains'])
+        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#ns_websites', '#ns_maildomains'])
+        direct_zones = helper_zone.get_everyone_that_is_direct_zone()
+        all_mail_domains = helper_mail_domain.get_everyone()
+        all_web_sites = helper_web_site.get_everyone()
         for ine in ines:
             try:
                 ase = helper_autonomous_system.get_of_entity_ip_network(ine)
@@ -363,8 +390,10 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             name_servers = set()
             dz_name_servers = set()
             zones = set()
-            web_sites = set()
-            mail_domains = set()
+            ns_web_sites = set()
+            ns_mail_domains = set()
+            ap_web_sites = set()
+            ap_mail_domains = set()
             for iae in network_iaes:
                 access_path_dnes = helper_ip_address.resolve_reversed_access_path(iae, add_dne_along_the_chain=True)
                 # webservers
@@ -390,8 +419,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         pass
 
             # dz_name_servers
-            zes = helper_zone.get_everyone_that_is_direct_zone()
-            for ze in zes:
+            for ze in direct_zones:
                 try:
                     nses = helper_name_server.get_all_from_zone_entity(ze)
                 except DoesNotExist:
@@ -420,28 +448,70 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         all_nse_in_ine = False
                     if all_nse_in_ine:
                         zones.add(ze)
-            # websites
+            # ns_websites
             for ze in zones:
                 dnes = helper_domain_name.get_from_direct_zone(ze)
                 for dne in dnes:
                     try:
                         wsdnas = helper_web_site_domain_name.get_from_entity_domain_name(dne)
                         for wsdna in wsdnas:
-                            web_sites.add(wsdna.web_site)
+                            ns_web_sites.add(wsdna.web_site)
                     except DoesNotExist:
                         pass
-            # mail_domains
+            # ns_mail_domains
             for ze in zones:
                 dnes = helper_domain_name.get_from_direct_zone(ze)
                 for dne in dnes:
                     try:
                         mde = helper_mail_domain.get(dne.string)
-                        mail_domains.add(mde)
+                        ns_mail_domains.add(mde)
                     except DoesNotExist:
                         pass
+            # ap_mail_domains
+            for mde in all_mail_domains:
+                try:
+                    mses = helper_mail_server.get_every_of(mde)
+                except DoesNotExist:
+                    continue
+                ip_addresses = set()
+                unresolved = False
+                for mse in mses:
+                    try:
+                        iaes, alias_dne = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
+                    except (DoesNotExist, NoAvailablePathError):
+                        unresolved = True
+                        break
+                    for iae in iaes:
+                        ip_addresses.add(iae)
+                if unresolved:
+                    pass
+                else:
+                    if ApplicationQueryExportingCSVTestCase.are_all_ip_addresses_in_ip_network(ip_addresses, ine):
+                        ap_mail_domains.add(mde)
+            # ap_websites
+            for web_site_e in all_web_sites:
+                try:
+                    wses = helper_web_server.get_from_entity_web_site(web_site_e)
+                except DoesNotExist:
+                    continue
+                ip_addresses = set()
+                unresolved = False
+                for wse in wses:
+                    try:
+                        iaes, alias_dne = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
+                    except (DoesNotExist, NoAvailablePathError):
+                        unresolved = True
+                        break
+                    for iae in iaes:
+                        ip_addresses.add(iae)
+                if unresolved:
+                    pass
+                else:
+                    if ApplicationQueryExportingCSVTestCase.are_all_ip_addresses_in_ip_network(ip_addresses, ine):
+                        ap_web_sites.add(web_site_e)
             if len(dz_name_servers) > len(name_servers):
                 print(f"!!! ERROR !!!")
-            rows.append([ine.compressed_notation, ase.number, len(web_servers), len(mail_servers), len(name_servers), len(dz_name_servers), len(zones), len(web_sites), len(mail_domains)])
+            rows.append([ine.compressed_notation, ase.number, len(web_servers), len(mail_servers), len(name_servers), len(dz_name_servers), len(zones), len(ns_web_sites), len(ns_mail_domains), len(ap_web_sites), len(ap_mail_domains)])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
