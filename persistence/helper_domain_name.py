@@ -10,13 +10,13 @@ from utils import domain_name_utils
 
 
 def insert(name: str) -> DomainNameEntity:
-    dn = domain_name_utils.insert_trailing_point(name)
+    dn = domain_name_utils.standardize_for_application(name)
     dne, created = DomainNameEntity.get_or_create(string=dn)
     return dne
 
 
 def get(domain_name: str) -> DomainNameEntity:
-    dn = domain_name_utils.insert_trailing_point(domain_name)
+    dn = domain_name_utils.standardize_for_application(domain_name)
     try:
         return DomainNameEntity.get_by_id(dn)
     except DoesNotExist:

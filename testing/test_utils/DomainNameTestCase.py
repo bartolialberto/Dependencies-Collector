@@ -56,15 +56,25 @@ class DomainNameTestCase(unittest.TestCase):
         print(f"Result: {result}")
         print(f"------- [4] END ELIMINATING TRAILING POINT TEST -------")
 
-    def test_4_is_tld(self):
-        print(f"\n------- [3] START QUERYING IF IT IS TLD TEST -------")
+    def test_5_is_tld(self):
+        print(f"\n------- [5] START QUERYING IF IT IS TLD TEST -------")
         # PARAMETERS
         domain_name = 'units.it.'
         # ELABORATION
         result = domain_name_utils.is_tld(domain_name)
         print(f"Domain name: {domain_name}")
         print(f"Result: {result}")
-        print(f"------- [3] END QUERYING IF IT IS TLD TEST -------")
+        print(f"------- [5] END QUERYING IF IT IS TLD TEST -------")
+
+    def test_6_getting_standardized_version(self):
+        print(f"\n------- [6] START GETTING STANDARDIZED DOMAIN NAME TEST -------")
+        # PARAMETERS
+        domain_name = 'mx.cert.LEGALMAIL.IT'
+        # ELABORATION
+        result = domain_name_utils.standardize_for_application(domain_name)
+        print(f"Domain name: {domain_name}")
+        print(f"Result: {result}")
+        print(f"------- [6] END GETTING STANDARDIZED DOMAIN NAME TEST -------")
 
 
 if __name__ == '__main__':

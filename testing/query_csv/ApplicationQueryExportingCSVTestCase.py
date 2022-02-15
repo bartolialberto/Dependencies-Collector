@@ -372,7 +372,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         # QUERY
         print(f"Parameters: {len(ines)} IP networks retrieved from database.")
         rows = list()
-        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#ns_websites', '#ns_maildomains', '#ap_websites', '#ap_maildomains'])
+        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#nr_websites', '#nr_maildomains', '#ap_websites', '#ap_maildomains'])
         direct_zones = helper_zone.get_everyone_that_is_direct_zone()
         all_mail_domains = helper_mail_domain.get_everyone()
         all_web_sites = helper_web_site.get_everyone()

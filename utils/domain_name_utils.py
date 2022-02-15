@@ -53,6 +53,20 @@ def is_grammatically_correct(domain_name: str) -> bool:
         return False
 
 
+def standardize_for_application(string: str) -> str:
+    """
+    This method returns the predefined syntactic version of a string that represents a domain name in the system.
+    This means taking a string that is supposed to represents a domain name, make it all lowercase and then adding
+    a trailing point.
+
+    :param string: A string.
+    :type string: str
+    :return: The result string.
+    :rtype: str
+    """
+    return insert_trailing_point(string.casefold())
+
+
 def get_subdomains_name_list(domain: str, root_included=False, parameter_included=True) -> List[str]:
     """
     Method that gives all the subdomain name from a domain name. An example:
@@ -277,6 +291,14 @@ def is_contained_in_list(domain_names: List[str], domain_name: str) -> bool:
 
 
 def is_tld(domain_name: str) -> bool:
+    """
+    This method returns a boolean if the string parameter is grammatically a TLD.
+
+    :param domain_name: A domain name as string.
+    :type domain_name: str
+    :return: A boolean.
+    :rtype: bool
+    """
     if domain_name == '.':
         return True
     point_count = domain_name.count('.')

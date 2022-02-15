@@ -2,20 +2,17 @@ from typing import List, Tuple, Set
 from peewee import DoesNotExist
 from persistence import helper_web_site, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
-from utils import domain_name_utils
 
 
 def insert(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
-    dn = domain_name_utils.insert_trailing_point(name)
-    dne = helper_domain_name.insert(dn)
+    dne = helper_domain_name.insert(name)
     wse, created = WebServerEntity.get_or_create(name=dne)
     return wse, dne
 
 
 def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
-    dn = domain_name_utils.insert_trailing_point(name)
     try:
-        dne = helper_domain_name.get(dn)
+        dne = helper_domain_name.get(name)
     except DoesNotExist:
         raise
     try:
