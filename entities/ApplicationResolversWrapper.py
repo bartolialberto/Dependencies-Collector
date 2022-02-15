@@ -469,26 +469,47 @@ class ApplicationResolversWrapper:
         print("END SCRIPT DEPENDENCIES RESOLVER")
         return script_dependencies_result
 
-    def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping) -> ASResolverResultForROVPageScraping:
+    def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping, sequential_selenium_exceptions_threshold=10) -> ASResolverResultForROVPageScraping:
         """
         This method executes the ROVPage scraping from the IpAsDatabase resolution results (reformatted).
+        Empirically it has been noticed that selenium raises a WebDriverException (after a long timer) sometimes and
+        since then every request made through selenium raises such exception again. To avoid wasting time it has been
+        implemented a threshold of sequential WebDriverException that once passed truncates all remaining ROV page
+        scraping elaborations.
 
         :param reformat: A ASResolverResultForROVPageScraping object.
         :type reformat: ASResolverResultForROVPageScraping
+        :param sequential_selenium_exceptions_threshold: xxx
+        :type sequential_selenium_exceptions_threshold: int
         :return: The ASResolverResultForROVPageScraping parameter object updated with new informations.
         :rtype: ASResolverResultForROVPageScraping
         """
         print("\n\nSTART ROV PAGE SCRAPING")
+        count_sequential_selenium_exceptions = 0
         for i, as_number in enumerate(reformat.results.keys()):
+            if count_sequential_selenium_exceptions > sequential_selenium_exceptions_threshold:
+                print(f"There have been {count_sequential_selenium_exceptions} sequential selenium exceptions... Remaining {len(reformat.results.keys()) - i} elaborations are aborted.")
+                for ip_address in reformat.results[as_number].keys():
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
+                continue
             print(f"Loading page [{i+1}/{len(reformat.results.keys())}] for AS{as_number}")
             try:
                 self.rov_page_scraper.load_as_page(as_number)
-            except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError, selenium.common.exceptions.WebDriverException) as exc:
+            except selenium.common.exceptions.WebDriverException as exc:
+                print(f"!!! {str(exc)} !!!")
+                count_sequential_selenium_exceptions = count_sequential_selenium_exceptions + 1
+                for ip_address in reformat.results[as_number].keys():
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
+                self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
+                continue
+            except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
+                count_sequential_selenium_exceptions = 0
                 print(f"!!! {str(exc)} !!!")
                 for ip_address in reformat.results[as_number].keys():
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
+            count_sequential_selenium_exceptions = 0
             for ip_address in reformat.results[as_number].keys():
                 server = reformat.results[as_number][ip_address].server
                 try:
