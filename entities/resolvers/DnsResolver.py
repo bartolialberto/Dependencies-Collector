@@ -620,8 +620,7 @@ class DnsResolver:
         :return: The direct zone name.
         :rtype: str
         """
-        dn = domain_name_utils.insert_trailing_point(domain_name)
-        for_zone_name_subdomains = reversed(domain_name_utils.get_subdomains_name_list(dn, root_included=True, parameter_included=True))
+        for_zone_name_subdomains = list(reversed(domain_name_utils.get_subdomains_name_list(domain_name, root_included=True, parameter_included=False)))
         zone_name_dependencies = list(map(lambda z: z.name, zone_list))
         for current_domain in for_zone_name_subdomains:
             if current_domain in zone_name_dependencies:

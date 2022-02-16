@@ -49,7 +49,7 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETER
-        cls.mtasts_query = False
+        cls.mtasts_query = True
         # ELABORATION
         cls.my_resolver = dns.resolver.Resolver()
         cls.PRD = file_utils.get_project_root_directory()

@@ -8,7 +8,7 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
 from persistence.BaseModel import db
-from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils, domain_name_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[str]:
@@ -52,9 +52,11 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), pr
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
     lines = get_input_generic_file('mail_domains.txt', default_mail_domains, project_root_directory=project_root_directory)
-    for i, value in enumerate(lines):
-        print(f"> [{i+1}/{len(lines)}]: {value}")
-    return lines
+    standardized_lines = list(map(lambda s: domain_name_utils.standardize_for_application(s), lines))
+    definitive_list = list_utils.remove_duplicates(standardized_lines)
+    for i, value in enumerate(definitive_list):
+        print(f"> [{i+1}/{len(definitive_list)}]: {value}")
+    return definitive_list
 
 
 def get_input_generic_file(input_filename: str, default_values: tuple, project_root_directory=Path.cwd()) -> List[str]:
@@ -93,7 +95,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=False, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=False, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:

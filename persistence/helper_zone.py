@@ -1,4 +1,3 @@
-import copy
 from typing import Set, List, Tuple
 from peewee import DoesNotExist
 from entities.RRecord import RRecord
@@ -13,13 +12,13 @@ from utils import domain_name_utils
 
 
 def insert(zone_name: str) -> ZoneEntity:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
+    zn = domain_name_utils.standardize_for_application(zone_name)
     ze, created = ZoneEntity.get_or_create(name=zn)
     return ze
 
 
 def insert_zone_object(zone: Zone) -> ZoneEntity:
-    ze, created = ZoneEntity.get_or_create(name=zone.name)
+    ze, created = ZoneEntity.get_or_create(name=domain_name_utils.standardize_for_application(zone.name))
     if created:
         pass
     else:
@@ -64,7 +63,7 @@ def insert_zone_object(zone: Zone) -> ZoneEntity:
 
 
 def get(zone_name: str) -> ZoneEntity:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
+    zn = domain_name_utils.standardize_for_application(zone_name)
     try:
         ze = ZoneEntity.get_by_id(zn)
     except DoesNotExist:
@@ -73,12 +72,13 @@ def get(zone_name: str) -> ZoneEntity:
 
 
 def resolve_zone_object(zone_name: str) -> Tuple[Zone, List[DomainNameEntity]]:
+    zn = domain_name_utils.standardize_for_application(zone_name)
     try:
-        ze = get(zone_name)
+        ze = get(zn)
         dnes = list()
     except DoesNotExist:
         try:
-            dne = helper_domain_name.get(zone_name)
+            dne = helper_domain_name.get(zn)
         except DoesNotExist:
             raise
         try:
@@ -133,30 +133,13 @@ def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
             prev = a_dne.string
         ip_addresses = list(map(lambda iae: iae.exploded_notation, iaes))
         zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, ip_addresses))
-
-
-
-        """
-        try:
-            iae = helper_ip_address.get_first_of(nse.name.string)
-            zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
-        except DoesNotExist:
-            try:
-                iae, a_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=True)
-            except NoAvailablePathError:
-                raise
-            prev = nse.name.string
-            for a_dne in a_dnes[1:]:
-                zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
-                prev = a_dne.string
-            zone_name_addresses.append(RRecord(nse.name.string, TypesRR.A, iae.exploded_notation))
-        """
     return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())
 
 
 def get_zone_object_from_zone_name(zone_name: str) -> Zone:
+    zn = domain_name_utils.standardize_for_application(zone_name)
     try:
-        ze = get(zone_name)
+        ze = get(zn)
     except DoesNotExist:
         raise
     return get_zone_object_from_zone_entity(ze)
@@ -204,9 +187,8 @@ def get_zone_dependencies_of_string_name_server(name_server: str) -> Set[ZoneEnt
 
 
 def get_zone_dependencies_of_string_domain_name(domain_name: str) -> Set[ZoneEntity]:
-    dn = domain_name_utils.insert_trailing_point(domain_name)
     try:
-        dne = helper_domain_name.get(dn)
+        dne = helper_domain_name.get(domain_name)
     except DoesNotExist:
         raise
     return get_zone_dependencies_of_entity_domain_name(dne)
@@ -222,7 +204,7 @@ def get_zone_dependencies_of_entity_domain_name(dne: DomainNameEntity) -> Set[Zo
 
 
 def get_zone_dependencies_of_zone_name(zone_name: str) -> Set[ZoneEntity]:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
+    zn = domain_name_utils.standardize_for_application(zone_name)
     try:
         ze = get(zn)
     except DoesNotExist:
