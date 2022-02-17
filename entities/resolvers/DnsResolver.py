@@ -74,21 +74,22 @@ class DnsResolver:
             final_name = None
             for cname in answer.chaining_result.cnames:
                 for key in cname.items.keys():
-                    name = domain_name_utils.standardize_for_application(str(cname.name))
-                    alias_value = domain_name_utils.standardize_for_application(str(key.target))
+                    name = str(cname.name)
+                    alias_value = str(key.target)
                     rr_aliases.append(RRecord(name, TypesRR.CNAME, alias_value))
-                    final_name = domain_name_utils.standardize_for_application(alias_value)
+                    final_name = alias_value
             if final_name is None:
-                final_name = domain_name_utils.standardize_for_application(name)
+                final_name = name
             rr_values = list()
             for ad in answer:
                 if isinstance(ad, Name):
                     rr_values.append(str(ad))
                 else:
                     rr_values.append(ad.to_text())
-            rr_values_standardized = list(map(lambda s: domain_name_utils.standardize_for_application(s), rr_values))
-            response_rrecord = RRecord(final_name, type_rr, rr_values_standardized)
-            return response_rrecord, rr_aliases
+            response_rrecord = RRecord(final_name, type_rr, rr_values)
+            standardized_response_rrecord = RRecord.standardize_rr_domain_names(response_rrecord)
+            standardized_rr_aliases = RRecord.standardize_multiple_rr(rr_aliases)
+            return standardized_response_rrecord, standardized_rr_aliases
         except dns.resolver.NXDOMAIN:  # name is a domain that does not exist
             raise DomainNonExistentError(name)
         except dns.resolver.NoAnswer:  # there is no answer

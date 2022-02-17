@@ -1,3 +1,4 @@
+import ipaddress
 from typing import List
 from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
@@ -144,5 +145,33 @@ class RRecord:
             for domain_name in domain_names[1:]:
                 result.append(RRecord(prev_domain_name, TypesRR.CNAME, domain_name))
                 prev_domain_name = domain_name
-
             return result
+
+    @staticmethod
+    def standardize_rr_domain_names(rr: 'RRecord') -> 'RRecord':
+        # TODO: docs
+        standardized_name = domain_name_utils.standardize_for_application(rr.name)
+        if rr.type != TypesRR.A:
+            if rr.type == TypesRR.MX:
+                standardized_values = list()
+                for val in rr.values:
+                    split_val = val.split(' ')
+                    if ipaddress.IPv4Address(split_val[-1]):
+                        standardized_values.append(val)
+                    else:
+                        standardized_values.append(split_val[0]+' '+domain_name_utils.standardize_for_application(split_val[-1]))
+            else:
+                standardized_values = list()
+                for val in rr.values:
+                    standardized_values.append(domain_name_utils.standardize_for_application(val))
+        else:
+            standardized_values = rr.values
+        return RRecord(standardized_name, rr.type, standardized_values)
+
+    @staticmethod
+    def standardize_multiple_rr(rrs: List['RRecord']) -> List['RRecord']:
+        # TODO: docs
+        standardized_rrs = list()
+        for rr in rrs:
+            standardized_rrs.append(RRecord.standardize_rr_domain_names(rr))
+        return standardized_rrs
