@@ -173,8 +173,8 @@ class DnsResolver:
             result.add_mail_server(mail_server)
             try:
                 rr_a, rr_cnames = self.resolve_access_path(mail_server)
-            except (NoAnswerError, UnknownReasonError, DomainNonExistentError):
-                print(f"mail server[{i+1}/{len(mx_values.values)}]: {mail_server} is UNRESOLVED")
+            except (NoAnswerError, UnknownReasonError, DomainNonExistentError) as e:
+                print(f"!!! {str(e)} ==> mail domain {mail_domain} is unresolved.!!!")
                 continue
                 # TODO: should propagate to log in the error_logger
             result.add_address(rr_a)
