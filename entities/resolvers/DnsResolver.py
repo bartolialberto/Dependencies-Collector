@@ -622,9 +622,6 @@ class DnsResolver:
         :return: The direct zone name.
         :rtype: str
         """
-        if domain_name == 'pec.istruzione.it.' or domain_name == 'regione.lazio.legalmail.it.':
-            print('')
-            pass
         for_zone_name_subdomains = list(reversed(domain_name_utils.get_subdomains_name_list(domain_name, root_included=True, parameter_included=False)))
         zone_name_dependencies = list(map(lambda z: z.name, zone_list))
         for current_domain in for_zone_name_subdomains:

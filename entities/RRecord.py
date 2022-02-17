@@ -156,9 +156,10 @@ class RRecord:
                 standardized_values = list()
                 for val in rr.values:
                     split_val = val.split(' ')
-                    if ipaddress.IPv4Address(split_val[-1]):
+                    try:
+                        ipaddress.IPv4Address(split_val[-1])
                         standardized_values.append(val)
-                    else:
+                    except ValueError:
                         standardized_values.append(split_val[0]+' '+domain_name_utils.standardize_for_application(split_val[-1]))
             else:
                 standardized_values = list()
