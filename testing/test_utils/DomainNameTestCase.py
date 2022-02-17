@@ -70,6 +70,7 @@ class DomainNameTestCase(unittest.TestCase):
         print(f"\n------- [6] START GETTING STANDARDIZED DOMAIN NAME TEST -------")
         # PARAMETERS
         domain_name = 'mx.cert.LEGALMAIL.IT'
+        domain_name = 'legalmail.it.'
         # ELABORATION
         result = domain_name_utils.standardize_for_application(domain_name)
         print(f"Domain name: {domain_name}")

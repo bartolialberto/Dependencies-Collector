@@ -74,19 +74,20 @@ class DnsResolver:
             final_name = None
             for cname in answer.chaining_result.cnames:
                 for key in cname.items.keys():
-                    name = str(cname.name)
-                    alias_value = str(key.target)
+                    name = domain_name_utils.standardize_for_application(str(cname.name))
+                    alias_value = domain_name_utils.standardize_for_application(str(key.target))
                     rr_aliases.append(RRecord(name, TypesRR.CNAME, alias_value))
-                    final_name = alias_value
+                    final_name = domain_name_utils.standardize_for_application(alias_value)
             if final_name is None:
-                final_name = name
+                final_name = domain_name_utils.standardize_for_application(name)
             rr_values = list()
             for ad in answer:
                 if isinstance(ad, Name):
                     rr_values.append(str(ad))
                 else:
                     rr_values.append(ad.to_text())
-            response_rrecord = RRecord(final_name, type_rr, rr_values)
+            rr_values_standardized = list(map(lambda s: domain_name_utils.standardize_for_application(s), rr_values))
+            response_rrecord = RRecord(final_name, type_rr, rr_values_standardized)
             return response_rrecord, rr_aliases
         except dns.resolver.NXDOMAIN:  # name is a domain that does not exist
             raise DomainNonExistentError(name)
@@ -620,6 +621,9 @@ class DnsResolver:
         :return: The direct zone name.
         :rtype: str
         """
+        if domain_name == 'pec.istruzione.it.' or domain_name == 'regione.lazio.legalmail.it.':
+            print('')
+            pass
         for_zone_name_subdomains = list(reversed(domain_name_utils.get_subdomains_name_list(domain_name, root_included=True, parameter_included=False)))
         zone_name_dependencies = list(map(lambda z: z.name, zone_list))
         for current_domain in for_zone_name_subdomains:
