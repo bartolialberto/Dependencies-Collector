@@ -1,14 +1,13 @@
-import ipaddress
-from ipaddress import IPv4Address
 from typing import Dict, Set
 import requests
+from entities.Url import Url
 from entities.error_log.ErrorLog import ErrorLog
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
-from utils import requests_utils, domain_name_utils, url_utils
+from utils import requests_utils
 
 
 class LandingResolver:
@@ -31,7 +30,7 @@ class LandingResolver:
         """
         self.dns_resolver = dns_resolver
 
-    def resolve_sites(self, sites: Set[str]) -> Dict[str, LandingSiteResult]:
+    def resolve_sites(self, sites: Set[Url]) -> Dict[Url, LandingSiteResult]:
         """
         This methods resolves landing of all sites (web sites or script sites) parameters.
 
@@ -50,8 +49,9 @@ class LandingResolver:
             print(f"***** via HTTPS *****")
             if resolver_result.https is not None:
                 print(f"HTTPS Landing url: {resolver_result.https.url}")
-                print(f"HTTPS Access Path: {resolver_result.https.stamp_access_path()}")
+                print(f"HTTPS Access Path: {resolver_result.https.a_path.stamp()}")
                 print(f"Strict Transport Security: {resolver_result.https.hsts}")
+                print(f"Landing scheme: {resolver_result.https.url.stamp_landing_scheme()}")
                 print(f"HTTPS Redirection path:")
                 for index, url in enumerate(resolver_result.https.redirection_path):
                     print(f"----> [{index + 1}/{len(resolver_result.https.redirection_path)}]: {url}")
@@ -62,8 +62,9 @@ class LandingResolver:
             print(f"***** via HTTP *****")
             if resolver_result.http is not None:
                 print(f"HTTP Landing url: {resolver_result.http.url}")
-                print(f"HTTP Access Path: {resolver_result.http.stamp_access_path()}")
+                print(f"HTTP Access Path: {resolver_result.http.a_path.stamp()}")
                 print(f"Strict Transport Security: {resolver_result.http.hsts}")
+                print(f"Landing scheme: {resolver_result.http.url.stamp_landing_scheme()}")
                 print(f"HTTP Redirection path:")
                 for index, url in enumerate(resolver_result.http.redirection_path):
                     print(f"----> [{index + 1}/{len(resolver_result.http.redirection_path)}]: {url}")
@@ -72,7 +73,7 @@ class LandingResolver:
             print()
         return final_results
 
-    def resolve_site(self, site: str) -> LandingSiteResult:
+    def resolve_site(self, url: Url) -> LandingSiteResult:
         """
         This methods resolves landing of a site.
         If an error occurs, it will be added in the error_logs attribute of the result, so exceptions are silent.
@@ -84,30 +85,30 @@ class LandingResolver:
         """
         error_logs = list()
         try:
-            https_result = self.do_single_request(site, True)
+            https_result = self.do_single_request(url, https=True)
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
             https_result = None
-            error_logs.append(ErrorLog(e, site, str(e)))
+            error_logs.append(ErrorLog(e, url.https().string, str(e)))
         except requests.exceptions.ConnectionError as e:
             https_result = None
-            error_logs.append(ErrorLog(e, site, str(e)))
+            error_logs.append(ErrorLog(e, url.https().string, str(e)))
         except Exception as exc:
             https_result = None
-            error_logs.append(ErrorLog(exc, site, str(exc)))
+            error_logs.append(ErrorLog(exc, url.https().string, str(exc)))
         try:
-            http_result = self.do_single_request(site, False)
+            http_result = self.do_single_request(url, https=False)
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
             http_result = None
-            error_logs.append(ErrorLog(e, site, str(e)))
+            error_logs.append(ErrorLog(e, url.http().string, str(e)))
         except requests.exceptions.ConnectionError as e:
             http_result = None
-            error_logs.append(ErrorLog(e, site, str(e)))
+            error_logs.append(ErrorLog(e, url.http().string, str(e)))
         except Exception as exc:
             http_result = None
-            error_logs.append(ErrorLog(exc, site, str(exc)))
+            error_logs.append(ErrorLog(exc, url.http().string, str(exc)))
         return LandingSiteResult(https_result, http_result, error_logs)
 
-    def do_single_request(self, site: str, https: bool) -> InnerLandingSiteSingleSchemeResult:
+    def do_single_request(self, site: Url, https: bool) -> InnerLandingSiteSingleSchemeResult:
         """
         This methods actually executes a HTTP GET request; it constructs a HTTP URL from the site parameter using HTTPS
         or HTTP scheme according to the https parameter.
@@ -130,7 +131,7 @@ class LandingResolver:
         :rtype: InnerLandingSiteSingleSchemeResult
         """
         try:
-            landing_url, redirection_path, hsts, ip_string = requests_utils.resolve_landing_page(site, as_https=https)
+            landing_url, redirection_path, hsts, ip = requests_utils.resolve_landing_page(site, as_https=https)
         except requests.exceptions.ConnectTimeout:
             # The request timed out while trying to connect to the remote server.
             # Requests that produced this error are safe to retry.
@@ -158,16 +159,8 @@ class LandingResolver:
         except requests.exceptions.RequestException:
             # There was an ambiguous exception that occurred while handling your request.
             raise
-        access_path = list()
-        ip_set = set()
-        web_server_domain_name = domain_name_utils.deduct_domain_name(landing_url, with_trailing_point=True)
         try:
-            rr_a, rr_cnames = self.dns_resolver.resolve_access_path(web_server_domain_name)
+            a_path = self.dns_resolver.resolve_access_path(landing_url.domain_name())
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
             raise
-        for rr in rr_cnames:
-            access_path.append(rr.name)
-        access_path.append(rr_a.name)
-        for value in rr_a.values:
-            ip_set.add(ipaddress.IPv4Address(value))
-        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, ip_set, access_path)
+        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, a_path)

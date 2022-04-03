@@ -1,15 +1,22 @@
-import copy
 import csv
-from pathlib import Path
-from typing import List, Set, Tuple
+from ipaddress import IPv4Address
+from pathlib import Path as PPath
+from typing import List, Tuple
+from entities.DomainName import DomainName
 from entities.Zone import Zone
+from entities.paths.builders.APathBuilder import APathBuilder
+from entities.paths.builders.CNAMEPathBuilder import CNAMEPathBuilder
+from entities.paths.builders.MXPathBuilder import MXPathBuilder
+from entities.paths.builders.NSPathBuilder import NSPathBuilder
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import file_utils, csv_utils, list_utils, domain_name_utils
+from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
+from utils import file_utils, csv_utils, list_utils, domain_name_utils, resource_records_utils
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
+from entities.paths import Path
 
 
 class LocalDnsResolverCache:
@@ -72,6 +79,15 @@ class LocalDnsResolverCache:
             for entry in entries:
                 self.cache.append(entry)
 
+    def add_path(self, path: Path, control_for_no_duplicates=False) -> None:
+        if control_for_no_duplicates:
+            for rr in path:
+                if rr not in self.cache:
+                    self.cache.append(rr)
+        else:
+            for rr in path:
+                self.cache.append(rr)
+
     def set_separator(self, separator: str) -> None:
         """
         Sets the separator.
@@ -88,12 +104,12 @@ class LocalDnsResolverCache:
         """
         self.cache.clear()
 
-    def lookup_first(self, domain_name: str, type_rr: TypesRR) -> RRecord:
+    def lookup_first(self, domain_name: DomainName, type_rr: TypesRR) -> RRecord:
         """
         Search for the first occurrence of a resource record of name and type as parameters told.
 
         :param domain_name: The domain name.
-        :type domain_name: str
+        :type domain_name: DomainName
         :param type_rr: The resource record type.
         :type type_rr: TypesRR
         :raises NoRecordInCacheError: If there is no resource record satisfying the parameters in cache list.
@@ -101,16 +117,16 @@ class LocalDnsResolverCache:
         :rtype: RRecord
         """
         for rr in self.cache:
-            if domain_name_utils.equals(rr.name, domain_name) and rr.type == type_rr:
+            if rr.name == domain_name and rr.type == type_rr:
                 return rr
-        raise NoRecordInCacheError(domain_name, type_rr)
+        raise NoRecordInCacheError(domain_name.string, type_rr)
 
-    def lookup(self, domain_name: str, type_rr: TypesRR) -> List[RRecord]:
+    def lookup(self, domain_name: DomainName, type_rr: TypesRR) -> List[RRecord]:
         """
         Search for all occurrences of resource records of name and type as parameters say.
 
         :param domain_name: The domain name.
-        :type domain_name: str
+        :type domain_name: DomainName
         :param type_rr: The resource record type.
         :type type_rr: TypesRR
         :raises NoRecordInCacheError: If there is no resource record satisfying the parameters in cache list.
@@ -119,14 +135,14 @@ class LocalDnsResolverCache:
         """
         result = []
         for rr in self.cache:
-            if domain_name_utils.equals(rr.name, domain_name) and rr.type == type_rr:
+            if rr.name == domain_name and rr.type == type_rr:
                 result.append(rr)
         if len(result) == 0:
-            raise NoRecordInCacheError(domain_name, type_rr)
+            raise NoRecordInCacheError(domain_name.string, type_rr)
         else:
             return result
 
-    def resolve_path(self, domain_name: str, rr_type_wanted: TypesRR, as_string=True) -> Tuple[RRecord, List[str] or List[RRecord]]:
+    def resolve_path(self, domain_name: DomainName, rr_type_wanted: TypesRR) -> Path:
         """
         This method resolves the path from the domain name parameter to a RR of the TypesRR parameter.
         It returns the final RR and all the alias along the access path.
@@ -134,119 +150,98 @@ class LocalDnsResolverCache:
         strings the name parameter is removed, so the list start with an alias.
 
         :param domain_name: The domain name.
-        :type domain_name: str
+        :type domain_name: DomainName
         :param rr_type_wanted: The RR type to be searched.
         :type rr_type_wanted: TypesRR
-        :param as_string: Flag to decide the list of aliases format.
-        :param as_string: bool
         :raise NoAvailablePathError: If there is not an access path.
         :return: The resolution RR and the list of aliases as a tuple.
-        :rtype: Tuple[RRecord, List[str] or List[RRecord]]
+        :rtype: Path
         """
         try:
-            inner_result = self.__inner_resolve_path(domain_name, rr_type_wanted, result=None)
+            inner_result = self.__inner_resolve_path(domain_name, rr_type_wanted, path_builder=None)
         except NoAvailablePathError:
             raise
-        aliases = list()
-        for rr in inner_result[0:-1]:
-            if as_string:
-                aliases.append(rr.get_first_value())
-            else:
-                aliases.append(rr)
-        return inner_result[-1], aliases
+        return inner_result
 
-    def __inner_resolve_path(self, domain_name: str, rr_type_resolution: TypesRR, result=None) -> List[RRecord]:
+    def __inner_resolve_path(self, domain_name: DomainName, rr_type_resolution: TypesRR, path_builder=None, count_invocations_threshold=1000, count_invocations=0) -> Path:
         """
         This method is the real resolver for the path of a domain name. It's recursive.
 
         :param domain_name: The domain name.
-        :type domain_name: str
+        :type domain_name: DomainName
         :param rr_type_resolution: The RR type to be searched that resolves the path.
         :type rr_type_resolution: TypesRR
         :param result: Is a parameter that populates with each recursive invocation.
         :type result: None or List[RRecord]
         :return: The access path.
-        :rtype: List[RRecord]
+        :rtype: Path
         """
-        if result is None:
-            result = list()
-        else:
+        if path_builder is not None:
             pass
+        else:
+            if rr_type_resolution == TypesRR.A:
+                path_builder = APathBuilder()
+            elif rr_type_resolution == TypesRR.NS:
+                path_builder = NSPathBuilder()
+            elif rr_type_resolution == TypesRR.CNAME:
+                path_builder = CNAMEPathBuilder()
+            elif rr_type_resolution == TypesRR.MX:
+                path_builder = MXPathBuilder()
+            else:
+                raise ValueError
+        count_invocations = count_invocations + 1
+        if count_invocations >= count_invocations_threshold:
+            raise ReachedMaximumRecursivePathThresholdError(domain_name.string)
         try:
             rr_a = self.lookup_first(domain_name, rr_type_resolution)
-            result.append(rr_a)
-            return result
+            path_builder.complete_resolution(rr_a)
+            return path_builder.build()
         except NoRecordInCacheError:
             try:
                 rr_cname = self.lookup_first(domain_name, TypesRR.CNAME)
-                result.append(rr_cname)
-                return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, result=result)
+                path_builder.add_alias(rr_cname)
+                return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, path_builder=path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
             except NoRecordInCacheError:
-                raise NoAvailablePathError(domain_name)
+                raise NoAvailablePathError(domain_name.string)
 
-    def resolve_zone_object_from_zone_name(self, zone_name: str) -> Tuple[Zone, List[RRecord]]:
+    def resolve_zone_object_from_zone_name(self, zone_name: DomainName) -> Zone:
         """
         This method searches the Zone (the application-defined object) corresponding to the zone name parameter.
         It is 'constructed' searching for all the nameservers of the zone and the aliases.
 
         :param zone_name: The zone name.
-        :type zone_name: str
+        :type zone_name: DomainName
         :raise NoRecordInCacheError: If there is no a NS RR corresponding to the zone name parameter.
         :raise NoAvailablePathError: If there is no access path for a name server of the zone.
         :return: The Zone (the application-defined object).
         :rtype: Zone
         """
         try:
-            rr_ns, rr_cnames = self.resolve_path(zone_name, TypesRR.NS, as_string=False)
+            ns_path = self.resolve_path(zone_name, TypesRR.NS)
         except NoRecordInCacheError:
             raise
-        try:
-            zone = self.resolve_zone_from_ns_rr(rr_ns)
-        except NoRecordInCacheError:
-            raise
-        for rr in rr_cnames:
-            zone.zone_aliases.append(rr)
-        return zone, rr_cnames
-
-    def resolve_zone_from_ns_rr(self, rr_ns: RRecord) -> Zone:
-        """
-        This method searches the Zone (the application-defined object) corresponding to the RR parameter.
-        It is 'constructed' searching for all the nameservers of the zone and the aliases.
-
-        :param rr_ns: A NS type RR.
-        :type rr_ns: RRecord
-        :raise NoAvailablePathError: If there is no access path for a name server of the zone.
-        :return: The Zone (the application-defined object).
-        :rtype: Zone
-        """
-        result_zone_name = rr_ns.name
-        result_zone_nameservers = list()
-        result_zone_name_servers_cnames = list()
-        result_zone_addresses = list()
-        for nameserver in rr_ns.values:
-            result_zone_nameservers.append(nameserver)
+        name_servers = list()
+        for name_server in ns_path.get_resolution().values:
             try:
-                rr_a, rr_cnames = self.resolve_path(nameserver, TypesRR.A, as_string=False)
+                a_path = self.resolve_path(name_server, TypesRR.A)
             except NoAvailablePathError:
                 raise
-            for rr in rr_cnames:
-                result_zone_name_servers_cnames.append(rr)
-            result_zone_addresses.append(rr_a)
-        return Zone(result_zone_name, result_zone_nameservers, result_zone_name_servers_cnames, result_zone_addresses, list())
+            name_servers.append(a_path)
+        return Zone(ns_path, name_servers)
 
-    def resolve_zones_from_nameserver(self, nameserver: str) -> List[str]:
+    def resolve_zones_from_nameserver(self, nameserver: DomainName) -> List[str]:
         """
         This method checks if the nameserver parameter is 'nameserver of the zone' of some zones in the cache.
         If it so, a list of zone names is returned.
 
         :param nameserver: A domain name.
-        :type nameserver: str
+        :type nameserver: DomainName
         :return: A list of zone names that has such nameserver (or aliases associated to it) as 'nameserver of the zone'.
         :rtype: List[str]
         """
         result = []
         for rr in self.cache:
-            if rr.type == TypesRR.NS and domain_name_utils.is_contained_in_list(rr.values, nameserver):
+            if rr.type == TypesRR.NS and nameserver in rr.values:
                 list_utils.append_with_no_duplicates(result, rr.name)
         return result
 
@@ -287,7 +282,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=Path.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=PPath.cwd()) -> None:
         """
         Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
         'dns_cache.csv' file from the output folder of the project root directory (if set correctly). So just invoking
@@ -338,7 +333,7 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = Path(filepath)
+        file = PPath(filepath)
         try:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
@@ -346,13 +341,7 @@ class LocalDnsResolverCache:
                     temp_list = list()
                     temp_list.append(rr.name)
                     temp_list.append(rr.type.to_string())
-                    tmp = "["
-                    for index, val in enumerate(rr.values):
-                        tmp += val
-                        if not index == len(rr.values) - 1:
-                            tmp += ","
-                    tmp += "]"
-                    temp_list.append(tmp)
+                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
                     writer.writerow(temp_list)
                 f.close()
         except PermissionError:
@@ -372,7 +361,7 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = Path(filepath)
+        file = PPath(filepath)
         file_abs_path = str(file)
         try:
             with open(file_abs_path, 'w') as f:  # 'w' or 'x'
@@ -392,7 +381,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def write_to_csv_in_output_folder(self, filename="dns_cache", project_root_directory=Path.cwd()) -> None:
+    def write_to_csv_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
         """
         Export the cache in the list to a .csv file in the output folder of the project directory (if set correctly).
         It uses the separator set to separate every attribute of the resource record.
@@ -422,7 +411,7 @@ class LocalDnsResolverCache:
         except OSError:
             raise
 
-    def write_to_txt_in_output_folder(self, filename="dns_cache", project_root_directory=Path.cwd()) -> None:
+    def write_to_txt_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
         """
         Export the cache in the list to a .txt file in the output folder of the project directory. It uses the separator
         set to separate every attribute of the resource record.
@@ -464,7 +453,7 @@ class LocalDnsResolverCache:
             if record not in self.cache:
                 self.cache.append(record)
 
-    def take_temp_snapshot(self, project_root_directory=Path.cwd()) -> None:
+    def take_temp_snapshot(self, project_root_directory=PPath.cwd()) -> None:
         """
         Method that copies the current state of the cache list in the input folder.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
@@ -484,11 +473,16 @@ class LocalDnsResolverCache:
             write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{self.separator}"))
             for rr in self.cache:
                 temp_list = list()
-                temp_list.append(rr.name)
+                temp_list.append(rr.name.string)
                 temp_list.append(rr.type.to_string())
                 tmp = "["
                 for index, val in enumerate(rr.values):
-                    tmp += val
+                    if isinstance(val, DomainName):
+                        tmp += val.string
+                    elif isinstance(val, IPv4Address):
+                        tmp += val.exploded
+                    else:
+                        raise ValueError
                     if not index == len(rr.values) - 1:
                         tmp += ","
                 tmp += "]"

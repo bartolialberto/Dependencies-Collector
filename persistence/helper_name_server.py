@@ -1,5 +1,7 @@
 from typing import Tuple, Set, List
 from peewee import DoesNotExist
+
+from entities.DomainName import DomainName
 from exceptions.EmptyResultError import EmptyResultError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_domain_name, helper_zone, helper_ip_address
@@ -8,21 +10,20 @@ from persistence.BaseModel import NameServerEntity, DomainNameEntity, ZoneCompos
 from utils import domain_name_utils
 
 
-def insert(name_server: str) -> Tuple[NameServerEntity, DomainNameEntity]:
-    ns = domain_name_utils.insert_trailing_point(name_server)
-    dne = helper_domain_name.insert(ns)
+def insert(name_server: DomainName) -> NameServerEntity:
+    dne = helper_domain_name.insert(name_server)
     nse, created = NameServerEntity.get_or_create(name=dne)
     return nse, dne
 
 
-def get(name_server: str) -> Tuple[NameServerEntity, DomainNameEntity]:
+def get(name_server: DomainName) -> NameServerEntity:
     try:
         dne = helper_domain_name.get(name_server)
     except DoesNotExist:
         raise
     try:
         nse = NameServerEntity.get(NameServerEntity.name == dne)
-        return nse, dne
+        return nse
     except DoesNotExist:
         raise
 

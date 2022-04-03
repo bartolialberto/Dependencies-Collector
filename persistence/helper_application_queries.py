@@ -59,8 +59,8 @@ def get_all_direct_zones_from_web_site(web_site: str) -> Set[ZoneEntity]:
     # from web landing
     https_w_server_e = helper_web_server.get_from_web_site_and_scheme(wse, https=True, first_only=True)
     http_w_server_e = helper_web_server.get_from_web_site_and_scheme(wse, https=False, first_only=True)
-    https_direct_ze = helper_zone.get_direct_zone_of(https_w_server_e.name)
-    http_direct_ze = helper_zone.get_direct_zone_of(http_w_server_e.name)
+    https_direct_ze = helper_zone.get_direct_zone_of(https_w_server_e._second_component_)
+    http_direct_ze = helper_zone.get_direct_zone_of(http_w_server_e._second_component_)
     direct_zones.add(https_direct_ze)
     direct_zones.add(http_direct_ze)
 

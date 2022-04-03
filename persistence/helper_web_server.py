@@ -1,16 +1,18 @@
 from typing import List, Tuple, Set
 from peewee import DoesNotExist
+
+from entities.DomainName import DomainName
 from persistence import helper_web_site, helper_domain_name
 from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
 
 
-def insert(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
+def insert(name: DomainName) -> WebServerEntity:
     dne = helper_domain_name.insert(name)
     wse, created = WebServerEntity.get_or_create(name=dne)
-    return wse, dne
+    return wse
 
 
-def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
+def get(name: DomainName) -> WebServerEntity:
     try:
         dne = helper_domain_name.get(name)
     except DoesNotExist:
@@ -19,7 +21,7 @@ def get(name: str) -> Tuple[WebServerEntity, DomainNameEntity]:
         wse = WebServerEntity.get(WebServerEntity.name == dne)
     except DoesNotExist:
         raise
-    return wse, dne
+    return wse
 
 
 def get_from_entity_web_site(wse: WebSiteEntity) -> Set[WebServerEntity]:

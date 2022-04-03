@@ -1,7 +1,7 @@
 import ipaddress
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
-from entities.scrapers.ROVPageScraper import RowPrefixesTable
+from entities.resolvers.ROVPageScraper import RowPrefixesTable
 
 
 class ASResolverValueForROVPageScraping:

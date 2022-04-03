@@ -1,5 +1,7 @@
 from typing import Set
 from peewee import DoesNotExist
+
+from entities.DomainName import DomainName
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from persistence import helper_domain_name
 from persistence.BaseModel import DomainNameEntity, AliasAssociation
@@ -16,6 +18,14 @@ def get_alias_from_entity(dne: DomainNameEntity) -> DomainNameEntity:
     except DoesNotExist:
         raise
     return aa.alias
+
+
+def get_alias(domain_name: DomainName) -> DomainNameEntity:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    return get_alias_from_entity(dne)
 
 
 def get_alias_from_string(domain_name: str) -> DomainNameEntity:

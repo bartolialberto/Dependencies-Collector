@@ -61,7 +61,7 @@ def __inner_resolve_reversed_access_path(alias_dne: Set[DomainNameEntity], chain
     chain_dnes.append(alias_dne)
     try:
         aa = AliasAssociation.get(AliasAssociation.alias == alias_dne)
-        name_dne = aa.name
+        name_dne = aa._second_component_
     except DoesNotExist:
         return chain_dnes
     return __inner_resolve_reversed_access_path(name_dne, chain_dnes)

@@ -1,13 +1,10 @@
 import unittest
-import selenium
 from peewee import DoesNotExist
-from entities.resolvers.DnsResolver import DnsResolver
-from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
-from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from exceptions.NoAliasFoundError import NoAliasFoundError
-from persistence import helper_domain_name, helper_application_results, helper_name_server, helper_zone, helper_alias
-from utils import domain_name_utils, file_utils
+from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
+from entities.DomainName import DomainName
+from persistence import helper_domain_name, helper_name_server, helper_zone, helper_alias, helper_alias_to_zone, \
+    helper_application_results
+from utils import file_utils
 
 
 # DOMAIN NAME LIST EXAMPLES
@@ -21,257 +18,208 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 
     """
-    headless_browser = None
     dns_results = None
-    zone_dependencies_per_nameserver = None
-    zone_dependencies_per_zone = None
-    consider_tld = None
-    import_cache_from_output_folder = None
-    dns_resolver = None
-    clear_cache_at_start = None
     domain_names = None
-    results = None
-    domain_name_list = None
-    headless_browser_is_instantiated = False
+    resolvers = None
 
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        cls.domain_names = ['cdn-auth.digidentity.eu.']
-        cls.import_cache_from_output_folder = False
-        cls.clear_cache_at_start = False
-        cls.consider_tld = True
+        cls.domain_names = [
+            DomainName('cdn-auth.digidentity.eu.'),
+            DomainName('twitter.com'),
+            DomainName('accounts.google.com'),
+            DomainName('login.microsoftonline.com'),
+            DomainName('www.facebook.com'),
+            DomainName('auth.digidentity.eu'),
+            DomainName('clave-dninbrt.seg-social.gob.es'),
+            DomainName('pasarela.clave.gob.es'),
+            DomainName('unipd.it'),
+            DomainName('dei.unipd.it'),
+            DomainName('units.it')
+        ]
+        cls.domain_names = [
+            DomainName('cdn-auth.digidentity.eu.')
+        ]
+        consider_tld = True
         # ELABORATION
+        execute_script_resolving = False
+        execute_rov_scraping = False
+        take_snapshot = False
         PRD = file_utils.get_project_root_directory()
-        if cls.clear_cache_at_start:
-            cls.dns_resolver.cache.clear()
-        if cls.import_cache_from_output_folder:
-            try:
-                cls.dns_resolver.cache.load_csv_from_output_folder(filename='cache_from_dns_test.csv', project_root_directory=PRD)
-            except FilenameNotFoundError as e:
-                print(f"!!! {str(e)} !!!")
-                exit(-1)
-        if not cls.consider_tld:
-            try:
-                cls.headless_browser = FirefoxHeadlessWebDriver(PRD)
-            except (FilenameNotFoundError, selenium.common.exceptions.WebDriverException) as e:
-                print(f"!!! {str(e)} !!!")
-                cls.fail(str(e))
-            cls.headless_browser_is_instantiated = True
-            tld_scraper = TLDPageScraper(cls.headless_browser)
-            try:
-                tlds = tld_scraper.scrape_tld()
-            except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.NoSuchElementException) as e:
-                print(f"!!! {str(e)} !!!")
-                return
-        else:
-             tlds = None
-        cls.dns_resolver = DnsResolver(tlds)
-        print("START DNS DEPENDENCIES RESOLVER")
-        results = cls.dns_resolver.resolve_multiple_domains_dependencies(cls.domain_names, consider_tld=cls.consider_tld)
-        cls.dns_results = results.zone_dependencies_per_domain_name
-        cls.zone_dependencies_per_zone = results.zone_name_dependencies_per_zone
-        cls.zone_dependencies_per_nameserver = results.zone_name_dependencies_per_name_server
-        cls.direct_zone_name_per_domain_name = results.direct_zone_name_per_domain_name
-        cls.error_logs = results.error_logs
-        print("END DNS DEPENDENCIES RESOLVER")
-        print("INSERTION INTO DATABASE... ", end='')
-        try:
-            helper_application_results.insert_dns_result(results)
-        except InvalidDomainNameError as e:
-            print(f"!!! {str(e)} !!!")
-            return
-        print("DONE")
+        cls.resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_scraping, PRD, take_snapshot)
+        cls.dns_results = cls.resolvers.do_dns_resolving(cls.domain_names)
+        print(f"\nInsertion into database... ", end='')
+        helper_application_results.insert_dns_result(cls.dns_results)
+        print(f"DONE.")
 
-    def test_1_domain_names_integrity(self):
+    def test_01_input_domain_names_presence(self):
         """
         Checks data integrity between input domain names and domain name entities saved in the DB.
 
         """
-        print("\n------- [1] START DOMAIN NAMES INTEGRITY CHECK -------")
-        db_domain_names = set()
-        domain_names_with_trailing_point = set()
-        for domain_name in self.domain_names:
-            domain_names_with_trailing_point.add(domain_name_utils.insert_trailing_point(domain_name))
-        for domain_name in domain_names_with_trailing_point:
+        print("\n------- [1] START INPUT DOMAIN NAMES PRESENCE CHECK -------")
+        for domain_name in self.dns_results.zone_dependencies_per_domain_name.keys():
             try:
                 dne = helper_domain_name.get(domain_name)
-                db_domain_names.add(dne.string)
             except DoesNotExist as e:
-                print(f"!!! {str(e)} !!!")
-        self.assertSetEqual(domain_names_with_trailing_point, db_domain_names)
-        print(f"Reached this print means everything went well")
-        print("------- [1] END DOMAIN NAMES INTEGRITY CHECK -------")
+                self.fail(f"!!! {str(e)} !!!")
+        print("------- [1] END INPUT DOMAIN NAMES PRESENCE CHECK -------")
 
-    def test_2_nameservers_integrity(self):
+    def test_02_nameservers_presence(self):
         """
         Checks data integrity between nameservers retrieved from elaboration and nameservers entities saved in the DB.
 
         """
-        print("\n------- [2] START NAMESERVERS INTEGRITY CHECK -------")
-        count_assertions = 0
-        for domain_name in self.dns_results.keys():
-            for zone in self.dns_results[domain_name]:
-                # check presence in the db
-                for nameserver in zone.nameservers:
-                    try:
-                        nse, dne = helper_name_server.get(nameserver)
-                    except DoesNotExist as e:
-                        print(f"!!! {str(e)} !!!")
+        print("\n------- [2] START NAMESERVERS PRESENCE CHECK -------")
+        for name_server in self.dns_results.zone_dependencies_per_name_server.keys():
+            try:
+                nse = helper_name_server.get(name_server)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+        print("------- [2] END NAMESERVERS PRESENCE CHECK -------")
 
-                # check they are the same
-                nameservers_result_set = set(zone.nameservers)
-                tmp = helper_name_server.get_all_from_zone_name(zone.name)
-                nameservers_db_set = set(map(lambda x: x.name.string, tmp))
-                self.assertSetEqual(nameservers_result_set, nameservers_db_set)
-                count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [2] END NAMESERVERS INTEGRITY CHECK -------")
-
-    def test_3_aliases_integrity(self):
+    def test_03_zone_presence(self):
         """
-        Checks data integrity between aliases retrieved from elaboration and aliases relations saved in the DB.
+        Checks data integrity between nameservers retrieved from elaboration and nameservers entities saved in the DB.
 
         """
-        print("\n------- [3] START ALIASES INTEGRITY CHECK -------")
-        count_assertions = 0
-        for domain_name in self.dns_results.keys():
-            for zone in self.dns_results[domain_name]:
-                for alias in zone.aliases:
-                    try:
-                        dnes = helper_alias.get_all_aliases_from_name(alias.name)
-                    except (DoesNotExist, NoAliasFoundError) as e:
-                        print(f"!!! {str(e)} !!!")
-                        continue
-                    dnes_names = set(map(lambda dne: dne.string, dnes))
-                    self.assertIn(alias.get_first_value(), dnes_names)
-                    count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [3] END ALIASES INTEGRITY CHECK -------")
+        print("\n------- [2] START ZONES PRESENCE CHECK -------")
+        for zone in self.dns_results.zone_dependencies_per_zone.keys():
+            try:
+                ze = helper_zone.get(zone.name)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+        print("------- [2] END ZONES PRESENCE CHECK -------")
 
-    def test_4_TLD_presence(self):
+    def test_04_TLD_presence(self):
         """
         Checks if are there TLD zones saved in the DB according to the boolean parameter of this test class.
 
         """
         print("\n------- [4] START TLD PRESENCE CHECK -------")
         tld_in_database = set()
-        if not self.consider_tld:
+        if not self.resolvers.consider_tld:
             zes = helper_zone.get_everyone()
-            for i, ze in enumerate(zes):
-                if ze.name in self.dns_resolver.tld_list:
-                    print(f"[{i + 1}/{len(zes)}] = {str(ze)} is in database")
-                    tld_in_database.add(ze.name)
-                else:
-                    pass
+            for ze in zes:
+                tmp = DomainName(ze.name)
+                if tmp.is_tld():
+                    tld_in_database.add(ze)
         self.assertSetEqual(set(), tld_in_database)
-        print(f"Reached this print means everything went well")
         print("------- [4] END TLD PRESENCE CHECK -------")
 
-    def test_5_dns_results_integrity_check(self):
+
+    def test_05_domain_name_zone_dependencies_integrity(self):
         """
         Checks data integrity between zone dependencies of input domain names retrieved from elaboration, and DB
         relations corresponding to zone dependencies between domain names and zones.
 
         """
-        print("\n------- [5] START DNS RESULTS INTEGRITY CHECK -------")
-        count_assertions = 0
-        for i, domain_name in enumerate(self.dns_results.keys()):
+        print("\n------- [5] START DOMAIN NAME ZONE DEPENDENCIES TEST -------")
+        print(f"{len(self.dns_results.zone_dependencies_per_domain_name.keys())} input domain names in total")
+        for domain_name in self.dns_results.zone_dependencies_per_domain_name.keys():
+            zones = self.dns_results.zone_dependencies_per_domain_name[domain_name]
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of_string_domain_name(domain_name)
+                zes = helper_zone.get_zone_dependencies_of_domain_name(domain_name)
             except DoesNotExist as e:
-                print(f"!!! {str(e)} !!!")
-                continue
-            are_same_len = len(self.dns_results[domain_name]) == len(zones_set_db)
-            if not are_same_len:
-                print(f"Tot zone dependencies for '{domain_name}':")
-                print(f"--> number of zone dependencies found from elaboration: {len(self.dns_results[domain_name])}")
-                for j, zone in enumerate(self.dns_results[domain_name]):
-                    print(f"----> zone[{j+1}/{len(self.dns_results[domain_name])}] = {zone.name}")
-                print(f"--> number of zone dependencies found from db: {len(zones_set_db)}")
-                for j, ze in enumerate(zones_set_db):
-                    print(f"----> zone[{j+1}/{len(zones_set_db)}] = {ze.name}")
-            self.assertEqual(len(self.dns_results[domain_name]), len(zones_set_db))
-            count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [5] END DNS RESULTS INTEGRITY CHECK -------")
+                self.fail(f"!!! {str(e)} !!!")
+            str_from_elaboration = set(map(lambda zone: zone.name.string, zones))
+            str_from_database = set(map(lambda ze: ze.name, zes))
+            self.assertSetEqual(str_from_elaboration, str_from_database)
+        print("------- [5] END DOMAIN NAME ZONE DEPENDENCIES TEST -------")
 
-    def test_6_zone_dependencies_per_nameserver_integrity_check(self):
+    def test_06_name_server_zone_dependencies(self):
         """
         Checks data integrity between zone dependencies of nameservers retrieved from elaboration, and DB relations
         corresponding to zone dependencies between nameservers and zones.
 
         """
-        count_assertions = 0
-        print("\n------- [6] START ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")
-        for i, nameserver in enumerate(self.zone_dependencies_per_nameserver.keys()):
+        print("\n------- [6] START NAMESERVER ZONE DEPENDENCIES TEST -------")
+        print(f"{len(self.dns_results.zone_dependencies_per_name_server.keys())} nameservers in total")
+        for name_server in self.dns_results.zone_dependencies_per_name_server.keys():
+            zones = self.dns_results.zone_dependencies_per_name_server[name_server]
             try:
-                zones_set_db = helper_zone.get_zone_dependencies_of_string_name_server(nameserver)
+                zes = helper_zone.get_zone_dependencies_of_domain_name(name_server)
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
-            zone_names_set_db = set(map(lambda ze: ze.name, zones_set_db))
-            are_same_len = len(self.zone_dependencies_per_nameserver[nameserver]) == len(zones_set_db)
-            if not are_same_len:
-                print(f"Tot zone dependencies for '{nameserver}':")
-                print(f"--> number of zone dependencies found from elaboration: {len(self.zone_dependencies_per_nameserver[nameserver])}")
-                for j, zone_name in enumerate(self.zone_dependencies_per_nameserver[nameserver]):
-                    print(f"----> zone[{j + 1}/{len(self.zone_dependencies_per_nameserver[nameserver])}] = {zone_name}")
-                print(f"--> number of zone dependencies found from db: {len(zones_set_db)}")
-                for j, ze in enumerate(zones_set_db):
-                    print(f"----> zone[{j + 1}/{len(zones_set_db)}] = {ze.name}")
-            self.assertSetEqual(set(self.zone_dependencies_per_nameserver[nameserver]), zone_names_set_db)
-            count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [6] END ZONE DEPENDENCIES PER NAMESERVER INTEGRITY CHECK -------")
+            str_from_elaboration = set(map(lambda zone: zone.name.string, zones))
+            str_from_database = set(map(lambda ze: ze.name, zes))
+            self.assertSetEqual(str_from_elaboration, str_from_database)
+        print("------- [6] END NAMESERVER ZONE DEPENDENCIES TEST -------")
 
-    def test_7_zone_dependencies_per_zone_integrity_check(self):
+    def test_07_zone_dependencies_per_zone_integrity_check(self):
         """
         Checks data integrity between zone dependencies of zones retrieved from elaboration, and DB relations
         corresponding to zone dependencies between zones.
 
         """
-        count_assertions = 0
-        print("\n------- [7] START ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
-        for i, zone in enumerate(self.zone_dependencies_per_zone.keys()):
+        print("\n------- [7] START ZONES ZONE DEPENDENCIES TEST -------")
+        print(f"{len(self.dns_results.zone_dependencies_per_zone.keys())} zones in total")
+        for zone in self.dns_results.zone_dependencies_per_zone.keys():
+            zones = self.dns_results.zone_dependencies_per_zone[zone]
             try:
-                ze_set_db = helper_zone.get_zone_dependencies_of_zone_name(zone)
-            except DoesNotExist as e:
-                print(f"!!! {str(e)} !!!")
-                continue
-            are_same_len = len(self.zone_dependencies_per_zone[zone]) == len(ze_set_db)
-            if not are_same_len:
-                print(f"Tot zone dependencies for '{zone}':")
-                print(f"--> number of zone dependencies found from elaboration: {len(self.zone_dependencies_per_zone[zone])}")
-                for j, zone_name in enumerate(self.zone_dependencies_per_zone[zone]):
-                    print(f"----> zone[{j + 1}/{len(self.zone_dependencies_per_zone[zone])}] = {zone_name}")
-                print(f"--> number of zone dependencies found from db: {len(ze_set_db)}")
-                for j, ze in enumerate(ze_set_db):
-                    print(f"----> zone[{j + 1}/{len(ze_set_db)}] = {ze.name}")
-            self.assertEqual(len(self.zone_dependencies_per_zone[zone]), len(ze_set_db))
-            count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [7] END ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
-
-    def test_8_getting_direct_zone_of_domain_name(self):
-        print("\n------- [8] START ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
-        count_assertions = 0
-        for domain_name in self.direct_zone_name_per_domain_name.keys():
-            try:
-                zo = helper_zone.get_direct_zone_object_of(domain_name)
+                zes = helper_zone.get_zone_dependencies_of_zone_name(zone.name)
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
-            print(f"Direct zone from elaboration: {self.direct_zone_name_per_domain_name[domain_name]}")
-            print(f"Direct zone from database: {zo.name}")
-            self.assertEqual(self.direct_zone_name_per_domain_name[domain_name], zo.name)
-            count_assertions = count_assertions + 1
-        print(f"Reached this print means everything went well ({count_assertions} assertions)")
-        print("------- [8] END ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
+            str_from_elaboration = set(map(lambda zone: zone.name.string, zones))
+            str_from_database = set(map(lambda ze: ze.name, zes))
+            self.assertSetEqual(str_from_elaboration, str_from_database)
+        print("------- [7] END ZONES ZONE DEPENDENCIES TEST -------")
 
-    @classmethod
-    def tearDownClass(cls) -> None:
-        if cls.headless_browser_is_instantiated:
-            cls.headless_browser.close()
+    def test_08_cname_presence(self):
+        """
+        Checks data integrity between aliases retrieved from elaboration and aliases relations saved in the DB.
+
+        """
+        print("\n------- [8] START ALIASES PRESENCE CHECK -------")
+        aliases_rr = set()
+        zone_name_cnames_rr = set()
+        for zone in self.dns_results.zone_dependencies_per_zone.keys():
+            if len(zone.name_path.get_aliases_chain()) == 0:
+                pass
+            elif len(zone.name_path.get_aliases_chain()) == 1:
+                zone_name_cnames_rr.add(zone.name_path.get_aliases_chain()[0])
+            else:
+                for rr in zone.name_path.get_aliases_chain()[0:-1]:
+                    aliases_rr.add(rr)
+                zone_name_cnames_rr.add(zone.name_path.get_aliases_chain()[-1])
+            for name_server_path in zone.name_servers:
+                for rr in name_server_path.get_aliases_chain():
+                    aliases_rr.add(rr)
+        # actual cname testing
+        print(f"{len(aliases_rr)+len(zone_name_cnames_rr)} CNAMEs in total")
+        for rr in aliases_rr:
+            try:
+                alias_dne = helper_alias.get_alias(rr.name)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+            str_from_elaboration = rr.get_first_value().string
+            str_from_database = alias_dne.name
+            self.assertEqual(str_from_elaboration, str_from_database)
+        for rr in zone_name_cnames_rr:
+            try:
+                atza = helper_alias_to_zone.get_from_domain_name(rr.name)
+            except DoesNotExist as e:
+                self.fail(f"!!! {str(e)} !!!")
+            str_from_elaboration = rr.get_first_value().string
+            str_from_database = atza.zone.name
+            self.assertEqual(str_from_elaboration, str_from_database)
+        print("------- [8] END ALIASES PRESENCE CHECK -------")
+
+    def test_09_getting_direct_zone_of_domain_name(self):
+        print("\n------- [9] START ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
+        for domain_name in self.dns_results.direct_zones.keys():
+            try:
+                ze = helper_zone.get_direct_zone_of(domain_name)
+                str_from_database = ze.name
+            except DoesNotExist:
+                str_from_database = None
+            if self.dns_results.direct_zones[domain_name] is None:
+                str_from_elaboration = None
+            else:
+                str_from_elaboration = self.dns_results.direct_zones[domain_name].name.string
+            self.assertEqual(str_from_elaboration, str_from_database)
+        print("------- [9] END ZONE DEPENDENCIES PER ZONE INTEGRITY CHECK -------")
 
 
 if __name__ == '__main__':

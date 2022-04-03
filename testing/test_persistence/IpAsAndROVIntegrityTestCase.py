@@ -1,6 +1,5 @@
 import ipaddress
 import unittest
-from pathlib import Path
 import selenium
 from peewee import DoesNotExist
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
@@ -9,7 +8,7 @@ from entities.resolvers.IpAsDatabase import IpAsDatabase
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
-from entities.scrapers.ROVPageScraper import ROVPageScraper
+from entities.resolvers.ROVPageScraper import ROVPageScraper
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.EmptyResultError import EmptyResultError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
@@ -18,8 +17,8 @@ from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
-from persistence import helper_application_results, helper_ip_address, helper_name_server, helper_ip_network, \
-    helper_autonomous_system, helper_rov, helper_prefixes_table, helper_ip_range_tsv, helper_ip_range_rov, helper_alias
+from persistence import helper_application_results, helper_name_server, helper_ip_network, \
+    helper_rov, helper_ip_range_tsv, helper_ip_range_rov, helper_alias
 from utils import file_utils
 
 
@@ -42,7 +41,7 @@ class IpAsAndROVIntegrityTestCase(unittest.TestCase):
         for index_domain, domain in enumerate(dns_results.zone_dependencies_per_domain_name.keys()):
             print(f"Handling domain[{index_domain}] '{domain}'")
             for index_zone, zone in enumerate(dns_results.zone_dependencies_per_domain_name[domain]):
-                print(f"--> Handling zone[{index_zone}] '{zone.name}'")
+                print(f"--> Handling zone[{index_zone}] '{zone._second_component_}'")
                 for i, nameserver in enumerate(zone.nameservers):
                     try:
                         rr_a = zone.resolve_name_server_access_path(nameserver)

@@ -4,9 +4,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from entities.SchemeUrl import SchemeUrl
+from entities.Url import Url
 
 
-class MainPageScript:
+class MainFrameScript:
     """
     This class represents a very simple container that contains infos representating a script and its withdraw.
 
@@ -23,11 +25,8 @@ class MainPageScript:
         self.src = src
         self.integrity = integrity
 
-    def __hash__(self):
-        return hash(repr(self))
-
     def __eq__(self, other):
-        if isinstance(other, MainPageScript):
+        if isinstance(other, MainFrameScript):
             if self.src == other.src:
                 return True
             else:
@@ -43,6 +42,9 @@ class MainPageScript:
         :rtype: str
         """
         return f"MainPageScript: src={self.src}, integrity={self.integrity}"
+
+    def __hash__(self) -> int:
+        return hash(self.src)
 
 
 class ScriptDependenciesResolver:
@@ -66,7 +68,7 @@ class ScriptDependenciesResolver:
         """
         self.headless_browser = headless_browser
 
-    def search_script_application_dependencies(self, url: str) -> Set[MainPageScript]:
+    def search_script_application_dependencies(self, url: SchemeUrl) -> Set[MainFrameScript]:
         """
         The method is the actual research of script dependencies from a HTTP URL.
 
@@ -75,10 +77,10 @@ class ScriptDependenciesResolver:
         :type url: str
         :raise selenium.common.exceptions.WebDriverException: There was a problem getting the response form the request.
         :returns: A set of scripts.
-        :rtype: Set[MainPageScript]
+        :rtype: Set[MainFrameScript]
         """
         try:
-            self.headless_browser.driver.get(url)
+            self.headless_browser.driver.get(url.string)
         except selenium.common.exceptions.WebDriverException:
             raise
 
@@ -94,7 +96,7 @@ class ScriptDependenciesResolver:
             if src == '' or src is None:
                 pass        # inline script
             else:
-                main_page_scripts.add(MainPageScript(src, integrity))
+                main_page_scripts.add(MainFrameScript(src, integrity))
         return main_page_scripts
 
     def close(self):

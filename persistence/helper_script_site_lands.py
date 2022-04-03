@@ -4,8 +4,8 @@ from persistence import helper_script_site
 from persistence.BaseModel import ScriptSiteEntity, ScriptServerEntity, ScriptSiteLandsAssociation
 
 
-def insert(ssitee: ScriptSiteEntity, sservere: ScriptServerEntity or None, https: bool) -> ScriptSiteLandsAssociation:
-    ssla, created = ScriptSiteLandsAssociation.get_or_create(script_site=ssitee, script_server=sservere, https=https)
+def insert(ssitee: ScriptSiteEntity, starting_https: bool, sservere: ScriptServerEntity or None, landing_https: bool or None) -> ScriptSiteLandsAssociation:
+    ssla, created = ScriptSiteLandsAssociation.get_or_create(script_site=ssitee, starting_https=starting_https, script_server=sservere, landing_https=landing_https)
     return ssla
 
 
@@ -80,6 +80,15 @@ def get_https_unresolved() -> Set[ScriptSiteLandsAssociation]:
 def get_http_unresolved() -> Set[ScriptSiteLandsAssociation]:
     query = ScriptSiteLandsAssociation.select()\
         .where((ScriptSiteLandsAssociation.script_server.is_null(True)) & (ScriptSiteLandsAssociation.https == False))
+    result = set()
+    for row in query:
+        result.add(row)
+    return result
+
+
+def get_unresolved() -> Set[ScriptSiteLandsAssociation]:
+    query = ScriptSiteLandsAssociation.select()\
+        .where(ScriptSiteLandsAssociation.script_server.is_null(True))
     result = set()
     for row in query:
         result.add(row)

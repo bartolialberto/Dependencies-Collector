@@ -47,7 +47,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_01_domain_names_presence(self):
         print("\n------- [1] START EVERY DOMAIN NAME PRESENCE TEST -------")
         tmp = helper_domain_name.get_everyone()
-        db_domain_names = set(map(lambda dne: dne.string, tmp))
+        db_domain_names = set(map(lambda dne: dne._second_component_, tmp))
         elaboration_domain_names = set(map(lambda dn: domain_name_utils.insert_trailing_point(dn), self.resolvers.total_dns_results.zone_dependencies_per_domain_name.keys()))
         for web_site in self.resolvers.landing_web_sites_results.keys():
             web_site_domain_name = domain_name_utils.deduct_domain_name(web_site)
@@ -85,7 +85,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             for mail_server in self.resolvers.mail_domains_results.dependencies[mail_domain].mail_servers:
                 self.assertIn(mail_server, db_domain_names)
                 # elaboration_domain_names.add(mail_server)
-        for name_server in self.resolvers.total_dns_results.zone_name_dependencies_per_name_server.keys():
+        for name_server in self.resolvers.total_dns_results.zone_dependencies_per_name_server.keys():
             self.assertIn(name_server, db_domain_names)
             # elaboration_domain_names.add(name_server)
         # self.assertSetEqual(elaboration_domain_names, db_domain_names)
@@ -95,8 +95,8 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_02_name_servers_presence(self):
         print("\n------- [2] START EVERY NAME SERVER PRESENCE TEST -------")
         tmp = helper_name_server.get_everyone()
-        db_name_servers = set(map(lambda nse: nse.name.string, tmp))
-        elaboration_name_servers = set(self.resolvers.total_dns_results.zone_name_dependencies_per_name_server.keys())
+        db_name_servers = set(map(lambda nse: nse._second_component_._second_component_, tmp))
+        elaboration_name_servers = set(self.resolvers.total_dns_results.zone_dependencies_per_name_server.keys())
         for name_server in elaboration_name_servers:
             self.assertIn(name_server, db_name_servers)
         # self.assertSetEqual(elaboration_name_servers, db_name_servers)
@@ -106,8 +106,8 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_03_zones_presence(self):
         print("\n------- [3] START EVERY ZONE PRESENCE TEST -------")
         tmp = helper_zone.get_everyone()
-        db_zones = set(map(lambda ze: ze.name, tmp))
-        elaboration_zones = set(self.resolvers.total_dns_results.zone_name_dependencies_per_zone.keys())
+        db_zones = set(map(lambda ze: ze._second_component_, tmp))
+        elaboration_zones = set(self.resolvers.total_dns_results.zone_dependencies_per_zone.keys())
         for zone_name in elaboration_zones:
             self.assertIn(zone_name, db_zones)
         # self.assertSetEqual(elaboration_zones, db_zones)
@@ -118,41 +118,41 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [4] START EVERY DOMAIN NAME ZONE DEPENDENCIES INTEGRITY TEST -------")
         for domain_name in self.resolvers.total_dns_results.zone_dependencies_per_domain_name.keys():
             tmp = helper_zone.get_zone_dependencies_of_string_domain_name(domain_name)
-            db_zone_names = set(map(lambda ze: ze.name, tmp))
-            elaboration_zone_names = set(map(lambda zo: zo.name, self.resolvers.total_dns_results.zone_dependencies_per_domain_name[domain_name]))
+            db_zone_names = set(map(lambda ze: ze._second_component_, tmp))
+            elaboration_zone_names = set(map(lambda zo: zo._second_component_, self.resolvers.total_dns_results.zone_dependencies_per_domain_name[domain_name]))
             self.assertSetEqual(elaboration_zone_names, db_zone_names)
         print(f"Reached this print means everything went well")
         print("------- [4] END EVERY DOMAIN NAME ZONE DEPENDENCIES INTEGRITY TEST -------")
 
     def test_05_zone_dependencies_per_name_server_integrity(self):
         print("\n------- [5] START EVERY NAME SERVER ZONE DEPENDENCIES INTEGRITY TEST -------")
-        for name_server in self.resolvers.total_dns_results.zone_name_dependencies_per_name_server.keys():
+        for name_server in self.resolvers.total_dns_results.zone_dependencies_per_name_server.keys():
             tmp = helper_zone.get_zone_dependencies_of_string_domain_name(name_server)
-            db_zone_names = set(map(lambda ze: ze.name, tmp))
-            elaboration_zone_names = set(self.resolvers.total_dns_results.zone_name_dependencies_per_name_server[name_server])
+            db_zone_names = set(map(lambda ze: ze._second_component_, tmp))
+            elaboration_zone_names = set(self.resolvers.total_dns_results.zone_dependencies_per_name_server[name_server])
             self.assertSetEqual(elaboration_zone_names, db_zone_names)
         print(f"Reached this print means everything went well")
         print("------- [5] END EVERY NAME SERVER ZONE DEPENDENCIES INTEGRITY TEST -------")
 
     def test_06_zone_dependencies_per_zone_name_integrity(self):
         print("\n------- [6] START EVERY ZONE NAME ZONE DEPENDENCIES INTEGRITY TEST -------")
-        for zone_name in self.resolvers.total_dns_results.zone_name_dependencies_per_zone.keys():
+        for zone_name in self.resolvers.total_dns_results.zone_dependencies_per_zone.keys():
             tmp = helper_zone.get_zone_dependencies_of_zone_name(zone_name)
-            db_zone_names = set(map(lambda ze: ze.name, tmp))
-            elaboration_zone_names = set(self.resolvers.total_dns_results.zone_name_dependencies_per_zone[zone_name])
+            db_zone_names = set(map(lambda ze: ze._second_component_, tmp))
+            elaboration_zone_names = set(self.resolvers.total_dns_results.zone_dependencies_per_zone[zone_name])
             self.assertSetEqual(elaboration_zone_names, db_zone_names)
         print(f"Reached this print means everything went well")
         print("------- [6] END EVERY ZONE NAME ZONE DEPENDENCIES INTEGRITY TEST -------")
 
     def test_07_zone_dependencies_per_zone_name_integrity(self):
         print("\n------- [7] START EVERY DOMAIN NAME DIRECT ZONE INTEGRITY TEST -------")
-        for domain_name in self.resolvers.total_dns_results.direct_zone_name_per_domain_name.keys():
+        for domain_name in self.resolvers.total_dns_results.direct_zone_per_domain_name.keys():
             try:
                 tmp = helper_zone.get_direct_zone_object_of(domain_name)
                 db_zone_name = tmp.name
             except DoesNotExist:
                 db_zone_name = None
-            elaboration_zone_name = self.resolvers.total_dns_results.direct_zone_name_per_domain_name[domain_name]
+            elaboration_zone_name = self.resolvers.total_dns_results.direct_zone_per_domain_name[domain_name]
             self.assertEqual(elaboration_zone_name, db_zone_name)
         print(f"Reached this print means everything went well")
         print("------- [7] END EVERY DOMAIN NAME DIRECT ZONE INTEGRITY TEST -------")
@@ -160,7 +160,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_08_mail_domains_presence(self):
         print("\n------- [8] START EVERY MAIL DOMAIN PRESENCE TEST -------")
         tmp = helper_mail_domain.get_everyone()
-        db_mail_domains = set(map(lambda mde: mde.name.string, tmp))
+        db_mail_domains = set(map(lambda mde: mde._second_component_._second_component_, tmp))
         elaboration_mail_domains = set(map(lambda md: domain_name_utils.insert_trailing_point(md), self.input_mail_domains))
         for mail_domain in elaboration_mail_domains:
             self.assertIn(mail_domain, db_mail_domains)
@@ -172,7 +172,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
         print("\n------- [9] START MAIL SERVER DEPENDENCIES INTEGRITY TEST -------")
         for mail_domain in self.resolvers.mail_domains_results.dependencies.keys():
             tmp = helper_mail_server.get_every_of(mail_domain)
-            db_mail_servers = set(map(lambda mse: mse.name.string, tmp))
+            db_mail_servers = set(map(lambda mse: mse._second_component_._second_component_, tmp))
             elaboration_mail_servers = set(self.resolvers.mail_domains_results.dependencies[mail_domain].mail_servers)
             for mail_server in elaboration_mail_servers:
                 self.assertIn(mail_server, db_mail_servers)
@@ -213,7 +213,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_11_web_sites_presence(self):
         print("\n------- [11] START EVERY WEB SITE PRESENCE TEST -------")
         tmp = helper_web_site.get_everyone()
-        db_web_sites = set(map(lambda wse: wse.url.string, tmp))
+        db_web_sites = set(map(lambda wse: wse.url._second_component_, tmp))
         elaboration_web_sites = set(map(lambda ws: url_utils.deduct_second_component(ws), self.input_websites))
         for web_site in elaboration_web_sites:
             self.assertIn(web_site, db_web_sites)
@@ -224,7 +224,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
     def test_12_web_servers_presence(self):
         print("\n------- [12] START EVERY WEB SERVERS PRESENCE TEST -------")
         tmp = helper_web_server.get_everyone()
-        db_web_servers = set(map(lambda wse: wse.name.string, tmp))
+        db_web_servers = set(map(lambda wse: wse._second_component_._second_component_, tmp))
         elaboration_web_servers = set()
         for web_site in self.resolvers.landing_web_sites_results.keys():
             landing_res = self.resolvers.landing_web_sites_results[web_site]
@@ -247,7 +247,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if wse is None:
                 db_web_server_https = None
             else:
-                db_web_server_https = wse.name.string
+                db_web_server_https = wse.name._second_component_
             if self.resolvers.landing_web_sites_results[web_site].https is None:
                 elaboration_web_server_https = None
             else:
@@ -260,7 +260,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if wse is None:
                 db_web_server_http = None
             else:
-                db_web_server_http = wse.name.string
+                db_web_server_http = wse.name._second_component_
             if self.resolvers.landing_web_sites_results[web_site].http is None:
                 elaboration_web_server_http = None
             else:
@@ -278,7 +278,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if sse is None:
                 db_script_server_https = None
             else:
-                db_script_server_https = sse.name.string
+                db_script_server_https = sse.name._second_component_
             if self.resolvers.landing_script_sites_results[script_site].https is None:
                 elaboration_script_server_https = None
             else:
@@ -288,7 +288,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if sse is None:
                 db_script_server_http = None
             else:
-                db_script_server_http = sse.name.string
+                db_script_server_http = sse.name._second_component_
             if self.resolvers.landing_script_sites_results[script_site].http is None:
                 elaboration_script_server_http = None
             else:
@@ -306,7 +306,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if landing_res.https is not None:
                 iaes, dnes = helper_domain_name.resolve_access_path(landing_res.https.server, get_only_first_address=False)
                 db_https_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
-                db_https_access_path = list(map(lambda dne: dne.string, dnes))
+                db_https_access_path = list(map(lambda dne: dne._second_component_, dnes))
             else:
                 db_https_ip_addresses = set()
                 db_https_access_path = list()
@@ -321,7 +321,7 @@ class EntireApplicationIntegrityTestCase(unittest.TestCase):
             if landing_res.http is not None:
                 iaes, dnes = helper_domain_name.resolve_access_path(landing_res.http.server, get_only_first_address=False)
                 db_http_ip_addresses = set(map(lambda iae: iae.exploded_notation, iaes))
-                db_http_access_path = list(map(lambda dne: dne.string, dnes))
+                db_http_access_path = list(map(lambda dne: dne._second_component_, dnes))
             else:
                 db_http_ip_addresses = set()
                 db_http_access_path = list()

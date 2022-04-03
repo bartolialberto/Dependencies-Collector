@@ -61,7 +61,7 @@ class QueryTXTRRecordsTestCase(unittest.TestCase):
             mdes = helper_mail_domain.get_everyone()
             rows = list()
             for mde in mdes:
-                rows.append([mde.name.string])
+                rows.append([mde.name._second_component_])
             file = file_utils.set_file_in_folder('output', "every_mail_domain.csv", cls.PRD)
             QueryTXTRRecordsTestCase.write_csv_file(file, ',', rows)
         finally:

@@ -1,12 +1,15 @@
 from pathlib import Path
 from typing import List
+
+from entities.DomainName import DomainName
+from entities.Url import Url
 from utils import file_utils
 
 
-def take_temporary_snapshot(web_sites: List[str], mail_domains: List[str], complete_unresolved_database: bool, consider_tld: bool, execute_rov_scraping: bool) -> None:
-    take_temp_snapshot_of_string_list(web_sites, 'temp_web_sites')
-    take_temp_snapshot_of_string_list(mail_domains, 'temp_mail_domains')
-    take_temp_snapshot_of_flags(complete_unresolved_database, consider_tld, execute_rov_scraping, 'temp_flags')
+def take_temporary_snapshot(web_sites: List[Url], mail_domains: List[DomainName], complete_unresolved_database: bool, consider_tld: bool, execute_script_resolving: bool, execute_rov_scraping: bool) -> None:
+    take_temp_snapshot_of_string_list(list(map(lambda u: u.original(), web_sites)), 'temp_web_sites')
+    take_temp_snapshot_of_string_list(list(map(lambda dn: dn.string, mail_domains)), 'temp_mail_domains')
+    take_temp_snapshot_of_flags(complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping, 'temp_flags')
 
 
 def take_temp_snapshot_of_string_list(string_list: List[str], filename: str, project_root_directory=Path.cwd()) -> None:
@@ -34,7 +37,7 @@ def take_temp_snapshot_of_string_list(string_list: List[str], filename: str, pro
         f.close()
 
 
-def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld: bool, execute_rov_scraping: bool, filename: str, project_root_directory=Path.cwd()) -> None:
+def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld: bool, execute_script_resolving: bool, execute_rov_scraping: bool, filename: str, project_root_directory=Path.cwd()) -> None:
     """
     Export 2 booleans as a .txt file in the SNAPSHOTS folder of the project root folder (PRD) with a predefined
     filename.
@@ -60,5 +63,6 @@ def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld
     with file.open('w', encoding='utf-8') as f:  # 'w' or 'x'
         f.write('complete_unresolved_database:'+str(complete_unresolved_database)+'\n')
         f.write('consider_tld:'+str(consider_tld)+'\n')
+        f.write('execute_script_resolving:'+str(execute_script_resolving)+'\n')
         f.write('execute_rov_scraping:'+str(execute_rov_scraping))
         f.close()

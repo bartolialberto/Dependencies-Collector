@@ -1,13 +1,13 @@
 from typing import Set
 from peewee import DoesNotExist
-
+from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 from persistence import helper_domain_name
 from persistence.BaseModel import AutonomousSystemEntity, IpRangeTSVEntity, NetworkNumbersAssociation, DomainNameEntity, \
     AccessAssociation, IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity
 
 
-def insert(as_number: int, description: str) -> AutonomousSystemEntity:
-    ase, created = AutonomousSystemEntity.get_or_create(number=as_number, description=description)
+def insert(entry: EntryIpAsDatabase) -> AutonomousSystemEntity:
+    ase, created = AutonomousSystemEntity.get_or_create(number=entry.as_number, description=entry.as_description, country_code=entry.country_code)
     return ase
 
 
@@ -53,4 +53,12 @@ def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AutonomousSystemEnti
     for iae in iaes:
         ase = get_of_entity_ip_address(iae)
         result.add(ase)
+    return result
+
+
+def get_everyone() -> Set[AutonomousSystemEntity]:
+    result = set()
+    query = AutonomousSystemEntity.select()
+    for row in query:
+        result.add(row)
     return result

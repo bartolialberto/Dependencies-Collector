@@ -28,7 +28,7 @@ class ApplicationQueryTestCase(unittest.TestCase):
         print(f"Parameter: zone name = {zone_name}")
         wses = helper_application_queries.get_all_web_sites_from_zone_name(zone_name)
         for i, wse in enumerate(wses):
-            print(f"web site[{i + 1}]: {str(wse.url.string)}")
+            print(f"web site[{i + 1}]: {str(wse.url._second_component_)}")
         print(f"------- [2] END GETTING ALL WEB SITES THAT DEPENDS ON ZONE QUERY -------")
 
     def test_3_query_direct_zone_object_from_web_site(self):

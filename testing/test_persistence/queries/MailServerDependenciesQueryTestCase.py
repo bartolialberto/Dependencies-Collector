@@ -16,7 +16,7 @@ class MailServerDependenciesQueryTestCase(unittest.TestCase):
         print(f"Parameter: {mail_domain}")
         print(f"Mail server dependencies of mail domain: {mail_domain}")
         for i, mse in enumerate(mses):
-            print(f"mail_server[{i+1}/{len(mses)}] = {mse.name.string}")
+            print(f"mail_server[{i+1}/{len(mses)}] = {mse.name._second_component_}")
         print(f"------- [1] END GETTING DEPENDENCIES OF MAIL DOMAIN QUERY -------")
 
     def test_1_get_mail_domains_from_mail_server(self):
@@ -30,7 +30,7 @@ class MailServerDependenciesQueryTestCase(unittest.TestCase):
             self.fail(str(e))
         print(f"Parameter: {mail_server}")
         for i, mde in enumerate(mdes):
-            print(f"mail_domain[{i+1}/{len(mdes)}] = {mde.name.string}")
+            print(f"mail_domain[{i+1}/{len(mdes)}] = {mde.name._second_component_}")
         print(f"------- [2] END GETTING MAIL DOMAINS FROM MAIL SERVERS QUERY -------")
 
 

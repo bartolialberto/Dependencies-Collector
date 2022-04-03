@@ -10,7 +10,7 @@ db = SqliteDatabase(str(db_file))
 db.connect()
 
 
-def handle_tables_creation():       # execute at the end of the file
+def handle_tables_creation():       # executed at the end of the file
     if len(db.get_tables()) > 18:
         pass
     else:
@@ -215,9 +215,10 @@ class IpRangeROVEntity(BaseModel):
 class AutonomousSystemEntity(BaseModel):
     number = IntegerField(primary_key=True)
     description = TextField()
+    country_code = CharField()
 
     def __str__(self):
-        return f"<number={self.number}, description={self.description}>"
+        return f"<number={self.number}, description={self.description}, country_code={self.country_code}>"
 
     class Meta:
         db_table = 'autonomous_system'
@@ -249,14 +250,15 @@ class AliasAssociation(BaseModel):
 class WebSiteLandsAssociation(BaseModel):
     web_site = ForeignKeyField(WebSiteEntity)
     web_server = ForeignKeyField(WebServerEntity, null=True)
-    https = BooleanField(null=False)
+    starting_https = BooleanField(null=False)
+    landing_https = BooleanField(null=True)
 
     def __str__(self):
-        return f"<web_site={self.web_site}, web_server={self.web_server}, https={self.https}>"
+        return f"<web_site={self.web_site}, web_server={self.web_server}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
 
     class Meta:
         db_table = 'web_site_lands'
-        primary_key = CompositeKey('web_site', 'web_server', 'https')
+        primary_key = CompositeKey('web_site', 'web_server', 'starting_https')
 
 
 class ZoneComposedAssociation(BaseModel):
@@ -348,14 +350,15 @@ class ScriptHostedOnAssociation(BaseModel):
 class ScriptSiteLandsAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
     script_server = ForeignKeyField(ScriptServerEntity, null=True)
-    https = BooleanField(null=False)
+    starting_https = BooleanField(null=False)
+    landing_https = BooleanField(null=True)
 
     def __str__(self):
-        return f"<script_site={self.script_site}, script_server={self.script_server}, https={self.https}>"
+        return f"<script_site={self.script_site}, script_server={self.script_server}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
 
     class Meta:
         db_table = 'script_site_lands'
-        primary_key = CompositeKey('script_site', 'script_server', 'https')
+        primary_key = CompositeKey('script_site', 'script_server', 'starting_https')
 
 
 class AccessAssociation(BaseModel):

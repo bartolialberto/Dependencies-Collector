@@ -153,6 +153,11 @@ class ROVPageScraper:
         """
         try:
             self.headless_browser.driver.get(url_page)
+        except selenium.common.exceptions.TimeoutException:
+            self.headless_browser.close_and_reopen()
+            self.prefixes_table.clear()
+            self.current_as_number = -1
+            raise
         except selenium.common.exceptions.WebDriverException:
             self.prefixes_table.clear()
             self.current_as_number = -1
@@ -180,7 +185,7 @@ class ROVPageScraper:
         else:
             try:
                 self.load_page(ROVPageScraper.base_url(as_number))
-            except selenium.common.exceptions.WebDriverException:
+            except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.TimeoutException):
                 raise
             # self.prefixes_table.clear()
             self.current_as_number = as_number

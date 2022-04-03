@@ -1,4 +1,6 @@
 import ipaddress
+
+from entities.DomainName import DomainName
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
 
 
@@ -43,7 +45,7 @@ class AutonomousSystemResolutionResults:
         self.no_as_results = dict()
         self.unresolved_servers = set()
 
-    def add_complete_result(self, ip_address: ipaddress.IPv4Address, server: str, entry: EntryIpAsDatabase, ip_range_tsv: ipaddress.IPv4Network) -> None:
+    def add_complete_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase, ip_range_tsv: ipaddress.IPv4Network) -> None:
         """
         This method adds a complete result.
 
@@ -61,7 +63,7 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.complete_results[ip_address.exploded] = (server, entry, ip_range_tsv)
 
-    def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: str, entry: EntryIpAsDatabase) -> None:
+    def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase) -> None:
         """
         This method adds an almost complete result that lacks the IP .tsv range resolution.
 
@@ -77,7 +79,7 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.no_ip_range_tsv_results[ip_address.exploded] = (server, entry)
 
-    def add_no_as_result(self, ip_address: ipaddress.IPv4Address, server: str) -> None:
+    def add_no_as_result(self, ip_address: ipaddress.IPv4Address, server: DomainName) -> None:
         """
         This method adds an unresolved (in the .tsv database) result.
 
@@ -91,7 +93,7 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.no_as_results[ip_address.exploded] = server
 
-    def add_unresolved_server(self, server: str) -> None:
+    def add_unresolved_server(self, server: DomainName) -> None:
         """
         This method adds an unresolved result (no IP address).
 

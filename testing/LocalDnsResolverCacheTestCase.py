@@ -49,9 +49,9 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
                     print(f"alias[{i+1}] = {name}")
             else:
                 for i, rr in enumerate(aliases):
-                    print(f"alias[{i + 1}] = (name={rr.name}, first_value={rr.get_first_value()})")
+                    print(f"alias[{i + 1}] = (name={rr._second_component_}, first_value={rr.get_first_value()})")
             print(f"Resolved RR:")
-            print(f"(name={rr_a.name}, values={rr_a.values})")
+            print(f"(name={rr_a._second_component_}, values={rr_a.values})")
         except NoAvailablePathError:
             print(f"No path for '{domain_name}'")
         print(f"------- [1] END PATH RESOLVING -------")

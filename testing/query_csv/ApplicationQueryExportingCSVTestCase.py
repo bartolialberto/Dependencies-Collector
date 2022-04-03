@@ -155,7 +155,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 except DoesNotExist:
                     pass          # could be a TLD that are not considered
             for zone_name in zone_name_dependencies_of_wse:
-                rows.append([wse.url.string, zone_name])
+                rows.append([wse.url._second_component_, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
@@ -193,7 +193,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 mail_server_server_direct_zone_name = mail_server_server_direct_zone.name
                 zone_name_dependencies_of_mde.add(mail_server_server_direct_zone_name)
             for zone_name in zone_name_dependencies_of_mde:
-                rows.append([mde.name.string, zone_name])
+                rows.append([mde.name._second_component_, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
@@ -231,7 +231,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                 except DoesNotExist:
                     pass  # could be a TLD that are not considered
             for zone_name in zone_name_dependencies_of_wse:
-                rows.append([wse.url.string, zone_name])
+                rows.append([wse.url._second_component_, zone_name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
@@ -254,7 +254,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
             for ze in ze_dependencies:
-                rows.append([mde.name.string, ze.name])
+                rows.append([mde.name._second_component_, ze.name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
@@ -301,10 +301,10 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                         is_unresolved = True
                         break
             if not only_complete_mail_domain and is_unresolved:
-                rows.append([mde.name.string, self.unresolved_value, self.unresolved_value, self.unresolved_value])
+                rows.append([mde.name._second_component_, self.unresolved_value, self.unresolved_value, self.unresolved_value])
                 count_unresolved_mail_domain = count_unresolved_mail_domain + 1
             else:
-                rows.append([mde.name.string, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
+                rows.append([mde.name._second_component_, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
                 count_resolved_mail_domain = count_resolved_mail_domain + 1
         print(f"Written {len(rows)} rows.")
         if not only_complete_mail_domain:
@@ -335,7 +335,7 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
             try:
                 iaes, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
             except DoesNotExist:
-                print(f"{wse.name.string} IS NON-RESOLVABLE")
+                print(f"{wse.name._second_component_} IS NON-RESOLVABLE")
                 is_unresolved = True
                 iaes = set()
             for iae in iaes:
@@ -349,10 +349,10 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
                     break
                 autonomous_systems.add(ase)
             if not only_complete_web_server and is_unresolved:
-                rows.append([wse.name.string, self.unresolved_value, self.unresolved_value, self.unresolved_value])
+                rows.append([wse.name._second_component_, self.unresolved_value, self.unresolved_value, self.unresolved_value])
                 count_unresolved_web_server = count_unresolved_web_server + 1
             else:
-                rows.append([wse.name.string, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
+                rows.append([wse.name._second_component_, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
                 count_resolved_web_server = count_resolved_web_server + 1
         print(f"Written {len(rows)} rows.")
         if not only_complete_web_server:

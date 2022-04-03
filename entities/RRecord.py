@@ -1,8 +1,9 @@
-import ipaddress
+from ipaddress import IPv4Address
 from typing import List
+from entities.DomainName import DomainName
 from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import domain_name_utils
+from utils import resource_records_utils
 
 
 class RRecord:
@@ -14,33 +15,31 @@ class RRecord:
 
     Attributes
     ----------
-    name : `str`
+    name : DomainName
         The name field of the resource record.
-    type : `TypesRR`
+    type : TypesRR
         The type field of the resource record.
-    values : `List[str]`
+    values : List[DomainName or ipaddress.IPv4Address]
         The values field of the resource record.
     """
 
-    def __init__(self, name: str, type_rr: TypesRR, values: str or List[str]):
+    def __init__(self, name: DomainName or str, type_rr: TypesRR, values: List[str]):
         """
         Instantiate a RRecord object initializing all the attributes defined above.
 
         :param name: The name.
-        :type name: str
+        :type name: DomainName or str
         :param type_rr: The type.
         :type type_rr: TypesRR
         :param values: The values.
-        :type values: str or List[str]
+        :type values: List[str]
         """
-        self.name = name
-        self.type = type_rr
-        if isinstance(values, str):
-            temp = list()
-            temp.append(values)
-            self.values = temp
+        if isinstance(name, str):
+            self.name = DomainName(name)
         else:
-            self.values = values
+            self.name = name
+        self.type = type_rr
+        self.values = RRecord.construct_objects(type_rr, values)
 
     def __eq__(self, other: any) -> bool:
         """
@@ -53,19 +52,19 @@ class RRecord:
         :rtype: bool
         """
         if isinstance(other, RRecord):
-            if domain_name_utils.equals(self.name, other.name) and self.type == other.type:
+            if self.name == other.name and self.type == other.type:
                 return True
             else:
                 return False
         else:
             return False
 
-    def get_first_value(self) -> str:
+    def get_first_value(self) -> DomainName or IPv4Address:
         """
         Gets the first value in the values field.
 
         :return: The first value.
-        :rtype: str
+        :rtype: DomainName or IPv4Address
         """
         return self.values[0]
 
@@ -97,10 +96,10 @@ class RRecord:
             raise
         # parsing values
         split_values = split_entry[2].split(',')
-        values = []
+        values = list()
         for val in split_values:
             values.append(val)
-        return RRecord(split_entry[0], type_rr, values)
+        return RRecord(DomainName(split_entry[0]), type_rr, values)
 
     def __str__(self):
         """
@@ -109,7 +108,10 @@ class RRecord:
         :return: A string representation of this object.
         :rtype: str
         """
-        return f"{self.name}\t{self.type.to_string()}\t{str(self.values)}"
+        return f"{self.name}\t{self.type.to_string()}\t{resource_records_utils.stamp_values(self.type, self.values)}"
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.type))
 
     @staticmethod
     def parse_mail_server_from_value(value: str) -> str:
@@ -122,7 +124,7 @@ class RRecord:
         :rtype: str
         """
         split_value = value.split(' ')
-        return split_value[1]       # TODO: se è un IP? Da gestire
+        return split_value[1]       # TODO: se Ã¨ un IP? Da gestire
 
     @staticmethod
     def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:      # FORWARD DECLARATIONS (REFERENCES)
@@ -143,36 +145,45 @@ class RRecord:
             result = list()
             prev_domain_name = domain_names[0]
             for domain_name in domain_names[1:]:
-                result.append(RRecord(prev_domain_name, TypesRR.CNAME, domain_name))
+                result.append(RRecord(DomainName(prev_domain_name), TypesRR.CNAME, [domain_name]))
                 prev_domain_name = domain_name
+
             return result
 
     @staticmethod
-    def standardize_rr_domain_names(rr: 'RRecord') -> 'RRecord':
-        # TODO: docs
-        standardized_name = domain_name_utils.standardize_for_application(rr.name)
-        if rr.type != TypesRR.A:
-            if rr.type == TypesRR.MX:
-                standardized_values = list()
-                for val in rr.values:
-                    split_val = val.split(' ')
+    def construct_objects(type_rr: TypesRR, values: List[str]) -> List[DomainName or IPv4Address]:
+        if type_rr == TypesRR.A:
+            obj_values = list()
+            for value in values:
+                if isinstance(value, IPv4Address):
+                    obj_values.append(value)
+                else:
                     try:
-                        ipaddress.IPv4Address(split_val[-1])
-                        standardized_values.append(val)
+                        obj_values.append(IPv4Address(value))
                     except ValueError:
-                        standardized_values.append(split_val[0]+' '+domain_name_utils.standardize_for_application(split_val[-1]))
-            else:
-                standardized_values = list()
-                for val in rr.values:
-                    standardized_values.append(domain_name_utils.standardize_for_application(val))
+                        raise
+            return obj_values
+        elif type_rr == TypesRR.CNAME or type_rr == TypesRR.NS:
+            domain_names = list()
+            for value in values:
+                if isinstance(value, DomainName):
+                    domain_names.append(value)
+                else:
+                    domain_names.append(DomainName(value))
+            return domain_names
+        elif type_rr == TypesRR.MX:
+            obj_values = list()
+            for value in values:
+                if isinstance(value, DomainName) or isinstance(value, IPv4Address):
+                    obj_values.append(value)
+                else:
+                    split_string = value.split(' ')
+                    split_value = split_string[-1]
+                    try:
+                        val = IPv4Address(split_value)
+                    except ValueError:
+                        val = DomainName(split_value)
+                    obj_values.append(val)
+            return obj_values
         else:
-            standardized_values = rr.values
-        return RRecord(standardized_name, rr.type, standardized_values)
-
-    @staticmethod
-    def standardize_multiple_rr(rrs: List['RRecord']) -> List['RRecord']:
-        # TODO: docs
-        standardized_rrs = list()
-        for rr in rrs:
-            standardized_rrs.append(RRecord.standardize_rr_domain_names(rr))
-        return standardized_rrs
+            raise ValueError

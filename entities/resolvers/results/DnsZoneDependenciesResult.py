@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Set
+from entities.DomainName import DomainName
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
 
@@ -26,7 +27,7 @@ class DnsZoneDependenciesResult:
     error_logs : List[ErrorLog]
         A list of error logs occurred during resolving.
     """
-    def __init__(self, zone_dependencies: List[Zone], direct_zone_name: str or None, zone_name_dependencies_per_zone: Dict[str, List[str]], zone_name_dependencies_per_name_server: Dict[str, List[str]], error_logs: List[ErrorLog]):
+    def __init__(self, zone_dependencies: Set[Zone], direct_zones: Dict[DomainName, Zone or None], zone_dependencies_per_zone: Dict[DomainName, Set[Zone]], zone_dependencies_per_name_server: Dict[DomainName, Set[Zone]], error_logs: List[ErrorLog]):
         """
         Initialize the object.
 
@@ -42,7 +43,7 @@ class DnsZoneDependenciesResult:
         :type error_logs: List[ErrorLog]
         """
         self.zone_dependencies = zone_dependencies
-        self.direct_zone_name = direct_zone_name
-        self.zone_name_dependencies_per_zone = zone_name_dependencies_per_zone
-        self.zone_name_dependencies_per_name_server = zone_name_dependencies_per_name_server
+        self.direct_zones = direct_zones
+        self.zone_dependencies_per_zone = zone_dependencies_per_zone
+        self.zone_dependencies_per_name_server = zone_dependencies_per_name_server
         self.error_logs = error_logs

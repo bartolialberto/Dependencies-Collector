@@ -62,12 +62,26 @@ class FirefoxHeadlessWebDriver:
             self.driver = webdriver.Firefox(service=self.service, options=self.options)
         except selenium.common.exceptions.WebDriverException:
             raise
+        self.driver.set_page_load_timeout(30)       # [s]
         self.driver.implicitly_wait(10)  # SAFETY
 
-    def close(self):
+    def close(self) -> None:
         """
         Shutdown seleniumwire and then quit the webdriver.
 
         """
         # self.driver.close()     # close the current window
         self.driver.quit()      # shutdown selenium-wire and then quit the webdriver
+
+    def close_and_reopen(self) -> None:
+        self.close()
+        try:
+            self.service = Service(self.gecko_driver_path)
+        except selenium.common.exceptions.WebDriverException:
+            raise
+        try:
+            self.driver = webdriver.Firefox(service=self.service, options=self.options)
+        except selenium.common.exceptions.WebDriverException:
+            raise
+        self.driver.set_page_load_timeout(30)  # [s]
+        self.driver.implicitly_wait(10)  # SAFETY

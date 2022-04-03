@@ -1,8 +1,9 @@
+from entities.DomainName import DomainName
 from entities.error_log.ErrorLog import ErrorLog
-from entities.resolvers.results.DnsMailServersDependenciesResult import DnsMailServersDependenciesResult
+from entities.resolvers.results.MailDomainResolvingResult import MailDomainResolvingResult
 
 
-class MultipleDnsMailServerDependenciesResult:
+class MultipleMailDomainResolvingResult:
     """
     This class represents the result of multiple mail servers dependencies resolving.
     It consists in a dictionary that associates each mail domain to a DnsMailServersDependenciesResult object (which
@@ -25,16 +26,22 @@ class MultipleDnsMailServerDependenciesResult:
         self.dependencies = dict()
         self.error_logs = list()
 
-    def add_dependency(self, mail_domain: str, mail_servers_dependency: DnsMailServersDependenciesResult or None):
+    def add_dependency(self, mail_domain: DomainName, mail_servers_dependency: MailDomainResolvingResult or None):
         """
         This method adds a new mail domain resolution. None value is used to indicate that the resolving went wrong.
 
         :param mail_domain: A mail domain.
         :type mail_domain: str
         :param mail_servers_dependency: A DnsMailServersDependenciesResult object.
-        :type mail_servers_dependency: DnsMailServersDependenciesResult or None
+        :type mail_servers_dependency: MailDomainResolvingResult or None
         """
-        self.dependencies[mail_domain] = mail_servers_dependency
+        if mail_servers_dependency is None:
+            self.dependencies[mail_domain] = mail_servers_dependency
+        else:
+            if mail_domain != mail_servers_dependency.mail_domain_path.get_qname():
+                raise ValueError
+            else:
+                self.dependencies[mail_domain] = mail_servers_dependency
 
     def append_error_log(self, log: ErrorLog):
         """

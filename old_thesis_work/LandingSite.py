@@ -96,9 +96,9 @@ class LandingSite:
                 lastUrlWithHTTP = "http://"+webDomain+"/"
                 landedOn = None
                 for hist in range(len(r.retries.history)):
-                    self.httpHistory.append(r.retries.history[hist].string)
-                    if r.retries.history[hist].string.startswith("http:"):
-                        lastUrlWithHTTP = r.retries.history[hist].string
+                    self.httpHistory.append(r.retries.history[hist]._second_component_)
+                    if r.retries.history[hist]._second_component_.startswith("http:"):
+                        lastUrlWithHTTP = r.retries.history[hist]._second_component_
 
                     if hist == len(r.retries.history)-1:
                         self.httpHistory.append(r.retries.history[hist].redirect_location)
@@ -127,9 +127,9 @@ class LandingSite:
                         stsPresent = True
                     lastUrlWithHTTP = "http://" + webDomain + "/"
                     for hist in range(len(r.retries.history)):
-                        self.httpHistory.append(r.retries.history[hist].string)
-                        if r.retries.history[hist].string.startswith("http:"):
-                            lastUrlWithHTTP = r.retries.history[hist].string
+                        self.httpHistory.append(r.retries.history[hist]._second_component_)
+                        if r.retries.history[hist]._second_component_.startswith("http:"):
+                            lastUrlWithHTTP = r.retries.history[hist]._second_component_
 
                         if hist == len(r.retries.history) - 1:
                             self.httpHistory.append(r.retries.history[hist].redirect_location)
@@ -182,8 +182,8 @@ class LandingSite:
                 r = http.request('GET', "https://" + webDomain + "/")
                 lastUrlWithHTTP = "https://" + webDomain + "/"
                 for hist in r.retries.history:
-                    self.httpsHistory.append(hist.string)
-                    if hist.string.startswith("https:"):
+                    self.httpsHistory.append(hist._second_component_)
+                    if hist._second_component_.startswith("https:"):
                         lastUrlWithHTTP = hist.redirect_location
 
                 if lastUrlWithHTTP.startswith("https:"):
@@ -203,8 +203,8 @@ class LandingSite:
                     r = http.request('GET', "https://" + webDomain + "/")
                     lastUrlWithHTTP = "https://" + webDomain + "/"
                     for hist in r.retries.history:
-                        self.httpsHistory.append(hist.string)
-                        if hist.string.startswith("https:"):
+                        self.httpsHistory.append(hist._second_component_)
+                        if hist._second_component_.startswith("https:"):
                             lastUrlWithHTTP = hist.redirect_location
                     if lastUrlWithHTTP.startswith("https:"):
                         mat = re.findall("/", lastUrlWithHTTP)

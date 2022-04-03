@@ -24,3 +24,12 @@ def delete_of_entity_domain_name(dne: DomainNameEntity) -> None:
         return
     for aa in aas:
         aa.delete_instance()
+
+
+def get_unresolved() -> Set[AccessAssociation]:
+    result = set()
+    query = AccessAssociation.select()\
+        .where(AccessAssociation.ip_address.is_null(True))
+    for row in query:
+        result.add(row)
+    return result

@@ -1,20 +1,15 @@
 from peewee import DoesNotExist
-from exceptions.InvalidUrlError import InvalidUrlError
+from entities.Url import Url
 from persistence.BaseModel import UrlEntity
-from utils import url_utils
 
 
-def insert(string: str) -> UrlEntity:
-    try:
-        url = url_utils.deduct_second_component(string)
-    except InvalidUrlError:
-        raise
-    ue, created = UrlEntity.get_or_create(string=url)
+def insert(url: Url) -> UrlEntity:
+    ue, created = UrlEntity.get_or_create(string=url.second_component())
     return ue
 
 
-def get(url: str) -> UrlEntity:
+def get(url: Url) -> UrlEntity:
     try:
-        return UrlEntity.get_by_id(url)
+        return UrlEntity.get_by_id(url.second_component())
     except DoesNotExist:
         raise

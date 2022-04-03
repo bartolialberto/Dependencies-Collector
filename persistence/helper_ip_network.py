@@ -1,7 +1,6 @@
 import ipaddress
 from typing import Set
 from peewee import DoesNotExist
-
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_domain_name
 from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity, DomainNameEntity

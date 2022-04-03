@@ -5,10 +5,8 @@ from dns.name import Name
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.enums.TypesRR import TypesRR
 from exceptions.DomainNonExistentError import DomainNonExistentError
-from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
-from utils import file_utils
 
 
 class DnsQueryTestCase(unittest.TestCase):
@@ -30,18 +28,10 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'platform.twitter.com.'
-        cls.domain_name = 'posteid.poste.it.'
-        cls.domain_name = 'istruzione.it.'
+        cls.domain_name = 'arb-5.de.'
         cls.type = TypesRR.NS
-        cls.import_cache_from_output_folder = True
         # ELABORATION
-        PRD = file_utils.get_project_root_directory()
         cls.dns_resolver = DnsResolver(True)
-        if cls.import_cache_from_output_folder:
-            try:
-                cls.dns_resolver.cache.load_csv_from_output_folder(project_root_directory=PRD)
-            except FilenameNotFoundError:
-                print(f"!!! NO CACHE FILE FOUND !!!")
         print(f"PARAMETER: {cls.domain_name}")
 
     def test_1_do_raw_query_and_prints_raw_infos(self):
@@ -61,7 +51,7 @@ class DnsQueryTestCase(unittest.TestCase):
             print(f"answer.chaining_result.canonical_name = {answer.chaining_result.canonical_name}")
         for i, cname in enumerate(answer.chaining_result.cnames):
             print(f"\ncname[{i+1}/{len(answer.chaining_result.cnames)}]")
-            print(f"--> cname.name = {cname.name}")
+            print(f"--> cname.name = {cname._second_component_}")
             print(f"--> cname.ttl = {cname.ttl}")
             for j, key in enumerate(cname.items.keys()):
                 print(f"----> cname.item[{j+1}/{len(cname.items.keys())}] = {key}")
@@ -76,25 +66,13 @@ class DnsQueryTestCase(unittest.TestCase):
     def test_2_do_query_and_debug_prints_from_application_resolver(self):
         print(f"\n------- [2] START QUERY TEST -------")
         try:
-            rr_answer, rr_aliases = self.dns_resolver.do_query(self.domain_name, self.type)
+            path = self.dns_resolver.do_query(self.domain_name, self.type)
         except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
-            print(f"ERROR: {str(e)}")
-            return
-        print(f"Answer values:")
-        print(f"rr = (name={rr_answer.name}, type={rr_answer.type}, values=[", end='')
-        for i, value in enumerate(rr_answer.values):
-            if i == len(rr_answer.values) - 1:
-                print(f"{value}])")
-            else:
-                print(f"{value},", end='')
-        print(f"\nAliases:")
-        for i, rr_alias in enumerate(rr_aliases):
-            print(f"rr[{i+1}]: (name={rr_alias.name}, type={rr_alias.type}, values=[", end='')
-            for j, value in enumerate(rr_alias.values):
-                if j == len(rr_alias.values) - 1:
-                    print(f"{value}])")
-                else:
-                    print(f"{value},", end='')
+            self.fail(f"ERROR: {str(e)}")
+        print(f"type of path = {type(path)}")
+        print(f"canonical name = {path.get_canonical_name()}")
+        print(f"resolution = {path.get_resolution()}")
+        print(f"path = {path.stamp()}")
         print(f"------- [2] END QUERY TEST -------")
 
 

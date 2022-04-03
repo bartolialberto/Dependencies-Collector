@@ -1,16 +1,18 @@
 from typing import Tuple, Set
 from peewee import DoesNotExist
+
+from entities.DomainName import DomainName
 from persistence import helper_domain_name, helper_mail_domain
 from persistence.BaseModel import MailServerEntity, DomainNameEntity, MailDomainEntity, MailDomainComposedAssociation
 
 
-def insert(mailserver: str) -> Tuple[MailServerEntity, DomainNameEntity]:
+def insert(mailserver: DomainName) -> MailServerEntity:
     dne = helper_domain_name.insert(mailserver)
     nse, created = MailServerEntity.get_or_create(name=dne)
-    return nse, dne
+    return nse
 
 
-def get(mail_server: str) -> MailServerEntity:
+def get(mail_server: DomainName) -> MailServerEntity:
     try:
         dne = helper_domain_name.get(mail_server)
     except DoesNotExist:

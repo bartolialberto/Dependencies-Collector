@@ -1,5 +1,8 @@
 import ipaddress
 from typing import Tuple, List
+
+from entities.SchemeUrl import SchemeUrl
+from entities.Url import Url
 from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.InvalidUrlError import InvalidUrlError
 from utils import domain_name_utils, url_utils
@@ -11,7 +14,7 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from utils import file_utils
 
 
-def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bool, ipaddress.IPv4Address]:
+def resolve_landing_page(url: Url, as_https=True) -> Tuple[SchemeUrl, List[str], bool, ipaddress.IPv4Address]:
     """
     This method returns the landing page, the redirection path, the Strict Transport Security validity from an HTTP URL.
     In particular it creates an url from the string parameter and then tries a GET HTTP method with it.
@@ -34,24 +37,12 @@ def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bo
     :rtype: Tuple[str, List[str], bool, ipaddress.IPv4Address]
     """
     redirection_path = list()
-    url = ''
-    hsts = False
-
-    """
+    if as_https:
+        url_string = url.https().string
+    else:
+        url_string = url.http().string
     try:
-        domain_name_utils.grammatically_correct(string)
-        url = domain_name_utils.deduct_http_url(string, as_https=as_https)
-    except InvalidDomainNameError:
-        try:
-            url_utils.grammatically_correct(string)
-            url = url_utils.deduct_http_url(string, as_https=as_https)
-        except InvalidUrlError:
-            raise
-    """
-    url = domain_name_utils.deduct_http_url(string, as_https=as_https)
-
-    try:
-        response = requests.get(url, headers={'Connection': 'close'}, stream=True)
+        response = requests.get(url_string, headers={'Connection': 'close'}, stream=True)
         # tmp = response.raw._connection.sock.getsockname()
         # tmp = response.raw._connection.sock.getpeername()
         tmp = response.raw._fp.fp.raw._sock.getpeername()
@@ -90,8 +81,8 @@ def resolve_landing_page(string: str, as_https=True) -> Tuple[str, List[str], bo
     else:
         hsts = False
     redirection_path.append(response.url)  # final page
-    landing_http_url = response.url
-    return landing_http_url, redirection_path, hsts, ip
+    landing_url = SchemeUrl(response.url)
+    return landing_url, redirection_path, hsts, ip
 
 
 def download_latest_tsv_database(project_root_directory=Path.cwd()) -> None:

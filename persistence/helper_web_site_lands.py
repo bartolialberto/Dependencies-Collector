@@ -1,11 +1,13 @@
 from typing import List, Set
 from peewee import DoesNotExist
+from entities.Url import Url
+from entities.resolvers.results.LandingSiteResult import InnerLandingSiteSingleSchemeResult
 from persistence import helper_web_site
 from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity
 
 
-def insert(wsitee: WebSiteEntity, wservere: WebServerEntity or None, https: bool) -> WebSiteLandsAssociation:
-    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, web_server=wservere, https=https)
+def insert(wsitee: WebSiteEntity, starting_https: bool, wservere: WebServerEntity or None, landing_https: bool or None) -> WebSiteLandsAssociation:
+    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, starting_https=starting_https, web_server=wservere, landing_https=landing_https)
     return wsla
 
 
@@ -30,7 +32,7 @@ def get_all_from_entity_web_site(wse: WebSiteEntity) -> List[WebSiteLandsAssocia
     return result
 
 
-def get_all_from_string_website_and_scheme(website: str, https: bool) -> List[WebSiteLandsAssociation]:
+def get_all_from_string_website_and_scheme(website: Url, https: bool) -> List[WebSiteLandsAssociation]:
     try:
         wse = helper_web_site.get(website)
     except DoesNotExist:
@@ -78,9 +80,9 @@ def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity) -> No
     query.execute()
 
 
-def get_unresolved(https: bool) -> Set[WebSiteLandsAssociation]:
+def get_unresolved() -> Set[WebSiteLandsAssociation]:
     query = WebSiteLandsAssociation.select()\
-        .where((WebSiteLandsAssociation.web_server.is_null(True)) & (WebSiteLandsAssociation.https == https))
+        .where(WebSiteLandsAssociation.web_server.is_null(True))
     result = set()
     for row in query:
         result.add(row)

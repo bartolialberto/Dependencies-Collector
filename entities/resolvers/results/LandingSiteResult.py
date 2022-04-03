@@ -1,6 +1,10 @@
 from ipaddress import IPv4Address
 from typing import List, Set
+
+from entities.SchemeUrl import SchemeUrl
+from entities.Url import Url
 from entities.error_log.ErrorLog import ErrorLog
+from entities.paths.APath import APath
 from utils import domain_name_utils
 
 
@@ -26,31 +30,12 @@ class InnerLandingSiteSingleSchemeResult:
     access_path : List[str]
         The chain of domain names to resolve the server name to an IP address.
     """
-    def __init__(self, url: str, redirection_path: List[str], hsts: bool, ips: Set[IPv4Address], access_path: List[str]):
+    def __init__(self, url: SchemeUrl, redirection_path: List[str], hsts: bool, a_path: APath):
         self.url = url
         self.redirection_path = redirection_path
         self.hsts = hsts
-        self.ips = ips
-        tmp = domain_name_utils.deduct_domain_name(url)
-        self.server = domain_name_utils.insert_trailing_point(tmp)
-        self.access_path = access_path
-
-    def stamp_access_path(self) -> str:
-        """
-        This method return a string that represents schematically the access path and the ip addresses.
-
-        :return: The string representation.
-        :rtype: str
-        """
-        ip_string_set = list(map(lambda ip: ip.exploded, self.ips))
-        result = ''
-        for i, name in enumerate(self.access_path):
-            if i != len(self.access_path) - 1:
-                result = result + name + " ---> "
-            else:
-                result = result + name
-        result = result + " ==> " + str(ip_string_set)
-        return result
+        self.a_path = a_path
+        self.server = url.domain_name()
 
 
 class LandingSiteResult:

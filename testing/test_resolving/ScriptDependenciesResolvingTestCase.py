@@ -1,6 +1,7 @@
 import unittest
 import selenium
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from entities.SchemeUrl import SchemeUrl
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
 from utils import file_utils
 
@@ -15,8 +16,8 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.urls = [
-            'https://consent.youtube.com/ml?continue=https://www.youtube.com/feed/explore?gl%3DIT&gl=IT&hl=it&pc=yt&uxe=23983171&src=1',
-            'https://www.google.com/doodles'
+            SchemeUrl('https://consent.youtube.com/ml?continue=https://www.youtube.com/feed/explore?gl%3DIT&gl=IT&hl=it&pc=yt&uxe=23983171&src=1'),
+            SchemeUrl('https://www.google.com/doodles')
         ]
         # ELABORATION
         PRD = file_utils.get_project_root_directory()
@@ -30,15 +31,15 @@ class ScriptDependenciesResolvingTestCase(unittest.TestCase):
                 print(f"!!! {str(e)} !!!")
                 exit(-1)
 
-    def test_1_debug_prints_of_interested_scripts(self):
-        print(f"\n------- [1] START DEBUG PRINTS OF INTERESTED SCRIPTS TEST -------")
+    def test_01_debug_prints(self):
+        print(f"\n------- [1] START DEBUG PRINTS TEST -------")
         for i, url in enumerate(self.results.keys()):
             print(f"url[{i+1}/{len(self.results.keys())}]: {url}")
             for j, script in enumerate(self.results[url]):
-                print(f"--> script[{j+1}/{len(self.results[url])}].src={script.src}")
+                print(f"--> script[{j+1}/{len(self.results[url])}] integrity={script.integrity}, src={script.src}")
             if i != len(self.results.keys())-1:
                 print()
-        print(f"------- [1] END DEBUG PRINTS OF INTERESTED SCRIPTS TEST -------")
+        print(f"------- [1] END DEBUG PRINTS TEST -------")
 
     @classmethod
     def tearDownClass(cls) -> None:

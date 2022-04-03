@@ -64,7 +64,7 @@ def standardize_for_application(string: str) -> str:
     :return: The result string.
     :rtype: str
     """
-    return insert_trailing_point(string.casefold())
+    return insert_trailing_point(string.strip().casefold())
 
 
 def get_subdomains_name_list(domain: str, root_included=False, parameter_included=True) -> List[str]:

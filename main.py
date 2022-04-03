@@ -1,14 +1,18 @@
 import sys
+from datetime import datetime
 from typing import List, Tuple
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
+
+from entities.DomainName import DomainName
+from entities.Url import Url
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
 from persistence.BaseModel import db
-from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils, domain_name_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils, domain_name_utils, datetime_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[str]:
@@ -95,7 +99,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=False, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -123,10 +127,13 @@ def get_input_application_flags(default_complete_unresolved_database=False, defa
             default_consider_tld = True
         elif arg == '-rov':
             default_consider_tld = True
+        elif arg == '-script':
+            default_execute_script_resolving = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")
+    print(f"> EXECUTE SCRIPT RESOLVING flag: {str(default_execute_script_resolving)}")
     print(f"> EXECUTE ROV SCRAPING flag: {str(default_execute_rov_scraping)}")
-    return default_complete_unresolved_database, default_consider_tld, default_execute_rov_scraping
+    return default_complete_unresolved_database, default_consider_tld, default_execute_script_resolving, default_execute_rov_scraping
 
 
 if __name__ == "__main__":
@@ -136,12 +143,12 @@ if __name__ == "__main__":
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
-        input_websites = get_input_websites()
-        input_mail_domains = get_input_mail_domains()
-        complete_unresolved_database, consider_tld, execute_rov_scraping = get_input_application_flags()
+        input_websites = list(map(lambda s: Url(s), get_input_websites()))
+        input_mail_domains = list(map(lambda s: DomainName(s), get_input_mail_domains()))
+        complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
-        resolvers = ApplicationResolversWrapper(consider_tld, execute_rov_scraping)
+        resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_scraping)
         # complete unresolved database is flag is set to
         if complete_unresolved_database:
             print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
@@ -151,7 +158,7 @@ if __name__ == "__main__":
         # auxiliary elaborations
         print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
-        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_rov_scraping)    # for future error reproducibility
+        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping)    # for future error reproducibility
         # actual elaboration of all resolvers
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
@@ -173,4 +180,5 @@ if __name__ == "__main__":
         if resolvers.headless_browser_is_instantiated:
             resolvers.headless_browser.close()
         db.close()
+        print(f"Total application execution time is: {datetime_utils.compute_delta_and_print(resolvers.start_execution_time)}")
     print("********** APPLICATION END **********")

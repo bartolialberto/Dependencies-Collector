@@ -1,5 +1,7 @@
 from typing import Set
 from peewee import DoesNotExist
+
+from entities.Url import Url
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_url
 from persistence.BaseModel import WebSiteEntity, ScriptServerEntity, ScriptSiteLandsAssociation, \
@@ -7,19 +9,15 @@ from persistence.BaseModel import WebSiteEntity, ScriptServerEntity, ScriptSiteL
 from utils import url_utils
 
 
-def insert(url: str) -> WebSiteEntity:
+def insert(url: Url) -> WebSiteEntity:
     ue = helper_url.insert(url)
     we, created = WebSiteEntity.get_or_create(url=ue)
     return we
 
 
-def get(url: str) -> WebSiteEntity:
+def get(url: Url) -> WebSiteEntity:
     try:
-        temp = url_utils.deduct_second_component(url)
-    except InvalidUrlError:
-        raise
-    try:
-        ue = helper_url.get(temp)
+        ue = helper_url.get(url)
     except DoesNotExist:
         raise
     try:

@@ -1,16 +1,18 @@
 from typing import Set
 from peewee import DoesNotExist
+
+from entities.Url import Url
 from persistence import helper_url, helper_web_site
 from persistence.BaseModel import ScriptSiteEntity, WebSiteEntity, ScriptHostedOnAssociation, ScriptWithdrawAssociation
 
 
-def insert(url: str) -> ScriptSiteEntity:
+def insert(url: Url) -> ScriptSiteEntity:
     ue = helper_url.insert(url)
     sse, created = ScriptSiteEntity.get_or_create(url=ue)
     return sse
 
 
-def get(url: str) -> ScriptSiteEntity:
+def get(url: Url) -> ScriptSiteEntity:
     try:
         ue = helper_url.get(url)
     except DoesNotExist:
@@ -20,8 +22,9 @@ def get(url: str) -> ScriptSiteEntity:
 
 
 def get_from_string_web_site(web_site: str) -> Set[ScriptSiteEntity]:
+    web_site_url = Url(web_site)
     try:
-        wse = helper_web_site.get(web_site)
+        wse = helper_web_site.get(web_site_url)
     except DoesNotExist:
         raise
     return get_from_entity_web_site(wse)

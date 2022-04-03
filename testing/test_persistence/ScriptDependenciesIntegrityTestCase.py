@@ -5,7 +5,7 @@ from peewee import DoesNotExist
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.LandingResolver import LandingResolver
-from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainPageScript
+from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainFrameScript
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_script, helper_application_results, helper_web_site
@@ -90,7 +90,7 @@ class ScriptDependenciesIntegrityTestCase(unittest.TestCase):
         return script_dependencies_result
 
     @staticmethod
-    def extract_script_hosting_dependencies(web_site_script_dependencies) -> Tuple[Dict[MainPageScript, Set[str]], Set[str]]:
+    def extract_script_hosting_dependencies(web_site_script_dependencies) -> Tuple[Dict[MainFrameScript, Set[str]], Set[str]]:
         result = dict()
         script_sites = set()
         for web_site in web_site_script_dependencies.keys():

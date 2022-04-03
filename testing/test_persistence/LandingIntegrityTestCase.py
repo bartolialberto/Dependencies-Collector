@@ -106,11 +106,11 @@ class LandingIntegrityTestCase(unittest.TestCase):
             if wse_https is None:
                 db_https = 'null'
             else:
-                db_https = wse_https.name.string
+                db_https = wse_https.name._second_component_
             if wse_http is None:
                 db_http = 'null'
             else:
-                db_http = wse_http.name.string
+                db_http = wse_http.name._second_component_
             print(f"--> HTTPS landing_url from database: {db_https}")
             print(f"--> HTTP landing_url from database: {db_http}")
 
@@ -177,11 +177,11 @@ class LandingIntegrityTestCase(unittest.TestCase):
             if wse_https is None:
                 db_https = 'null'
             else:
-                db_https = wse_https.name.string
+                db_https = wse_https.name._second_component_
             if wse_http is None:
                 db_http = 'null'
             else:
-                db_http = wse_http.name.string
+                db_http = wse_http.name._second_component_
             print(f"--> HTTPS landing_url from database: {db_https}")
             print(f"--> HTTP landing_url from database: {db_http}")
 

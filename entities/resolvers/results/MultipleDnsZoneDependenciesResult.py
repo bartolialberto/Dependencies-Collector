@@ -1,3 +1,4 @@
+from entities.DomainName import DomainName
 from entities.resolvers.results.DnsZoneDependenciesResult import DnsZoneDependenciesResult
 from utils import list_utils
 
@@ -19,11 +20,11 @@ class MultipleDnsZoneDependenciesResult:
     zone_dependencies_per_domain_name : Dict[str, List[Zone]]
         This dictionary associates each domain name to a list of Zone (the application-defined object) which the domain
         name depends upon.
-    direct_zone_name_per_domain_name : Dict[str, str]
+    direct_zone_per_domain_name : Dict[str, str]
         This dictionary associates each domain with its direct zone name.
-    zone_name_dependencies_per_zone : Dict[str, List[str]]
+    zone_dependencies_per_zone : Dict[str, List[str]]
         This dictionary associates each zone NAME (key) to a list of zone NAMEs which the (key) zone depends upon.
-    zone_name_dependencies_per_name_server : Dict[str, List[str]]
+    zone_dependencies_per_name_server : Dict[str, List[str]]
         This dictionary associates each zone name server (key) to a list of zone NAMEs which the name server depends
         upon.
     error_logs : List[ErrorLog]
@@ -35,12 +36,12 @@ class MultipleDnsZoneDependenciesResult:
 
         """
         self.zone_dependencies_per_domain_name = dict()
-        self.direct_zone_name_per_domain_name = dict()
-        self.zone_name_dependencies_per_zone = dict()
-        self.zone_name_dependencies_per_name_server = dict()
+        self.direct_zones = dict()
+        self.zone_dependencies_per_zone = dict()
+        self.zone_dependencies_per_name_server = dict()
         self.error_logs = list()
 
-    def merge_single_resolver_result(self, domain_name: str, resolver_result: DnsZoneDependenciesResult):
+    def merge_single_resolver_result(self, domain_name: DomainName, resolver_result: DnsZoneDependenciesResult):
         """
         This method incorporates the result of a single zone dependency resolution into the self object.
 
@@ -50,9 +51,10 @@ class MultipleDnsZoneDependenciesResult:
         :type resolver_result: DnsZoneDependenciesResult
         """
         self.zone_dependencies_per_domain_name[domain_name] = resolver_result.zone_dependencies
-        self.direct_zone_name_per_domain_name[domain_name] = resolver_result.direct_zone_name
-        self.zone_name_dependencies_per_zone.update(resolver_result.zone_name_dependencies_per_zone)
-        self.zone_name_dependencies_per_name_server.update(resolver_result.zone_name_dependencies_per_name_server)
+        # self.direct_zone_per_domain_name[domain_name] = resolver_result.direct_zones
+        self.direct_zones.update(resolver_result.direct_zones)
+        self.zone_dependencies_per_zone.update(resolver_result.zone_dependencies_per_zone)
+        self.zone_dependencies_per_name_server.update(resolver_result.zone_dependencies_per_name_server)
         for log in resolver_result.error_logs:
             self.error_logs.append(log)
 
@@ -64,9 +66,9 @@ class MultipleDnsZoneDependenciesResult:
         :type other: MultipleDnsZoneDependenciesResult
         """
         MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_dependencies_per_domain_name, other.zone_dependencies_per_domain_name)
-        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.direct_zone_name_per_domain_name, other.direct_zone_name_per_domain_name)
-        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_name_dependencies_per_zone, other.zone_name_dependencies_per_zone)
-        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_name_dependencies_per_name_server, other.zone_name_dependencies_per_name_server)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_to_total(self.direct_zones, other.direct_zones)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_dependencies_per_zone, other.zone_dependencies_per_zone)
+        MultipleDnsZoneDependenciesResult.merge_current_dict_with_list_values_to_total(self.zone_dependencies_per_name_server, other.zone_dependencies_per_name_server)
 
     @staticmethod
     def merge_current_dict_to_total(total_results_dict: dict, current_results_dict: dict) -> None:

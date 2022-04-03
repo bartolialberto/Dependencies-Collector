@@ -1,4 +1,6 @@
 from peewee import DoesNotExist
+from entities.DomainName import DomainName
+from persistence import helper_domain_name
 from persistence.BaseModel import ZoneEntity, DomainNameEntity, AliasToZoneAssociation
 
 
@@ -21,3 +23,11 @@ def get_from_entity_domain_name(dne: DomainNameEntity) -> AliasToZoneAssociation
     except DoesNotExist:
         raise
     return znaa
+
+
+def get_from_domain_name(domain_name: DomainName) -> AliasToZoneAssociation:
+    try:
+        dne = helper_domain_name.get(domain_name)
+    except DoesNotExist:
+        raise
+    return get_from_entity_domain_name(dne)

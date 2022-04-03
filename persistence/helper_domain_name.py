@@ -1,29 +1,33 @@
 from typing import List, Tuple, Set
 from peewee import DoesNotExist
+from entities.DomainName import DomainName
+from entities.RRecord import RRecord
+from entities.enums.TypesRR import TypesRR
+from entities.paths.APath import APath
+from entities.paths.builders.APathBuilder import APathBuilder
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from persistence import helper_ip_address, helper_alias, helper_web_site_domain_name, helper_script_site_domain_name
-from persistence.BaseModel import DomainNameEntity, IpAddressEntity, DomainNameDependenciesAssociation, ZoneEntity, \
+from persistence.BaseModel import DomainNameEntity, DomainNameDependenciesAssociation, ZoneEntity, \
     AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation, WebSiteEntity, \
     ScriptSiteEntity, DirectZoneAssociation
-from utils import domain_name_utils
 
 
-def insert(name: str) -> DomainNameEntity:
-    dn = domain_name_utils.standardize_for_application(name)
-    dne, created = DomainNameEntity.get_or_create(string=dn)
+def insert(domain_name: DomainName) -> DomainNameEntity:
+    if domain_name.string == '.':
+        print('')
+    dne, created = DomainNameEntity.get_or_create(string=domain_name.string)
     return dne
 
 
-def get(domain_name: str) -> DomainNameEntity:
-    dn = domain_name_utils.standardize_for_application(domain_name)
+def get(domain_name: DomainName) -> DomainNameEntity:
     try:
-        return DomainNameEntity.get_by_id(dn)
+        return DomainNameEntity.get_by_id(domain_name.string)
     except DoesNotExist:
         raise
 
 
-def resolve_access_path(domain_name_parameter: DomainNameEntity or str, get_only_first_address=False) -> Tuple[IpAddressEntity or Set[IpAddressEntity], List[DomainNameEntity]]:
+def resolve_access_path(domain_name_parameter: DomainNameEntity or str) -> APath:
     dne = None
     if isinstance(domain_name_parameter, DomainNameEntity):
         dne = domain_name_parameter
@@ -33,35 +37,33 @@ def resolve_access_path(domain_name_parameter: DomainNameEntity or str, get_only
         except DoesNotExist:
             raise
     try:
-        inner_result = __inner_resolve_access_path(dne)
+        a_path_builder = __inner_resolve_access_path(dne)
     except NoAvailablePathError:
         raise
-    if len(inner_result[0]) == 0:
-        raise NoAvailablePathError(dne.string)
-    if get_only_first_address:
-        return inner_result[0].pop(), inner_result[1]
-    else:
-        return inner_result
+    return a_path_builder.build()
 
 
-def __inner_resolve_access_path(dne: DomainNameEntity, chain_dne=None) -> Tuple[Set[IpAddressEntity], List[DomainNameEntity]]:
-    if chain_dne is None:
-        chain_dne = list()
+def __inner_resolve_access_path(dne: DomainNameEntity, builder=None) -> APathBuilder:
+    if builder is None:
+        builder = APathBuilder()
     else:
         pass
-    chain_dne.append(dne)
     try:
         iaes = helper_ip_address.get_all_of(dne)
         if len(iaes) != 0:
-            return iaes, chain_dne
+            rr = RRecord(DomainName(dne.string), TypesRR.A, list(map(lambda iae: iae.exploded_notation, iaes)))
+            builder.complete_resolution(rr)
+            return builder
     except DoesNotExist:
         pass
     try:
         adne = helper_alias.get_alias_from_entity(dne)
+        rr = RRecord(DomainName(dne.string), TypesRR.CNAME, [adne.string])
+        builder.add_alias(rr)
     except NoAliasFoundError:
         raise NoAvailablePathError(dne.string)
     try:
-        return __inner_resolve_access_path(adne, chain_dne)
+        return __inner_resolve_access_path(adne, builder)
     except NoAvailablePathError:
         raise
 
