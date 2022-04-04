@@ -1,12 +1,14 @@
 from typing import List, Tuple
 from peewee import DoesNotExist
+
+from entities.resolvers.ROVPageScraper import RowPrefixesTable
 from exceptions.EmptyResultError import EmptyResultError
 from persistence import helper_ip_address
 from persistence.BaseModel import ROVEntity, PrefixesTableAssociation, IpAddressDependsAssociation, IpRangeROVEntity
 
 
-def insert(state_string: str, visibility_int: int) -> ROVEntity:
-    re, created = ROVEntity.get_or_create(state=state_string, visibility=visibility_int)
+def insert(row: RowPrefixesTable) -> ROVEntity:
+    re, created = ROVEntity.get_or_create(state=row.rov_state.to_string(), visibility=row.visibility)
     return re
 
 

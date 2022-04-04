@@ -1,14 +1,24 @@
-from typing import List, Set
+from typing import List, Set, Dict
 from peewee import DoesNotExist
 from entities.Url import Url
-from entities.resolvers.results.LandingSiteResult import InnerLandingSiteSingleSchemeResult
 from persistence import helper_web_site
-from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity
+from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity, db
 
 
 def insert(wsitee: WebSiteEntity, starting_https: bool, wservere: WebServerEntity or None, landing_https: bool or None) -> WebSiteLandsAssociation:
     wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, starting_https=starting_https, web_server=wservere, landing_https=landing_https)
     return wsla
+
+
+def final_bulk_insert(fields: List[Dict[str, WebSiteEntity or bool or WebServerEntity or None]]) -> None:
+    with db.atomic():
+        count_inserts = WebSiteLandsAssociation.insert_many(fields).on_conflict_ignore().execute()
+
+
+def bulk_insert(fields: List[Dict[str, WebSiteEntity or bool or WebServerEntity or None]]) -> None:
+    with db.atomic():
+        count_inserts = WebSiteLandsAssociation.insert_many(fields).on_conflict_ignore().execute()
+        count_inserts = WebSiteLandsAssociation.insert_many(fields).on_conflict_ignore().execute()
 
 
 def get_all_from_string_website(website: str) -> List[WebSiteLandsAssociation]:

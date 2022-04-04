@@ -1,18 +1,30 @@
-RR CHE PREVEDE 1 CNAME NELL'access path: www.units.it
-RR CHE PREVEDE 1 CNAME NELL'access path: www.youtube.com
+> Nomi che presentano 1 RR CNAME nella query di tipo A:
+www.youtube.com. --CNAME-> youtube-ui.l.google.com. ==A=> [142.250.180.174, 142.250.184.110, 142.250.184.78, 142.250.184.46, 216.58.209.46, 216.58.208.142, 142.251.209.46, 142.251.209.14]
+platform.twitter.com. --CNAME-> platform.twitter.map.fastly.net. ==A=> [151.101.240.157]
 
-RR CHE PREVEDE 2 CNAME NELL'access path: idp-cineca.units.it.
-RR CHE PREVEDE 2 CNAME NELL'access path: login.microsoftonline.com.
+> Nomi che presentano 2 RR CNAME nella query di tipo A:
+idp-cineca.units.it. --CNAME-> units.idp.cineca.it. --CNAME--> idpfe-prod-1.cineca.it. ==A=> [130.186.6.246]
+login.microsoftonline.com. --CNAME-> ak.privatelink.msidentity.com. --CNAME--> www.tm.ak.prd.aadg.akadns.net. ==A=> [20.190.159.72, 20.190.159.19, 20.190.159.1, 40.126.31.64, 20.190.159.3, 20.190.159.22, 40.126.31.70, 40.126.31.72]
 
-RR CHE PREVEDE 5 CNAME NELL'access path: platform.twitter.com.
+> Query NS che presentano RR CNAME:
+cdn-auth.digidentity.eu. --CNAME-> d1hljz92zxtrmu.cloudfront.net. ==NS=> [ns-1340.awsdns-39.org., ns-214.awsdns-26.com., ns-2007.awsdns-58.co.uk., ns-530.awsdns-02.net.]
 
-ZONA CHE PREVEDE UN CNAME NEL name resolution path: cdn-auth.digidentity.eu.
+> Zone che presentano nameserver diversi con lo stesso indirizzo IP:
+twitter.com:
+    [7/10]: ns1.p34.dynect.net. ==A=> [108.59.161.34]
+    [8/10]: d01-01.ns.twtrdns.net. ==A=> [108.59.161.34]
 
-ZONA CHE PREVEDE 2 NAME SERVER CON INDIRIZZO IP UGUALE: twitter.com
+> Più indirizzi IP per nome:
+youtube-ui.l.google.com. ne presenta  8
+www.tm.ak.prd.aadg.akadns.net. ne presenta  8
 
-NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: youtube-ui.l.google.com.
-NOME DI DOMINIO CON PIU' INDIRIZZI IP ASSOCIATI: www.tm.ak.prd.aadg.akadns.net.
+> Server che lavorano solo su HTTP:
+www.darklyrics.com
 
-SERVER CHE LAVORA SOLO SU HTTP: www.darklyrics.com
+> Siti che presentano dei prelievi di script con attributo integrity valido (non nullo):
+www.sky.it/login
 
-SCRIPT CON integrity TROVATO TRAMITE web site: www.sky.it/login
+> Risposte particolari:
+auslandsschulportal.del presenta RR MX con values: 0 .
+postecert.elpinet.it. presenta RR MX con solo un indirizzo IP come values: [62.241.4.37]
+pec.comune.gardonevaltrompia.bs.it. presenta RR MX un valore: 10 mx.cert.legalmail.it.comune.gardonevaltrompia.bs.it.

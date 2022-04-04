@@ -67,3 +67,10 @@ def multiple_contains_ignore_case(string_list: List[str], string_to_be_checked: 
     for s in string_list:
         temp.append(s.casefold())
     return multiple_contains(string_to_be_checked.casefold(), temp)
+
+
+def stamp_https_from_bool(is_https: bool) -> str:
+    if is_https:
+        return 'HTTPS'
+    else:
+        return 'HTTP'

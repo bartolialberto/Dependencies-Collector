@@ -99,7 +99,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -160,6 +160,7 @@ if __name__ == "__main__":
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
         snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping)    # for future error reproducibility
         # actual elaboration of all resolvers
+        start_execution_time = datetime.now()
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
         resolvers.do_epilogue_execution(midst_domain_names)
@@ -167,9 +168,11 @@ if __name__ == "__main__":
         print("\nInsertion into database started... ")
         helper_application_results.insert_all_application_results(resolvers)
         print("Insertion into database finished.")
-        # export dns cache and error_logs
+        # export dns cache, error_logs and unresolved entities
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
+        helper_application_results.dump_all_unresolved_entities(execute_rov_scraping=execute_rov_scraping)
+        print(f"Total application execution time is: {datetime_utils.compute_delta_and_print(start_execution_time)}")
     except Exception as e:
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")
@@ -180,5 +183,4 @@ if __name__ == "__main__":
         if resolvers.headless_browser_is_instantiated:
             resolvers.headless_browser.close()
         db.close()
-        print(f"Total application execution time is: {datetime_utils.compute_delta_and_print(resolvers.start_execution_time)}")
     print("********** APPLICATION END **********")

@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Tuple, Set
 import selenium
-
 from entities.DomainName import DomainName
 from entities.Url import Url
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainFrameScript
@@ -27,11 +26,10 @@ from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundE
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
-from utils import file_utils, requests_utils, list_utils, domain_name_utils, url_utils, datetime_utils
+from utils import file_utils, requests_utils, list_utils, datetime_utils
 
 
 class ApplicationResolversWrapper:
@@ -158,7 +156,6 @@ class ApplicationResolversWrapper:
         :return: A list of domain names extracted from the execution.
         :rtype: List[str]
         """
-        self.start_execution_time = datetime.now()
         self.landing_web_sites_results = self.do_web_site_landing_resolving(set(web_sites))
         self.mail_domains_results = self.do_mail_servers_resolving(mail_domains)
         return self._extract_domain_names_from_preamble(mail_domains)
@@ -495,31 +492,22 @@ class ApplicationResolversWrapper:
         """
         print("\n\nSTART ROV PAGE SCRAPING")
         start_execution_time = datetime.now()
-        count_sequential_selenium_exceptions = 0
         for i, as_number in enumerate(reformat.results.keys()):
-            if count_sequential_selenium_exceptions > sequential_selenium_exceptions_threshold:
-                print(f"There have been {count_sequential_selenium_exceptions} sequential selenium exceptions... Remaining {len(reformat.results.keys()) - i} elaborations are aborted.")
-                for ip_address in reformat.results[as_number].keys():
-                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
-                continue
             print(f"Loading page [{i+1}/{len(reformat.results.keys())}] for AS{as_number}")
             try:
                 self.rov_page_scraper.load_as_page(as_number)
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.TimeoutException) as exc:
                 print(f"!!! {str(exc)} !!!")
-                count_sequential_selenium_exceptions = count_sequential_selenium_exceptions + 1
                 for ip_address in reformat.results[as_number].keys():
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
             except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
-                count_sequential_selenium_exceptions = 0
                 print(f"!!! {str(exc)} !!!")
                 for ip_address in reformat.results[as_number].keys():
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
-            count_sequential_selenium_exceptions = 0
             for ip_address in reformat.results[as_number].keys():
                 server = reformat.results[as_number][ip_address].server
                 try:
@@ -543,26 +531,32 @@ class ApplicationResolversWrapper:
         :return: A list of extracted domain names.
         :rtype: List[str]
         """
-        domain_names = list()
+        domain_names = set()
         for website in self.landing_web_sites_results.keys():
             # adding domain names from web sites
-            list_utils.append_with_no_duplicates(domain_names, website.domain_name())
+            # list_utils.append_with_no_duplicates(domain_names, website.domain_name())
+            domain_names.add(website.domain_name())
             # adding domain names from web servers
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
             if https_result is not None:
-                list_utils.append_with_no_duplicates(domain_names, https_result.server)
+                # list_utils.append_with_no_duplicates(domain_names, https_result.server)
+                domain_names.add(https_result.server)
             if http_result is not None:
-                list_utils.append_with_no_duplicates(domain_names, http_result.server)
+                # list_utils.append_with_no_duplicates(domain_names, http_result.server)
+                domain_names.add(http_result.server)
         # adding mail domains
         for mail_domain in mail_domains:
-            list_utils.append_with_no_duplicates(domain_names, mail_domain)
+            # list_utils.append_with_no_duplicates(domain_names, mail_domain)
+            domain_names.add(mail_domain)
         # adding mail servers
         for mail_domain in self.mail_domains_results.dependencies.keys():
             if self.mail_domains_results.dependencies[mail_domain] is not None:
                 for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers_paths.keys():
-                    list_utils.append_with_no_duplicates(domain_names, mail_server)
-        return domain_names
+                    # list_utils.append_with_no_duplicates(domain_names, mail_server)
+                    domain_names.add(mail_server)
+        # return domain_names
+        return list(domain_names)
 
     def _extract_domain_names_from_landing_script_sites_results(self) -> List[DomainName]:
         """

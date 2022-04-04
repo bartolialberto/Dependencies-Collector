@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set
+from typing import Set
 from peewee import DoesNotExist
 from entities.DomainName import DomainName
 from entities.RRecord import RRecord
@@ -14,8 +14,6 @@ from persistence.BaseModel import DomainNameEntity, DomainNameDependenciesAssoci
 
 
 def insert(domain_name: DomainName) -> DomainNameEntity:
-    if domain_name.string == '.':
-        print('')
     dne, created = DomainNameEntity.get_or_create(string=domain_name.string)
     return dne
 

@@ -1,7 +1,7 @@
 import csv
 import ipaddress
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Set
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from utils import file_utils
@@ -111,6 +111,9 @@ class EntryIpAsDatabase:
             return self.as_number == other.as_number
         else:
             return False
+
+    def __hash__(self) -> int:
+        return hash((self.as_number, self.start_ip_range, self.end_ip_range))
 
 
 class IpAsDatabase:
@@ -227,7 +230,7 @@ class IpAsDatabase:
                 raise
         return -1
 
-    def get_entry_from_as_number(self, as_number: int) -> EntryIpAsDatabase:
+    def get_entries_from_as_number(self, as_number: int) -> Set[EntryIpAsDatabase]:
         """
         This method returns the database entry that matches the autonomous system associated with the parameter.
         The method needs to control every single entry, so it is pretty slow.
@@ -239,14 +242,17 @@ class IpAsDatabase:
         :returns: An EntryIpAsDatabase object of the matched entry in the database.
         :rtype: EntryIpAsDatabase
         """
+        entries = set()
         for entry in self.entries:
             if int(entry.as_number) == as_number:
                 try:
-                    # return EntryIpAsDatabase(entry.as_number)
-                    return entry
+                    entries.add(entry)
                 except ValueError:
                     raise
-        raise AutonomousSystemNotFoundError(as_number)
+        if len(entries) == 0:
+            raise AutonomousSystemNotFoundError(as_number)
+        else:
+            return entries
 
     def load(self):
         """

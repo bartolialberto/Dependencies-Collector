@@ -28,8 +28,10 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'platform.twitter.com.'
-        cls.domain_name = 'arb-5.de.'
-        cls.type = TypesRR.NS
+        cls.domain_name = 'auslandsschulportal.de'
+        cls.domain_name = 'pec.comune.gardonevaltrompia.bs.it.'
+        #cls.domain_name = 'postecert.elpinet.it.'
+        cls.type = TypesRR.MX
         # ELABORATION
         cls.dns_resolver = DnsResolver(True)
         print(f"PARAMETER: {cls.domain_name}")
@@ -51,7 +53,7 @@ class DnsQueryTestCase(unittest.TestCase):
             print(f"answer.chaining_result.canonical_name = {answer.chaining_result.canonical_name}")
         for i, cname in enumerate(answer.chaining_result.cnames):
             print(f"\ncname[{i+1}/{len(answer.chaining_result.cnames)}]")
-            print(f"--> cname.name = {cname._second_component_}")
+            print(f"--> cname.name = {cname.name}")
             print(f"--> cname.ttl = {cname.ttl}")
             for j, key in enumerate(cname.items.keys()):
                 print(f"----> cname.item[{j+1}/{len(cname.items.keys())}] = {key}")

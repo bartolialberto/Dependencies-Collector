@@ -59,9 +59,9 @@ class AutonomousSystemResolutionResults:
         :type ip_range_tsv: ipaddress.IPv4Network
         """
         try:
-            self.complete_results[ip_address.exploded] = (server, entry, ip_range_tsv)
+            self.complete_results[ip_address] = (server, entry, ip_range_tsv)
         except KeyError:
-            self.complete_results[ip_address.exploded] = (server, entry, ip_range_tsv)
+            self.complete_results[ip_address] = (server, entry, ip_range_tsv)
 
     def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase) -> None:
         """
@@ -75,9 +75,9 @@ class AutonomousSystemResolutionResults:
         :type entry: EntryIpAsDatabase
         """
         try:
-            self.no_ip_range_tsv_results[ip_address.exploded] = (server, entry)
+            self.no_ip_range_tsv_results[ip_address] = (server, entry)
         except KeyError:
-            self.no_ip_range_tsv_results[ip_address.exploded] = (server, entry)
+            self.no_ip_range_tsv_results[ip_address] = (server, entry)
 
     def add_no_as_result(self, ip_address: ipaddress.IPv4Address, server: DomainName) -> None:
         """
@@ -89,9 +89,9 @@ class AutonomousSystemResolutionResults:
         :type server: str
         """
         try:
-            self.no_as_results[ip_address.exploded] = server
+            self.no_as_results[ip_address] = server
         except KeyError:
-            self.no_as_results[ip_address.exploded] = server
+            self.no_as_results[ip_address] = server
 
     def add_unresolved_server(self, server: DomainName) -> None:
         """
@@ -111,19 +111,16 @@ class AutonomousSystemResolutionResults:
         :type other: AutonomousSystemResolutionResults
         """
         for ip_address in other.complete_results.keys():
-            ip = ipaddress.IPv4Address(ip_address)
-            self.add_complete_result(ip,
+            self.add_complete_result(ip_address,
                  other.complete_results[ip_address][0],
                  other.complete_results[ip_address][1],
                  other.complete_results[ip_address][2])
         for ip_address in other.no_ip_range_tsv_results.keys():
-            ip = ipaddress.IPv4Address(ip_address)
-            self.add_no_ip_range_tsv_result(ip,
+            self.add_no_ip_range_tsv_result(ip_address,
                 other.no_ip_range_tsv_results[ip_address][0],
                 other.no_ip_range_tsv_results[ip_address][1])
         for ip_address in other.no_as_results.keys():
-            ip = ipaddress.IPv4Address(ip_address)
-            self.add_no_as_result(ip, other.no_as_results[ip_address][0])
+            self.add_no_as_result(ip_address, other.no_as_results[ip_address][0])
         for server in other.unresolved_servers:
             self.unresolved_servers.add(server)
 

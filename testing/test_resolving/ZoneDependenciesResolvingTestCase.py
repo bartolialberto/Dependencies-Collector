@@ -13,8 +13,9 @@ from entities.error_log.ErrorLogger import ErrorLogger
 from utils import file_utils
 
 
-class DnsResolvingTestCase(unittest.TestCase):
+class ZoneDependenciesResolvingTestCase(unittest.TestCase):
     """
+    DEFINITIVE TEST
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
     The input to set is a list of domain name (PARAMETER), the name of the cache file to export and the name of the
     error logs file to export.
@@ -48,6 +49,7 @@ class DnsResolvingTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         domain_name_strings = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
+        domain_name_strings = ['postecert.elpinet.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = False

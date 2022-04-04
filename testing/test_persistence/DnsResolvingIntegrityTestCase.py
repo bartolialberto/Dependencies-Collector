@@ -14,6 +14,7 @@ from utils import file_utils
 # ['modor.verisign.net']
 class DnsResolvingIntegrityTestCase(unittest.TestCase):
     """
+    DEFINITIVE TEST
     Test class that takes a list of domain names and then executes the DNS resolving.
     Finally checks the integrity of the zone dependencies found with what was saved and retrieved from the database.
 

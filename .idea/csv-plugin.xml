@@ -17,6 +17,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\output\unresolved_entities.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\testing\edit_csv\csv\DE - Dependency - Access\main_ItemDependencyASAll.csv">
           <value>
             <Attribute>

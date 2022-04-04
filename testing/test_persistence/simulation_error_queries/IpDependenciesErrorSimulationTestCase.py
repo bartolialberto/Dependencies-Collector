@@ -1,52 +1,48 @@
-import copy
-import ipaddress
 import unittest
 from peewee import DoesNotExist
-from persistence import helper_domain_name, helper_access, helper_ip_address, helper_ip_address_depends
+from persistence import helper_ip_address, helper_ip_address_depends, helper_ip_network
+from utils import network_utils
 
 
 class IpDependenciesErrorSimulationTestCase(unittest.TestCase):
-    def test_1_set_access_association_to_null(self):
-        print(f"\n------- [1] START SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+    def test_01_set_ip_range_tsv_to_null(self):
+        print(f"\n------- [1] START SETTING IP RANGE TSV TO NULL QUERY -------")
         # PARAMETERS
-        domain_name = 'www.youtube.com'
+        for_ip_address = '216.58.209.46'
         # ELABORATION
-        print(f"Domain name: {domain_name}")
         try:
-            dne = helper_domain_name.get(domain_name)
-        except DoesNotExist as e:
-            self.fail(f"!!! {str(e)} !!!")
-        helper_access.delete_of_entity_domain_name(dne)
-        helper_access.insert(dne, None)
-        print(f"------- [1] END SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+            iae = helper_ip_address.get(for_ip_address)
+        except DoesNotExist:
+            iae = helper_ip_address.insert(for_ip_address)
+        try:
+            iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
+            iada.ip_range_tsv = None
+            iada.ip_range_rov = None
+            iada.save()
+        except DoesNotExist:
+            net = network_utils.get_predefined_network(for_ip_address)
+            ine = helper_ip_network.insert(net)
+            helper_ip_address_depends.insert(iae, ine, None, None)
+        print(f"------- [1] END SETTING IP RANGE TSV TO NULL QUERY -------")
 
-    def test_2_set_ip_address_association_to_null(self):
-        print(f"\n------- [2] START SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+    def test_02_set_ip_range_rov_to_null(self):
+        print(f"\n------- [2] START SETTING IP RANGE ROV TO NULL QUERY -------")
         # PARAMETERS
-        ip_address_parameter = '216.58.209.46'
-        set_ip_range_tsv_to_null = True
-        set_ip_range_rov_to_null = True
+        for_ip_address = '216.58.209.46'
         # ELABORATION
-        ip_address = ipaddress.IPv4Address(ip_address_parameter).exploded
-        print(f"IP address: {ip_address}")
         try:
-            iae = helper_ip_address.get(ip_address)
-        except DoesNotExist as e:
-            self.fail(f"!!! {str(e)} !!!")
-        iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
-        old_ip_network = copy.deepcopy(iada.ip_network)
-        old_ip_range_tsv = copy.deepcopy(iada.ip_range_tsv)
-        old_ip_range_rov = copy.deepcopy(iada.ip_range_rov)
-        iada.delete_instance()
-        if set_ip_range_rov_to_null and set_ip_range_tsv_to_null:
-            helper_ip_address_depends.insert(iae, old_ip_network, None, None)
-        elif set_ip_range_tsv_to_null:
-            helper_ip_address_depends.insert(iae, old_ip_network, old_ip_range_tsv, None)
-        elif set_ip_range_rov_to_null:
-            helper_ip_address_depends.insert(iae, old_ip_network, None, set_ip_range_rov_to_null)
-        else:
-            helper_ip_address_depends.insert(iae, old_ip_network, old_ip_range_tsv, old_ip_range_rov)
-        print(f"------- [2] END SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+            iae = helper_ip_address.get(for_ip_address)
+        except DoesNotExist:
+            iae = helper_ip_address.insert(for_ip_address)
+        try:
+            iada = helper_ip_address_depends.get_from_entity_ip_address(iae)
+            iada.ip_range_rov = None
+            iada.save()
+        except DoesNotExist:
+            net = network_utils.get_predefined_network(for_ip_address)
+            ine = helper_ip_network.insert(net)
+            helper_ip_address_depends.insert(iae, ine, None, None)
+        print(f"------- [2] END SETTING IP RANGE ROV TO NULL QUERY -------")
 
 
 if __name__ == '__main__':

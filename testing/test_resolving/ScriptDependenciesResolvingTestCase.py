@@ -7,6 +7,10 @@ from utils import file_utils
 
 
 class ScriptDependenciesResolvingTestCase(unittest.TestCase):
+    """
+    DEFINITIVE TEST
+
+    """
     results = None
     resolver = None
     headless_browser = None

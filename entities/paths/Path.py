@@ -40,7 +40,7 @@ class Path(ABC):
                 if i == 0:
                     result = str(rr.name) + " --CNAME-> " + rr.get_first_value().string
                 else:
-                    result = result + " --CNAME--> " + rr.get_first_value().string
+                    result = result + " --CNAME-> " + rr.get_first_value().string
         # return result + " ==> " + str(self.get_resolution().values)
         if len(self.get_aliases_chain()) == 0:
             return self.get_resolution().name.string + " =="+self.get_resolution().type.to_string()+"=> " + resource_records_utils.stamp_values(self.get_resolution().type, self.get_resolution().values)

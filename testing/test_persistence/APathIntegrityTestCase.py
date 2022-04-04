@@ -6,6 +6,10 @@ from persistence import helper_paths, helper_domain_name
 
 
 class APathIntegrityTestCase(unittest.TestCase):
+    """
+    DEFINITIVE TEST
+
+    """
     domain_name = None
     dns_resolver = None
     path = None

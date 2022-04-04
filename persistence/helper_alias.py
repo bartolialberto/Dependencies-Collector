@@ -28,14 +28,6 @@ def get_alias(domain_name: DomainName) -> DomainNameEntity:
     return get_alias_from_entity(dne)
 
 
-def get_alias_from_string(domain_name: str) -> DomainNameEntity:
-    try:
-        dne = helper_domain_name.get(domain_name)
-    except DoesNotExist:
-        raise
-    return get_alias_from_entity(dne)
-
-
 def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
     """ Query probably useful only for tests. """
     result = set()

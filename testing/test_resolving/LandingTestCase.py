@@ -5,6 +5,10 @@ from entities.resolvers.LandingResolver import LandingResolver
 
 
 class LandingTestCase(unittest.TestCase):
+    """
+    DEFINITIVE TEST
+
+    """
     def setUp(self) -> None:
         # PARAMETERS
         self.sites = {

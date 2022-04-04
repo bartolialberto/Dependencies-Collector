@@ -3,7 +3,7 @@ from typing import List
 from entities.DomainName import DomainName
 from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import resource_records_utils
+from utils import resource_records_utils, string_utils
 
 
 class RRecord:
@@ -155,11 +155,15 @@ class RRecord:
         if type_rr == TypesRR.A:
             obj_values = list()
             for value in values:
-                if isinstance(value, IPv4Address):
-                    obj_values.append(value)
+                if value.endswith('.'):
+                    val = value[0:-1]
+                else:
+                    val = value
+                if isinstance(val, IPv4Address):
+                    obj_values.append(val)
                 else:
                     try:
-                        obj_values.append(IPv4Address(value))
+                        obj_values.append(IPv4Address(val))
                     except ValueError:
                         raise
             return obj_values
@@ -174,16 +178,20 @@ class RRecord:
         elif type_rr == TypesRR.MX:
             obj_values = list()
             for value in values:
-                if isinstance(value, DomainName) or isinstance(value, IPv4Address):
-                    obj_values.append(value)
+                if value.endswith('.'):
+                    val = value[0:-1]
                 else:
-                    split_string = value.split(' ')
+                    val = value
+                if isinstance(val, DomainName) or isinstance(val, IPv4Address):
+                    obj_values.append(val)
+                else:
+                    split_string = val.split(' ')
                     split_value = split_string[-1]
                     try:
-                        val = IPv4Address(split_value)
+                        v = IPv4Address(split_value)
                     except ValueError:
-                        val = DomainName(split_value)
-                    obj_values.append(val)
+                        v = DomainName(split_value)
+                    obj_values.append(v)
             return obj_values
         else:
             raise ValueError

@@ -62,10 +62,10 @@ def insert_mx_path(mx_path: MXPath) -> Tuple[List[DomainNameEntity], MailDomainE
         dn_entity_to = helper_domain_name.insert(rr.get_first_value())
         helper_alias.insert(dn_entity_from, dn_entity_to)
         aliases_chain.append(dn_entity_from)
-    mail_domain_entity, domain_name_mail_domain = helper_mail_domain.insert(mx_path.get_resolution().name)
+    mail_domain_entity = helper_mail_domain.insert(mx_path.get_resolution().name)
     for value in mx_path.get_resolution().values:
         if isinstance(value, DomainName):
-            mail_server_entity, domain_name_mail_server = helper_mail_server.insert(value)
+            mail_server_entity = helper_mail_server.insert(value)
             helper_mail_domain_composed.insert(mail_domain_entity, mail_server_entity)
             mail_servers.add(mail_server_entity)
         elif isinstance(value, IPv4Address):

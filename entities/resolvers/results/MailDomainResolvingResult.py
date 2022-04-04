@@ -35,7 +35,8 @@ class MailDomainResolvingResult:
                 if isinstance(value, DomainName):
                     self.mail_servers_paths[value] = None
                 elif isinstance(value, IPv4Address):
-                    self.mail_servers_paths[value] = None
+                    # self.mail_servers_paths[value] = None
+                    pass
                 else:
                     raise ValueError
         else:

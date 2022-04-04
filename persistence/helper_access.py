@@ -4,6 +4,10 @@ from persistence.BaseModel import DomainNameEntity, IpAddressEntity, AccessAssoc
 
 
 def insert(dne: DomainNameEntity or None, iae: IpAddressEntity or None) -> AccessAssociation:
+    if dne.string == '62.241.4.37.':
+        print('', end='')
+    elif dne.string == 'mx.cert.legalmail.it.comune.gardonevaltrompia.bs.it.':
+        print('', end='')
     aa, created = AccessAssociation.get_or_create(domain_name=dne, ip_address=iae)
     return aa
 

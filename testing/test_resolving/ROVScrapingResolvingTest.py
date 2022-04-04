@@ -6,6 +6,10 @@ from utils import file_utils
 
 
 class ROVScrapingResolvingTestCase(unittest.TestCase):
+    """
+    DEFINITIVE TEST
+
+    """
     domain_names = None
     resolvers = None
 

@@ -39,12 +39,20 @@ def get_of_entity_ip_network(ine: IpNetworkEntity) -> AutonomousSystemEntity:
 
 
 def get_of_entity_ip_range_tsv(irte: IpRangeTSVEntity) -> AutonomousSystemEntity:
+    """
     query = NetworkNumbersAssociation.select()\
         .where(NetworkNumbersAssociation.ip_range_tsv == irte)\
         .limit(1)
     for row in query:
         return row.autonomous_system
     raise DoesNotExist
+    """
+
+    try:
+        nna = NetworkNumbersAssociation.get(NetworkNumbersAssociation.ip_range_tsv == irte)
+        return nna.autonomous_system
+    except DoesNotExist:
+        raise
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AutonomousSystemEntity]:
