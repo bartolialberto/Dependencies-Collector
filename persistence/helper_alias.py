@@ -39,15 +39,3 @@ def get_all_aliases_from_entity(dne: DomainNameEntity) -> Set[DomainNameEntity]:
         raise NoAliasFoundError(dne.string)
     else:
         return result
-
-
-def get_all_aliases_from_name(domain_name: str) -> Set[DomainNameEntity]:
-    """ Query probably useful only for tests. """
-    try:
-        dne = helper_domain_name.get(domain_name)
-    except DoesNotExist:
-        raise
-    try:
-        return get_all_aliases_from_entity(dne)
-    except NoAliasFoundError:
-        raise

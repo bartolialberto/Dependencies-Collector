@@ -92,7 +92,7 @@ def insert_ns_path(ns_path: NSPath) -> Tuple[List[DomainNameEntity], ZoneEntity,
     if last_domain_entity is not None:
         helper_alias_to_zone.insert(zone_entity, last_domain_entity)
     for value in ns_path.get_resolution().values:
-        nse, dne = helper_name_server.insert(value)
+        nse = helper_name_server.insert(value)
         helper_zone_composed.insert(zone_entity, nse)
         name_servers.add(nse)
     return aliases_chain, zone_entity, name_servers

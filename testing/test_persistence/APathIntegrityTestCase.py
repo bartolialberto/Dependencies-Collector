@@ -34,7 +34,7 @@ class APathIntegrityTestCase(unittest.TestCase):
 
     def test_02_from_database(self):
         print("\n------- [2] START RETRIEVING FROM DATABASE TEST -------")
-        result_path = helper_domain_name.resolve_access_path(self.domain_name)
+        result_path = helper_domain_name.resolve_a_path(self.domain_name)
         print(f"{result_path.stamp()}")
         self.assertEqual(self.path, result_path)
         print("------- [2] END RETRIEVING FROM DATABASE TEST -------")

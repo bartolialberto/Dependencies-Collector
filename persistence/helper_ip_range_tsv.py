@@ -1,9 +1,10 @@
 import ipaddress
-from typing import List
+from typing import Set
 from peewee import DoesNotExist
 from exceptions.EmptyResultError import EmptyResultError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_ip_address
-from persistence.BaseModel import IpRangeTSVEntity, IpAddressDependsAssociation
+from persistence.BaseModel import IpRangeTSVEntity, IpAddressDependsAssociation, IpAddressEntity
 
 
 def insert(compressed_notation: str) -> IpRangeTSVEntity:
@@ -24,19 +25,21 @@ def get(network: str) -> IpRangeTSVEntity:
     return irte
 
 
-def get_all_from(address: str) -> List[IpRangeTSVEntity]:
-    """ Query probably useful only for tests. """
+def get_of(iae: IpAddressEntity) -> IpRangeTSVEntity:
     try:
-        iae = helper_ip_address.get(address)
+        iada = IpAddressDependsAssociation.get(IpAddressDependsAssociation.ip_address == iae)
+        return iada.ip_range_tsv
     except DoesNotExist:
         raise
+
+
+def get_all_addresses_of(irte: IpRangeTSVEntity) -> Set[IpAddressEntity]:
     query = IpAddressDependsAssociation.select()\
-        .join(IpRangeTSVEntity)\
-        .where(IpAddressDependsAssociation.ip_address == iae)
-    result = list()
+        .where(IpAddressDependsAssociation.ip_range_tsv == irte)
+    result = set()
     for row in query:
-        result.append(row.ip_range_tsv)
+        result.add(row.ip_address)
     if len(result) == 0:
-        raise EmptyResultError
+        raise NoDisposableRowsError
     else:
         return result

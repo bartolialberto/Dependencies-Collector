@@ -24,6 +24,7 @@ from persistence.BaseModel import db, MailDomainComposedAssociation, WebSiteLand
 from utils import datetime_utils, file_utils, csv_utils, string_utils
 
 
+# dict to save entities' objects and share them between methods, avoiding searching such entities in the DB
 domain_name_dict = dict()
 zone_dict = dict()
 web_site_dict = dict()
@@ -50,7 +51,7 @@ def insert_all_application_results(resolvers: ApplicationResolversWrapper) -> No
     print("[6/6] IP-AS and ROV RESOLVING RESULTS... ", end='')
     insert_ip_as_and_rov_resolving(resolvers.total_rov_page_scraper_results)
     print("DONE.")
-    print(f"All insertions took in total: ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+    print(f"All insertions took in total: ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
 
 
 def insert_landing_web_sites_results(result: Dict[Url, LandingSiteResult]):
@@ -70,20 +71,20 @@ def insert_landing_web_sites_results(result: Dict[Url, LandingSiteResult]):
             if result[web_site].https is None:
                 helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, None, None)
             else:
-                w_server_https, wse_https_dne = helper_web_server.insert(result[web_site].https.server)
+                w_server_https = helper_web_server.insert(result[web_site].https.server)
                 helper_paths.insert_a_path(result[web_site].https.a_path)
                 # networks and the rest is inserted in the IP-AS / ROV results later
-                helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, w_server_https, result[web_site].https.url.is_https())
+                helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, result[web_site].https.url, w_server_https)
 
             # HTTP result
             is_starting_scheme_https = False
             if result[web_site].http is None:
                 helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, None, None)
             else:
-                w_server_http, wse_http_dne = helper_web_server.insert(result[web_site].http.server)
+                w_server_http = helper_web_server.insert(result[web_site].http.server)
                 helper_paths.insert_a_path(result[web_site].http.a_path)
                 # networks and the rest is inserted in the IP-AS / ROV results later
-                helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, w_server_http, result[web_site].http.url.is_https())
+                helper_web_site_lands.insert(w_site_e, is_starting_scheme_https, result[web_site].http.url, w_server_http)
 
 
 def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
@@ -188,25 +189,29 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[Url,
             https_scripts = web_site_script_dependencies[web_site].https
             http_scripts = web_site_script_dependencies[web_site].http
 
+            # HTTPS
+            is_https = True
             if https_scripts is not None:
                 for script in https_scripts:
                     se = helper_script.insert(script.src)
-                    helper_script_withdraw.insert(wse, se, True, script.integrity)
+                    helper_script_withdraw.insert(wse, se, is_https, script.integrity)
                     for script_site in script_script_site_dependencies[script]:
                         sse = helper_script_site.insert(script_site)
                         helper_script_hosted_on.insert(se, sse)
             else:
-                helper_script_withdraw.insert(wse, None, True, None)
+                helper_script_withdraw.insert(wse, None, is_https, None)
 
+            # HTTP
+            is_https = False
             if http_scripts is not None:
                 for script in http_scripts:
                     se = helper_script.insert(script.src)
-                    helper_script_withdraw.insert(wse, se, False, script.integrity)
+                    helper_script_withdraw.insert(wse, se, is_https, script.integrity)
                     for script_site in script_script_site_dependencies[script]:
                         sse = helper_script_site.insert(script_site)
                         helper_script_hosted_on.insert(se, sse)
             else:
-                helper_script_withdraw.insert(wse, None, False, None)
+                helper_script_withdraw.insert(wse, None, is_https, None)
 
 
 def insert_landing_script_sites_results(result: Dict[Url, LandingSiteResult]):
@@ -222,20 +227,20 @@ def insert_landing_script_sites_results(result: Dict[Url, LandingSiteResult]):
             if result[script_site].https is None:
                 helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, None, None)
             else:
-                s_server_https, sse_https_dne = helper_script_server.insert(result[script_site].https.server)
+                s_server_https = helper_script_server.insert(result[script_site].https.server)
                 helper_paths.insert_a_path(result[script_site].https.a_path)
                 # networks and the rest is inserted in the IP-AS / ROV results later
-                helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, s_server_https, result[script_site].https.url.is_https())
+                helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, result[script_site].https.url, s_server_https)
 
             # HTTP result
             is_starting_scheme_https = False
             if result[script_site].http is None:
                 helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, None, None)
             else:
-                s_server_http, sse_http_dne = helper_script_server.insert(result[script_site].http.server)
+                s_server_http = helper_script_server.insert(result[script_site].http.server)
                 helper_paths.insert_a_path(result[script_site].http.a_path)
                 # networks and the rest is inserted in the IP-AS / ROV results later
-                helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, s_server_http, result[script_site].http.url.is_https())
+                helper_script_site_lands.insert(s_site_e, is_starting_scheme_https, result[script_site].http.url, s_server_http)
 
 
 def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):

@@ -1,7 +1,4 @@
 from typing import Set
-
-from peewee import DoesNotExist
-
 from persistence.BaseModel import MailDomainEntity, MailDomainComposedAssociation, MailServerEntity
 
 

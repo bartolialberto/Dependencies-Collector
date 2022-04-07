@@ -5,14 +5,13 @@ from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
 from pathlib import Path
-
 from entities.DomainName import DomainName
 from entities.Url import Url
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
 from persistence.BaseModel import db
-from utils import network_utils, list_utils, file_utils, snapshot_utils, url_utils, domain_name_utils, datetime_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[str]:
@@ -33,7 +32,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     values = list()
     for line in lines:
         try:
-            values.append(url_utils.deduct_second_component(line))
+            values.append(line)
         except InvalidUrlError:
             pass
     for i, value in enumerate(values):
@@ -56,11 +55,9 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), pr
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
     lines = get_input_generic_file('mail_domains.txt', default_mail_domains, project_root_directory=project_root_directory)
-    standardized_lines = list(map(lambda s: domain_name_utils.standardize_for_application(s), lines))
-    definitive_list = list_utils.remove_duplicates(standardized_lines)
-    for i, value in enumerate(definitive_list):
-        print(f"> [{i+1}/{len(definitive_list)}]: {value}")
-    return definitive_list
+    for i, value in enumerate(lines):
+        print(f"> [{i+1}/{len(lines)}]: {value}")
+    return lines
 
 
 def get_input_generic_file(input_filename: str, default_values: tuple, project_root_directory=Path.cwd()) -> List[str]:
@@ -99,7 +96,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=False, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -144,14 +141,15 @@ if __name__ == "__main__":
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         # application input
         input_websites = list(map(lambda s: Url(s), get_input_websites()))
+        input_websites = list_utils.remove_duplicates(input_websites)
         input_mail_domains = list(map(lambda s: DomainName(s), get_input_mail_domains()))
+        input_mail_domains = list_utils.remove_duplicates(input_mail_domains)
         complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_scraping)
         # complete unresolved database is flag is set to
         if complete_unresolved_database:
-            print("********** START COMPLETING PREVIOUS APPLICATION ELABORATION **********")
             completer = DatabaseEntitiesCompleter(resolvers)
             unresolved_entities = helper_application_results.get_unresolved_entities()
             completer.do_complete_unresolved_entities(unresolved_entities)
@@ -172,7 +170,7 @@ if __name__ == "__main__":
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
         helper_application_results.dump_all_unresolved_entities(execute_rov_scraping=execute_rov_scraping)
-        print(f"Total application execution time is: {datetime_utils.compute_delta_and_print(start_execution_time)}")
+        print(f"Total application execution time is: {datetime_utils.compute_delta_and_stamp(start_execution_time)}")
     except Exception as e:
         take_snapshot(e)
         print(f"!!! Unexpected exception occurred. SNAPSHOT taken. !!!")

@@ -250,11 +250,12 @@ class AliasAssociation(BaseModel):
 class WebSiteLandsAssociation(BaseModel):
     web_site = ForeignKeyField(WebSiteEntity)
     web_server = ForeignKeyField(WebServerEntity, null=True)
+    landing_url = CharField(null=True)
     starting_https = BooleanField(null=False)
     landing_https = BooleanField(null=True)
 
     def __str__(self):
-        return f"<web_site={self.web_site}, web_server={self.web_server}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
+        return f"<web_site={self.web_site}, web_server={self.web_server}, landing_url={self.landing_url}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
 
     class Meta:
         db_table = 'web_site_lands'
@@ -350,11 +351,12 @@ class ScriptHostedOnAssociation(BaseModel):
 class ScriptSiteLandsAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
     script_server = ForeignKeyField(ScriptServerEntity, null=True)
+    landing_url = CharField(null=True)
     starting_https = BooleanField(null=False)
     landing_https = BooleanField(null=True)
 
     def __str__(self):
-        return f"<script_site={self.script_site}, script_server={self.script_server}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
+        return f"<script_site={self.script_site}, script_server={self.script_server}, landing_url={self.landing_url}, starting_https={self.starting_https}, landing_https={self.landing_https}>"
 
     class Meta:
         db_table = 'script_site_lands'

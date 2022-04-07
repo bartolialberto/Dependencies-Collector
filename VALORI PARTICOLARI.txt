@@ -21,8 +21,9 @@ www.tm.ak.prd.aadg.akadns.net. ne presenta  8
 > Server che lavorano solo su HTTP:
 www.darklyrics.com
 
-> Siti che presentano dei prelievi di script con attributo integrity valido (non nullo):
+> Website che presentano dei prelievi di script con attributo integrity valido (non nullo):
 www.sky.it/login
+www.netflix.com/it-en/login
 
 > Risposte particolari:
 auslandsschulportal.del presenta RR MX con values: 0 .

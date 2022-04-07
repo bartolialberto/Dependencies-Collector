@@ -9,14 +9,6 @@ def insert(ze: ZoneEntity, dne: DomainNameEntity) -> AliasToZoneAssociation:
     return znafa
 
 
-def get_from_entity_zone_name(ze: ZoneEntity) -> AliasToZoneAssociation:
-    try:
-        znaa = AliasToZoneAssociation.get(AliasToZoneAssociation.zone == ze)
-    except DoesNotExist:
-        raise
-    return znaa
-
-
 def get_from_entity_domain_name(dne: DomainNameEntity) -> AliasToZoneAssociation:
     try:
         znaa = AliasToZoneAssociation.get(AliasToZoneAssociation.domain_name == dne)

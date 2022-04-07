@@ -23,23 +23,6 @@ def get(mail_domain: DomainName) -> MailDomainEntity:
         raise
 
 
-def get_every_of(mail_server_parameter: MailServerEntity or str) -> Set[MailDomainEntity]:
-    mse = None
-    if isinstance(mail_server_parameter, MailServerEntity):
-        mse = mail_server_parameter
-    else:
-        try:
-            mse = helper_mail_server.get(mail_server_parameter)
-        except DoesNotExist:
-            raise
-    query = MailDomainComposedAssociation.select()\
-        .where(MailDomainComposedAssociation.mail_server == mse)
-    result = set()
-    for row in query:
-        result.add(row.mail_domain)
-    return result
-
-
 def get_everyone() -> Set[MailDomainEntity]:
     query = MailDomainEntity.select()
     result = set()

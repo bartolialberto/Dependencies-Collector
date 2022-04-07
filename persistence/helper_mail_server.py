@@ -1,9 +1,11 @@
-from typing import Tuple, Set
+from typing import Set
 from peewee import DoesNotExist
-
 from entities.DomainName import DomainName
-from persistence import helper_domain_name, helper_mail_domain
-from persistence.BaseModel import MailServerEntity, DomainNameEntity, MailDomainEntity, MailDomainComposedAssociation
+from exceptions.NoAvailablePathError import NoAvailablePathError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
+from persistence import helper_domain_name, helper_ip_address
+from persistence.BaseModel import MailServerEntity, MailDomainEntity, MailDomainComposedAssociation, IpAddressEntity, \
+    DomainNameEntity
 
 
 def insert(mailserver: DomainName) -> MailServerEntity:
@@ -23,21 +25,25 @@ def get(mail_server: DomainName) -> MailServerEntity:
         raise
 
 
-def get_every_of(mail_domain_parameter: MailDomainEntity or str) -> Set[MailServerEntity]:
-    mde = None
-    if isinstance(mail_domain_parameter, MailDomainEntity):
-        mde = mail_domain_parameter
-    else:
-        try:
-            mde = helper_mail_domain.get(mail_domain_parameter)
-        except DoesNotExist:
-            raise
+def get_every_of(mde: MailDomainEntity) -> Set[MailServerEntity]:
     query = MailDomainComposedAssociation.select()\
         .where((MailDomainComposedAssociation.mail_domain == mde) & (MailDomainComposedAssociation.mail_server.is_null(False)))
     result = set()
     for row in query:
         result.add(row.mail_server)
     return result
+
+
+def filter_domain_names(dnes: Set[DomainNameEntity]) -> Set[MailServerEntity]:
+    query = MailServerEntity.select()\
+        .where(MailServerEntity.name.in_(dnes))
+    result = set()
+    for row in query:
+        result.add(row)
+    if len(result) == 0:
+        raise NoDisposableRowsError
+    else:
+        return result
 
 
 def get_everyone() -> Set[MailServerEntity]:

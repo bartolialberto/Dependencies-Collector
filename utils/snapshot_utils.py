@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import List
-
 from entities.DomainName import DomainName
 from entities.Url import Url
 from utils import file_utils

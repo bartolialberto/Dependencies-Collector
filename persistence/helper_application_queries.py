@@ -1,183 +1,320 @@
-from typing import Set
+from typing import Dict, Tuple, Set, Union, Optional, List
 from peewee import DoesNotExist
-from entities.Zone import Zone
-from persistence import helper_web_server, helper_script_server, helper_zone, helper_domain_name, helper_web_site, \
-    helper_name_server, helper_autonomous_system, helper_web_site_domain_name, helper_mail_domain, helper_mail_server, \
-    helper_script_site
-from persistence.BaseModel import ZoneEntity, WebSiteEntity, AutonomousSystemEntity, MailDomainEntity
-from utils import domain_name_utils
+from exceptions.NoAvailablePathError import NoAvailablePathError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
+from persistence import helper_zone, helper_name_server, helper_domain_name, helper_ip_network, \
+    helper_autonomous_system, helper_web_site, helper_web_server, helper_mail_domain, helper_mail_server, \
+    helper_direct_zone
+from persistence.BaseModel import db, ZoneEntity, IpAddressEntity, IpNetworkEntity, AutonomousSystemEntity, \
+    WebSiteEntity, MailDomainEntity, WebServerEntity, MailServerEntity, NameServerEntity
 
 
-def get_all_zone_dependencies_from_web_site(wse: WebSiteEntity, from_script_sites=False) -> Set[ZoneEntity]:
-    zone_dependencies = set()
-
-    # from web site domain name
-    wsdna = helper_web_site_domain_name.get_from_entity_web_site(wse)
-    web_site_dne = wsdna.domain_name
-    web_site_dne_zes = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_dne)
-    for ze in web_site_dne_zes:
-        zone_dependencies.add(ze)
-
-    # from web landing
-    w_server_es = helper_web_server.get_from_entity_web_site(wse)       # HTTPS and HTTP
-    for w_server_e in w_server_es:
-        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(w_server_e)
+def do_query_1() -> List[Tuple[ZoneEntity, Optional[Set[IpAddressEntity]], Optional[Set[IpNetworkEntity]], Optional[Set[AutonomousSystemEntity]]]]:
+    zes = helper_zone.get_everyone()
+    # this flag tells if we have to export a zone name that we know it is a zone (NS RR was resolved) but each
+    # nameserver's A RR was not resolved. In that case the zone row will be added and for each field regarding the
+    # relative infos will present the string value: ND
+    only_complete_zones = False
+    # QUERY
+    print(f"Parameters: {len(zes)} zones retrieved from database.")
+    count_complete_zones = 0
+    count_incomplete_zones = 0
+    result = list()
+    with db.atomic():
         for ze in zes:
-            zone_dependencies.add(ze)
+            try:
+                nses = helper_name_server.get_zone_nameservers(ze)
+            except NoDisposableRowsError:
+                continue
+            ases = set()
+            iaes = set()
+            ines = set()
+            is_unresolved = False
+            for nse in nses:
+                try:
+                    cname_dnes, dne_iaes = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=True)
+                    # a_path = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=False)
+                except (DoesNotExist, NoAvailablePathError):
+                    is_unresolved = True
+                    break
+                for iae in dne_iaes:
+                    iaes.add(iae)
+                    try:
+                        ine = helper_ip_network.get_of(iae)
+                    except (DoesNotExist, NoAvailablePathError):
+                        raise
+                    ines.add(ine)
+                    try:
+                        ase = helper_autonomous_system.get_of_ip_address(iae)
+                    except DoesNotExist:
+                        print('')
+                        continue  # TODO
+                    ases.add(ase)
+            if not only_complete_zones and is_unresolved:
+                result.append((ze, None, None, None))       # TODO
+                count_incomplete_zones = count_incomplete_zones + 1
+            else:
+                result.append((ze, iaes, ines, ases))
+                count_complete_zones = count_complete_zones + 1
+            if len(ases) > len(ines):
+                print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
+    if not only_complete_zones:
+        print(f"---> {count_complete_zones} complete zones.")
+        print(f"---> {count_incomplete_zones} incomplete zones.")
+    return result
 
-    if from_script_sites:
-        # from scripts
-        s_site_es = helper_script_site.get_from_entity_web_site(wse)
-        s_site_dnes = set(map(lambda s_site_e: s_site_e.domain_name, s_site_es))
-        for s_site_dne in s_site_dnes:
-            zes = helper_zone.get_zone_dependencies_of_entity_domain_name(s_site_dne)
-            for ze in zes:
-                zone_dependencies.add(ze)
-        for s_site_e in s_site_es:
-            s_server_es = helper_script_server.get_from_entity_script_site(s_site_e)
-            for sse in s_server_es:
-                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(sse.name)
+
+def do_query_2() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
+    web_site_entities = helper_web_site.get_everyone()
+    # QUERY
+    print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
+    result = list()
+    with db.atomic():
+        for web_site_entity in web_site_entities:
+            #
+            https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
+            try:
+                web_site_domain_name_entity = helper_domain_name.get_of(web_site_entity)
+            except DoesNotExist:
+                raise
+            #
+            direct_zones_of_web_site = set()
+            try:
+                ze = helper_zone.get_direct_zone_of(https_web_server_entity.name)
+                direct_zones_of_web_site.add(ze)
+            except DoesNotExist:
+                pass          # could be a TLD that are not considered
+            if http_web_server_entity != https_web_server_entity:
+                try:
+                    ze = helper_zone.get_direct_zone_of(http_web_server_entity.name)
+                    direct_zones_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass      # could be a TLD that are not considered
+            try:
+                ze = helper_zone.get_direct_zone_of(web_site_domain_name_entity)
+                direct_zones_of_web_site.add(ze)
+            except DoesNotExist:
+                pass          # could be a TLD that are not considered
+            for ze in direct_zones_of_web_site:
+                result.append((web_site_entity, ze))
+    return result
+
+
+def do_query_3() -> List[Tuple[MailDomainEntity, ZoneEntity]]:
+    mail_domain_entities = helper_mail_domain.get_everyone()
+    print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
+    result = list()
+    with db.atomic():
+        for mail_domain_entity in mail_domain_entities:
+            #
+            try:
+                mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+            except DoesNotExist:
+                continue
+            #
+            direct_zones_of_mail_domain = set()
+            try:
+                ze = helper_zone.get_direct_zone_of(mail_domain_entity.name)
+                direct_zones_of_mail_domain.add(ze)
+            except DoesNotExist:
+                pass
+            for mail_server_entity in mail_server_entities_of_mail_domain:
+                try:
+                    ze = helper_zone.get_direct_zone_of(mail_server_entity.name)
+                    direct_zones_of_mail_domain.add(ze)
+                except DoesNotExist:
+                    pass
+            for ze in direct_zones_of_mail_domain:
+                result.append((mail_domain_entity, ze))
+    return result
+
+
+def do_query_4() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
+    web_site_entities = helper_web_site.get_everyone()
+    print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
+    result = list()
+    with db.atomic():
+        for web_site_entity in web_site_entities:
+            #
+            https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
+            try:
+                web_site_domain_name_entity = helper_domain_name.get_of(web_site_entity)
+            except DoesNotExist:
+                raise
+            #
+            zone_dependencies_of_web_site = set()
+            try:
+                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(https_web_server_entity.name)
                 for ze in zes:
-                    zone_dependencies.add(ze)
-
-    return zone_dependencies
-
-
-def get_all_direct_zones_from_web_site(web_site: str) -> Set[ZoneEntity]:
-    try:
-        wse = helper_web_site.get(web_site)
-    except DoesNotExist:
-        raise
-    direct_zones = set()
-
-    # from web site domain name
-    wsdna = helper_web_site_domain_name.get_from_entity_web_site(wse)
-    web_site_dne = wsdna.domain_name
-    web_site_dne_direct_ze = helper_zone.get_direct_zone_of(web_site_dne)
-    direct_zones.add(web_site_dne_direct_ze)
-
-    # from web landing
-    https_w_server_e = helper_web_server.get_from_web_site_and_scheme(wse, https=True, first_only=True)
-    http_w_server_e = helper_web_server.get_from_web_site_and_scheme(wse, https=False, first_only=True)
-    https_direct_ze = helper_zone.get_direct_zone_of(https_w_server_e._second_component_)
-    http_direct_ze = helper_zone.get_direct_zone_of(http_w_server_e._second_component_)
-    direct_zones.add(https_direct_ze)
-    direct_zones.add(http_direct_ze)
-
-    # from scripts
-    s_server_es = helper_script_server.get_from_entity_web_site(wse)
-    for sse in s_server_es:
-        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(sse.name)
-        for ze in zes:
-            direct_zones.add(ze)
-
-    return direct_zones
-
-
-def get_all_zone_dependencies_from_mail_domain(mde: MailDomainEntity) -> Set[ZoneEntity]:
-    zone_dependencies = set()
-
-    # from mail domain name
-    mail_domain_dne_zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mde.name)
-    for ze in mail_domain_dne_zes:
-        zone_dependencies.add(ze)
-
-    # from mail servers
-    mses = helper_mail_server.get_every_of(mde)
-    for mse in mses:
-        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mse.name)
-        for ze in zes:
-            zone_dependencies.add(ze)
-
-    return zone_dependencies
-
-
-def get_all_web_sites_from_zone_name(zone_name: str) -> Set[WebSiteEntity]:
-    try:
-        ze = helper_zone.get(zone_name)
-    except DoesNotExist:
-        raise
-    web_sites = set()
-    dnes = helper_domain_name.get_all_that_depends_on_zone(ze)
-
-    # from web site domain name
-    for dne in dnes:
-        try:
-            wsdnas = helper_web_site_domain_name.get_from_entity_domain_name(dne)
-        except DoesNotExist:
-            continue
-        for wsdna in wsdnas:
-            web_sites.add(wsdna.web_site)
-        break       # should always be only 1
-
-    # from scripts
-    for dne in dnes:
-        try:
-            sse, sse_dne = helper_script_server.get(dne.string)
-        except DoesNotExist:
-            continue
-        wses = helper_web_site.get_all_from_entity_script_server(sse)
-        for wse in wses:
-            web_sites.add(wse)
-
-    # from web landing
-    for dne in dnes:
-        try:
-            wse, wse_dne = helper_web_server.get(dne.string)
-        except DoesNotExist:
-            continue
-        wses = helper_web_site.get_all_from_entity_web_server(wse)
-        for wse in wses:
-            web_sites.add(wse)
-
-    return web_sites
-
-
-def get_direct_zone_from_web_site(web_site: str) -> Zone:
-    """
-    web_site parameter could be an HTTP URL.
-
-    """
-    domain_name = domain_name_utils.deduct_domain_name(web_site)
-    try:
-        zo = helper_zone.get_direct_zone_object_of(domain_name)
-    except DoesNotExist:
-        raise
-    return zo
-
-
-def get_autonomous_systems_dependencies_from_zone_name(zone_name: str) -> Set[AutonomousSystemEntity]:
-    try:
-        zo = helper_zone.get_zone_object_from_zone_name(zone_name)
-    except DoesNotExist:
-        raise
-    result = set()
-    for name_server in zo.nameservers:
-        try:
-            nse, nse_dne = helper_name_server.get(name_server)
-        except DoesNotExist:
-            raise
-        ases = helper_autonomous_system.get_of_entity_domain_name(nse_dne)
-        result = result.union(ases)
+                    zone_dependencies_of_web_site.add(ze)
+            except DoesNotExist:
+                pass
+            if http_web_server_entity != https_web_server_entity:
+                try:
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(http_web_server_entity.name)
+                    for ze in zes:
+                        zone_dependencies_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass
+            try:
+                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_domain_name_entity)
+                for ze in zes:
+                    zone_dependencies_of_web_site.add(ze)
+            except DoesNotExist:
+                pass
+            for ze in zone_dependencies_of_web_site:
+                result.append((web_site_entity, ze))
     return result
 
 
-def get_zone_names_dependencies_from_autonomous_system(as_number: int) -> Set[ZoneEntity]:
-    try:
-        ase = helper_autonomous_system.get(as_number)
-    except DoesNotExist:
-        raise
-    dnes = helper_domain_name.get_all_from_entity_autonomous_system(ase)
-    nses = list()
-    result = set()
-    for dne in dnes:
-        try:
-            nse, dne = helper_name_server.get(dne.string)
-            nses.append(nse)
-        except DoesNotExist:
-            pass
-    for nse in nses:
-        zes = helper_zone.get_all_of_entity_name_server(nse)
-        for ze in zes:
-            result.add(ze)
+def do_query_5() -> List[Tuple[MailDomainEntity, ZoneEntity]]:
+    mail_domain_entities = helper_mail_domain.get_everyone()
+    print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
+    result = list()
+    with db.atomic():
+        for mail_domain_entity in mail_domain_entities:
+            #
+            try:
+                mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+            except DoesNotExist:
+                continue
+            #
+            zone_dependencies_of_web_site = set()
+            try:
+                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mail_domain_entity.name)
+                for ze in zes:
+                    zone_dependencies_of_web_site.add(ze)
+            except DoesNotExist:
+                pass
+            for mail_server_entity in mail_server_entities_of_mail_domain:
+                try:
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mail_server_entity.name)
+                    for ze in zes:
+                        zone_dependencies_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass
+            for ze in zone_dependencies_of_web_site:
+                result.append((mail_domain_entity, ze))
     return result
+
+
+def do_query_6() -> List[Tuple[MailDomainEntity, Set[IpAddressEntity], Set[IpNetworkEntity], Set[AutonomousSystemEntity]]]:
+    mail_domain_entities = helper_mail_domain.get_everyone()
+    only_complete_mail_domain = False
+    print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
+    result = list()
+    with db.atomic():
+        for mail_domain_entity in mail_domain_entities:
+            #
+            try:
+                mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+            except DoesNotExist:
+                continue
+            #
+            ip_addresses_of_mail_domain = set()
+            ip_networks_of_mail_domain = set()
+            autonomous_systems_of_mail_domain = set()
+            for mail_server_entity in mail_server_entities_of_mail_domain:
+                try:
+                    cname_chain, iaes = helper_domain_name.resolve_a_path(mail_server_entity.name, as_persistence_entities=True)
+                except NoAvailablePathError:
+                    continue
+                for iae in iaes:
+                    ip_addresses_of_mail_domain.add(iae)
+                    try:
+                        ine = helper_ip_network.get_of(iae)
+                    except DoesNotExist:
+                        raise
+                    ip_networks_of_mail_domain.add(ine)
+                    try:
+                        ase = helper_autonomous_system.get_of_ip_address(iae)
+                    except DoesNotExist:
+                        continue
+                    autonomous_systems_of_mail_domain.add(ase)
+            result.append((mail_domain_entity, ip_addresses_of_mail_domain, ip_networks_of_mail_domain, autonomous_systems_of_mail_domain))
+    return result
+
+
+def do_query_7() -> List[Tuple[WebServerEntity, Set[IpAddressEntity], Set[IpNetworkEntity], Set[AutonomousSystemEntity]]]:
+    web_server_entities = helper_web_server.get_everyone()
+    print(f"Parameters: {len(web_server_entities)} web servers retrieved from database.")
+    result = list()
+    with db.atomic():
+        for web_server_entity in web_server_entities:
+            ip_addresses_of_web_server = set()
+            ip_networks_of_web_server = set()
+            autonomous_systems_of_web_server = set()
+            try:
+                cname_chain, iaes = helper_domain_name.resolve_a_path(web_server_entity.name, as_persistence_entities=True)
+            except NoAvailablePathError:
+                continue
+            for iae in iaes:
+                ip_addresses_of_web_server.add(iae)
+                try:
+                    ine = helper_ip_network.get_of(iae)
+                except DoesNotExist:
+                    raise
+                ip_networks_of_web_server.add(ine)
+                try:
+                    ase = helper_autonomous_system.get_of_ip_address(iae)
+                except DoesNotExist:
+                    continue
+                autonomous_systems_of_web_server.add(ase)
+            result.append((web_server_entity, ip_addresses_of_web_server, ip_networks_of_web_server, autonomous_systems_of_web_server))
+    return result
+
+
+#TODO
+def do_query_8() -> List[Tuple[IpNetworkEntity, AutonomousSystemEntity, Set[WebServerEntity], Set[MailServerEntity], Set[NameServerEntity], Set[ZoneEntity], Set[WebSiteEntity], Set[MailDomainEntity]]]:
+    network_entities = helper_ip_network.get_everyone()
+    print(f"Parameters: {len(network_entities)} IP networks retrieved from database.")
+    result = list()
+    with db.atomic():
+        for network_entity in network_entities:
+            try:
+                autonomous_system = helper_autonomous_system.get_of_entity_ip_network(network_entity)
+            except DoesNotExist:
+                print(f"{network_entity.compressed_notation} does not exist..")
+                continue
+            try:
+                dnes = helper_domain_name.get_everyone_from_ip_network(network_entity)
+            except NoDisposableRowsError:
+                raise
+            try:
+                belonging_webservers = helper_web_server.filter_domain_names(dnes)
+            except NoDisposableRowsError:
+                belonging_webservers = set()
+            try:
+                belonging_mailservers = helper_mail_server.filter_domain_names(dnes)
+            except NoDisposableRowsError:
+                belonging_mailservers = set()
+            try:
+                belonging_nameservers = helper_mail_server.filter_domain_names(dnes)
+            except NoDisposableRowsError:
+                belonging_nameservers = set()
+            try:
+                zones_entirely_contained = helper_zone.get_entire_zones_from_nameservers_pool(belonging_nameservers)
+            except NoDisposableRowsError:
+                zones_entirely_contained = set()
+            try:
+                direct_zones = helper_direct_zone.get_from_zone_dataset(zones_entirely_contained)
+            except NoDisposableRowsError:
+                direct_zones = set()
+            website_directzones_entirely_contained = set()
+            maildomain_directzones_entirely_contained = set()
+            # TODO
+
+
+
+            result.append((
+                network_entity,
+                autonomous_system,
+                belonging_webservers,
+                belonging_mailservers,
+                belonging_nameservers,
+                zones_entirely_contained,
+                website_directzones_entirely_contained,
+                maildomain_directzones_entirely_contained
+            ))
+    return result
+

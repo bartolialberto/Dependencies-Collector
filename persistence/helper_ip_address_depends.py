@@ -11,18 +11,6 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or
     return iada
 
 
-def get_from_string_ip_address(ip_address: str) -> IpAddressDependsAssociation:
-    try:
-        ip = ipaddress.IPv4Address(ip_address)
-    except ValueError:
-        raise
-    try:
-        iae = helper_ip_address.get(ip.exploded)
-    except DoesNotExist:
-        raise
-    return get_from_entity_ip_address(iae)
-
-
 def get_from_entity_ip_address(iae: IpAddressEntity) -> IpAddressDependsAssociation:
     try:
         return IpAddressDependsAssociation.get(IpAddressDependsAssociation.ip_address == iae)
@@ -41,30 +29,3 @@ def get_unresolved(execute_rov_scraping=True) -> Set[IpAddressDependsAssociation
     for row in query:
         result.add(row)
     return result
-
-
-def update_ip_network(iada: IpAddressDependsAssociation, new_ine: IpNetworkEntity):
-    query = IpAddressDependsAssociation.update(ip_network=new_ine)\
-        .where((IpAddressDependsAssociation.ip_address == iada.ip_address) &
-               (IpAddressDependsAssociation.ip_range_tsv == iada.ip_range_tsv) &
-               (IpAddressDependsAssociation.ip_range_rov == iada.ip_range_rov) &
-               (IpAddressDependsAssociation.ip_network == iada.ip_network))
-    query.execute()
-
-
-def update_ip_range_tsv(iada: IpAddressDependsAssociation, new_irte: IpRangeTSVEntity or None):
-    query = IpAddressDependsAssociation.update(ip_range_tsv=new_irte)\
-        .where((IpAddressDependsAssociation.ip_address == iada.ip_address) &
-               (IpAddressDependsAssociation.ip_range_tsv == iada.ip_range_tsv) &
-               (IpAddressDependsAssociation.ip_range_rov == iada.ip_range_rov) &
-               (IpAddressDependsAssociation.ip_network == iada.ip_network))
-    query.execute()
-
-
-def update_ip_range_rov(iada: IpAddressDependsAssociation, new_irre: IpRangeROVEntity or None):
-    query = IpAddressDependsAssociation.update(ip_range_rov=new_irre) \
-        .where((IpAddressDependsAssociation.ip_address == iada.ip_address) &
-               (IpAddressDependsAssociation.ip_range_tsv == iada.ip_range_tsv) &
-               (IpAddressDependsAssociation.ip_range_rov == iada.ip_range_rov) &
-               (IpAddressDependsAssociation.ip_network == iada.ip_network))
-    query.execute()

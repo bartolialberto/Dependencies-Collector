@@ -1,7 +1,8 @@
 import ipaddress
-from typing import List
+from typing import List, Set
 from peewee import DoesNotExist
 from exceptions.EmptyResultError import EmptyResultError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_ip_address
 from persistence.BaseModel import IpRangeROVEntity, IpAddressDependsAssociation, IpAddressEntity
 
@@ -23,19 +24,21 @@ def get(ip_range_rov: str) -> IpRangeROVEntity:
         raise
 
 
-def get_all_from(address: str) -> List[IpRangeROVEntity]:
-    """ Query probably useful only for tests. """
+def get_of(iae: IpAddressEntity) -> IpRangeROVEntity:
     try:
-        iae = helper_ip_address.get(address)
+        iada = IpAddressDependsAssociation.get(IpAddressDependsAssociation.ip_address == iae)
+        return iada.ip_range_rov
     except DoesNotExist:
         raise
+
+
+def get_all_addresses_of(irre: IpRangeROVEntity) -> Set[IpAddressEntity]:
     query = IpAddressDependsAssociation.select()\
-        .join(IpRangeROVEntity)\
-        .where(IpAddressDependsAssociation.ip_address == iae)
-    result = list()
+        .where(IpAddressDependsAssociation.ip_range_rov == irre)
+    result = set()
     for row in query:
-        result.append(row.ip_range_rov)
+        result.add(row.ip_address)
     if len(result) == 0:
-        raise EmptyResultError
+        raise NoDisposableRowsError
     else:
         return result

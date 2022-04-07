@@ -1,12 +1,18 @@
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Union
 from peewee import DoesNotExist
-from entities.Url import Url
-from persistence import helper_web_site
-from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, UrlEntity, db
+from entities.SchemeUrl import SchemeUrl
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
+from persistence.BaseModel import WebSiteEntity, WebSiteLandsAssociation, WebServerEntity, db
 
 
-def insert(wsitee: WebSiteEntity, starting_https: bool, wservere: WebServerEntity or None, landing_https: bool or None) -> WebSiteLandsAssociation:
-    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, starting_https=starting_https, web_server=wservere, landing_https=landing_https)
+def insert(wsitee: WebSiteEntity, starting_https: bool, landing_url: Union[SchemeUrl, None], wservere: Union[WebServerEntity, None]) -> WebSiteLandsAssociation:
+    if landing_url is None:
+        landing_url_string = None
+        landing_scheme_is_https = None
+    else:
+        landing_url_string = landing_url.string
+        landing_scheme_is_https = landing_url.is_https()
+    wsla, created = WebSiteLandsAssociation.get_or_create(web_site=wsitee, starting_https=starting_https, landing_url=landing_url_string, web_server=wservere, landing_https=landing_scheme_is_https)
     return wsla
 
 
@@ -21,16 +27,23 @@ def bulk_insert(fields: List[Dict[str, WebSiteEntity or bool or WebServerEntity 
         count_inserts = WebSiteLandsAssociation.insert_many(fields).on_conflict_ignore().execute()
 
 
-def get_all_from_string_website(website: str) -> List[WebSiteLandsAssociation]:
+def test_getting_unlimited_association_from(wse: WebSiteEntity) -> Set[WebSiteLandsAssociation]:
+    result = set()
+    query = WebSiteLandsAssociation.select()\
+        .where(WebSiteLandsAssociation.web_site == wse)
+    for row in query:
+        result.add(row)
+    if len(result) == 0:
+        raise NoDisposableRowsError
+    else:
+        return result
+
+
+def get_from_web_site_and_starting_scheme(wse: WebSiteEntity, is_https: bool) -> WebSiteLandsAssociation:
     try:
-        ue = UrlEntity.get(UrlEntity.string == website)
+        return WebSiteLandsAssociation.get((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.starting_https == is_https))
     except DoesNotExist:
         raise
-    try:
-        wse = WebSiteEntity.get(WebSiteEntity.url == ue)
-    except DoesNotExist:
-        raise
-    return get_all_from_entity_web_site(wse)
 
 
 def get_all_from_entity_web_site(wse: WebSiteEntity) -> List[WebSiteLandsAssociation]:
@@ -40,14 +53,6 @@ def get_all_from_entity_web_site(wse: WebSiteEntity) -> List[WebSiteLandsAssocia
     for row in query:
         result.append(row)
     return result
-
-
-def get_all_from_string_website_and_scheme(website: Url, https: bool) -> List[WebSiteLandsAssociation]:
-    try:
-        wse = helper_web_site.get(website)
-    except DoesNotExist:
-        raise
-    return get_all_from_entity_web_site_and_scheme(wse, https)
 
 
 def get_all_from_entity_web_site_and_scheme(wse: WebSiteEntity, https: bool) -> List[WebSiteLandsAssociation]:
@@ -61,18 +66,6 @@ def get_all_from_entity_web_site_and_scheme(wse: WebSiteEntity, https: bool) -> 
     return result
 
 
-def delete_all_from_string_website(website: str):
-    try:
-        ue = UrlEntity.get(UrlEntity.string == website)
-    except DoesNotExist:
-        raise
-    try:
-        wse = WebSiteEntity.get(WebSiteEntity.url == ue)
-    except DoesNotExist:
-        raise
-    return delete_all_from_entity_web_site(wse)
-
-
 def delete_all_from_entity_web_site(wse: WebSiteEntity):
     try:
         tmp = get_all_from_entity_web_site(wse)
@@ -80,14 +73,6 @@ def delete_all_from_entity_web_site(wse: WebSiteEntity):
             relation.delete_instance()
     except DoesNotExist:
         pass
-
-
-def update(wsla: WebSiteLandsAssociation, new_w_server_e: WebServerEntity) -> None:
-    query = WebSiteLandsAssociation.update(web_server=new_w_server_e) \
-        .where((WebSiteLandsAssociation.web_site == wsla.web_site) &
-               (WebSiteLandsAssociation.https == wsla.https) &
-               (WebSiteLandsAssociation.web_server.is_null(False)))
-    query.execute()
 
 
 def get_unresolved() -> Set[WebSiteLandsAssociation]:

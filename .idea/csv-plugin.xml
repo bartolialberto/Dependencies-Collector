@@ -17,6 +17,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\output\networks_dependencies.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\output\unresolved_entities.csv">
           <value>
             <Attribute>

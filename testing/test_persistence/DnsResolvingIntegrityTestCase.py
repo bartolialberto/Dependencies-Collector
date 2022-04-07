@@ -39,10 +39,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
             DomainName('dei.unipd.it'),
             DomainName('units.it')
         ]
-        cls.domain_names = [
-            DomainName('cdn-auth.digidentity.eu.')
-        ]
-        consider_tld = True
+        consider_tld = False
         # ELABORATION
         execute_script_resolving = False
         execute_rov_scraping = False
@@ -108,7 +105,6 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
                     tld_in_database.add(ze)
         self.assertSetEqual(set(), tld_in_database)
         print("------- [4] END TLD PRESENCE CHECK -------")
-
 
     def test_05_domain_name_zone_dependencies_integrity(self):
         """
@@ -195,7 +191,7 @@ class DnsResolvingIntegrityTestCase(unittest.TestCase):
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
             str_from_elaboration = rr.get_first_value().string
-            str_from_database = alias_dne.name
+            str_from_database = alias_dne.string
             self.assertEqual(str_from_elaboration, str_from_database)
         for rr in zone_name_cnames_rr:
             try:

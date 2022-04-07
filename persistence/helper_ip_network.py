@@ -1,8 +1,9 @@
 import ipaddress
-from typing import Set
+from typing import Set, Union
 from peewee import DoesNotExist
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from persistence import helper_domain_name
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
+from persistence import helper_domain_name, helper_ip_address
 from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity, DomainNameEntity
 from utils import network_utils
 
@@ -23,17 +24,9 @@ def insert_from_address_entity(iae: IpAddressEntity) -> IpNetworkEntity:
     return ine
 
 
-def get(ip_network_parameter: ipaddress.IPv4Network or str) -> IpNetworkEntity:
-    network = None
-    if isinstance(ip_network_parameter, ipaddress.IPv4Network):
-        network = ip_network_parameter
-    else:
-        try:
-            network = ipaddress.IPv4Network(ip_network_parameter)
-        except ValueError:
-            raise
+def get(ip_network: ipaddress.IPv4Network) -> IpNetworkEntity:
     try:
-        ine = IpNetworkEntity.get_by_id(network.compressed)
+        ine = IpNetworkEntity.get_by_id(ip_network.compressed)
     except DoesNotExist:
         raise
     return ine
@@ -47,18 +40,30 @@ def get_everyone() -> Set[IpNetworkEntity]:
     return result
 
 
-def get_of(iae: ipaddress.IPv4Address) -> IpNetworkEntity:
+def get_of(iae: IpAddressEntity) -> IpNetworkEntity:
+    # TODO: testare... Ha l'attributo ip_network??
+    try:
+        iada = IpAddressDependsAssociation.get(IpAddressDependsAssociation.ip_address == iae)
+        return iada.ip_network
+    except DoesNotExist:
+        raise
+
+
+def get_all_addresses_of(ine: IpNetworkEntity) -> Set[IpNetworkEntity]:
     query = IpAddressDependsAssociation.select()\
-        .where(IpAddressDependsAssociation.ip_address == iae)\
-        .limit(1)
+        .where(IpAddressDependsAssociation.ip_network == ine)
+    result = set()
     for row in query:
-        return row.ip_network
-    raise DoesNotExist
+        result.add(row.ip_address)
+    if len(result) == 0:
+        raise NoDisposableRowsError
+    else:
+        return result
 
 
 def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[IpNetworkEntity]:
     try:
-        iaes, dnes = helper_domain_name.resolve_access_path(dne, get_only_first_address=False)
+        iaes, dnes = helper_domain_name.resolve_a_path(dne, get_only_first_address=False)
     except (NoAvailablePathError, DoesNotExist):
         raise
     result = set()

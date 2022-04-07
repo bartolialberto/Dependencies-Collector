@@ -1,18 +1,19 @@
 import csv
-import ipaddress
 import unittest
+from datetime import datetime
 from pathlib import Path
-from typing import List, Set
+from typing import List
 from peewee import DoesNotExist
-from entities.Zone import Zone
 from exceptions.NoAvailablePathError import NoAvailablePathError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_web_server, helper_zone, helper_web_site, helper_domain_name, helper_mail_domain, \
-    helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_application_queries, \
-    helper_ip_address, helper_web_site_domain_name
-from persistence.BaseModel import IpNetworkEntity, IpAddressEntity
-from utils import file_utils, csv_utils, network_utils
+    helper_mail_server, helper_name_server, helper_autonomous_system, helper_ip_network, helper_direct_zone, \
+    helper_application_queries
+from persistence.BaseModel import db
+from utils import file_utils, csv_utils, datetime_utils
 
 
+# TODO: eccezioni nelle query...
 class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
     @staticmethod
     def write_csv_file(file: Path, separator: str, rows: List[List[str]]) -> None:
@@ -29,42 +30,34 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         except OSError:
             raise
 
-    @staticmethod
-    def are_all_ip_addresses_in_ip_network(ip_addresses: Set[IpAddressEntity], ip_network: IpNetworkEntity) -> bool:
-        network = ipaddress.IPv4Network(ip_network.compressed_notation)
-        for iae in ip_addresses:
-            if network_utils.is_in_network(ipaddress.IPv4Address(iae.exploded_notation), network):
-                pass
-            else:
-                return False
-        return True
-
-    @staticmethod
-    def are_all_name_servers_of_zone_object_in_network(zo: Zone, network_param: IpNetworkEntity) -> bool:
-        network = ipaddress.IPv4Network(network_param.compressed_notation)
-        all_addresses = set()
-        for name_server in zo.nameservers:
-            try:
-                rr_a = zo.resolve_name_server_access_path(name_server)
-            except NoAvailablePathError:
-                raise
-            for value in rr_a.values:
-                all_addresses.add(ipaddress.IPv4Address(value))
-        for address in all_addresses:
-            if network_utils.is_in_network(address, network):
-                pass
-            else:
-                return False
-        return True
-
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETER
         cls.sub_folder = 'output'
         cls.separator = ','
         cls.unresolved_value = 'ND'
+        #
+        cls.PRD = file_utils.get_project_root_directory()
+
+    def execute_query_1(self):
+        start_time = datetime.now()
+        # PARAMETER
+        filename = 'zone_infos'
+        # QUERY
+        print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
+        result = helper_application_queries.do_query_1()
+        rows = ["zone_name", "#nameservers", "#networks", "#as"]
+        for tupl in result:
+            rows.append([tupl[0].name, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
 
     def test_1_query_number_of_dependencies_of_all_zones(self):
+        start_time = datetime.now()
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
         # PARAMETER
         zes = helper_zone.get_everyone()
@@ -79,42 +72,44 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         rows.append(["zone_name", "#nameservers", "#networks", "#as"])
         count_complete_zones = 0
         count_incomplete_zones = 0
-        for ze in zes:
-            try:
-                nses = helper_name_server.get_all_from_zone_entity(ze)
-            except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            ases = set()
-            iaes = set()
-            ines = set()
-            is_unresolved = False
-            for nse in nses:
+        with db.atomic():
+            for ze in zes:
                 try:
-                    nse_iaes, path_dnes = helper_domain_name.resolve_access_path(nse.name, get_only_first_address=False)
-                except (DoesNotExist, NoAvailablePathError):
-                    is_unresolved = True
-                    break
-                for iae in nse_iaes:
-                    iaes.add(iae)
+                    nses = helper_name_server.get_zone_nameservers(ze)
+                except NoDisposableRowsError as e:
+                    self.fail(f"!!! {str(e)} !!!")
+                ases = set()
+                iaes = set()
+                ines = set()
+                is_unresolved = False
+                for nse in nses:
                     try:
-                        ine = helper_ip_network.get_of(iae)
+                        cname_dnes, dne_iaes = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=True)
+                        # a_path = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=False)
                     except (DoesNotExist, NoAvailablePathError):
-                        raise
-                    ines.add(ine)
-                    try:
-                        ase = helper_autonomous_system.get_of_entity_ip_address(iae)
-                    except DoesNotExist:
-                        print('')
-                        continue        # TODO
-                    ases.add(ase)
-            if not only_complete_zones and is_unresolved:
-                rows.append([ze.name, self.unresolved_value, self.unresolved_value, self.unresolved_value])
-                count_incomplete_zones = count_incomplete_zones + 1
-            else:
-                rows.append([ze.name, str(len(iaes)), str(len(ines)), str(len(ases))])
-                count_complete_zones = count_complete_zones + 1
-            if len(ases) > len(ines):
-                print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
+                        is_unresolved = True
+                        break
+                    for iae in dne_iaes:
+                        iaes.add(iae)
+                        try:
+                            ine = helper_ip_network.get_of(iae)
+                        except (DoesNotExist, NoAvailablePathError):
+                            raise
+                        ines.add(ine)
+                        try:
+                            ase = helper_autonomous_system.get_of_ip_address(iae)
+                        except DoesNotExist:
+                            print('')
+                            continue        # TODO
+                        ases.add(ase)
+                if not only_complete_zones and is_unresolved:
+                    rows.append([ze.name, self.unresolved_value, self.unresolved_value, self.unresolved_value])
+                    count_incomplete_zones = count_incomplete_zones + 1
+                else:
+                    rows.append([ze.name, str(len(iaes)), str(len(ines)), str(len(ases))])
+                    count_complete_zones = count_complete_zones + 1
+                if len(ases) > len(ines):
+                    print(f"ERROR: {ze.name} has more ases {len(ases)} than ines {len(ines)}")
         print(f"Written {len(rows)} rows.")
         if not only_complete_zones:
             print(f"---> {count_complete_zones} complete zones.")
@@ -123,400 +118,470 @@ class ApplicationQueryExportingCSVTestCase(unittest.TestCase):
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
-    def test_2_query_direct_zones_from_all_web_sites(self):
-        print(f"--- QUERY DIRECT ZONES FROM WEB SITES AND ASSOCIATED WEB SERVERS")
+    def execute_query_2(self):
+        start_time = datetime.now()
         # PARAMETER
-        wses = helper_web_site.get_everyone()
         filename = 'web_sites_direct_zone_dependencies'
         # QUERY
-        print(f"Parameters: {len(wses)} web sites retrieved from database.")
+        print(f"--- QUERY DIRECT ZONES OF ALL WEB SITES AND ASSOCIATED WEB SERVERS")
+        result = helper_application_queries.do_query_2()
+        rows = ['web_site', 'zone_name']
+        for tupl in result:
+            rows.append([tupl[0].url.string, tupl[1].name])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def test_2_query_direct_zones_of_all_web_sites(self):
+        start_time = datetime.now()
+        print(f"--- QUERY DIRECT ZONES OF ALL WEB SITES AND ASSOCIATED WEB SERVERS")
+        # PARAMETER
+        web_site_entities = helper_web_site.get_everyone()
+        filename = 'web_sites_direct_zone_dependencies'
+        # QUERY
+        print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
         rows = list()
         rows.append(['web_site', 'zone_name'])
-        for wse in wses:
-            w_server_es = helper_web_server.get_from_entity_web_site(wse)
-            try:
-                web_site_dne = helper_domain_name.get_from_entity_web_site(wse)
-            except DoesNotExist as e:
-                raise
-            zone_name_dependencies_of_wse = set()
-            try:
-                web_site_direct_zone = helper_zone.get_direct_zone_of(web_site_dne)
-                web_site_direct_zone_name = web_site_direct_zone.name
-                zone_name_dependencies_of_wse.add(web_site_direct_zone_name)
-            except DoesNotExist:
-                pass                  # could be a TLD that are not considered
-            for w_server_e in w_server_es:
+        with db.atomic():
+            for web_site_entity in web_site_entities:
+                #
+                https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
                 try:
-                    web_server_direct_zone = helper_zone.get_direct_zone_of(w_server_e.name)
-                    web_server_direct_zone_name = web_server_direct_zone.name
-                    zone_name_dependencies_of_wse.add(web_server_direct_zone_name)
+                    web_site_domain_name_entity = helper_domain_name.get_of(web_site_entity)
+                except DoesNotExist:
+                    raise
+                #
+                direct_zones_of_web_site = set()
+                try:
+                    ze = helper_zone.get_direct_zone_of(https_web_server_entity.name)
+                    direct_zones_of_web_site.add(ze)
                 except DoesNotExist:
                     pass          # could be a TLD that are not considered
-            for zone_name in zone_name_dependencies_of_wse:
-                rows.append([wse.url._second_component_, zone_name])
+                if http_web_server_entity != https_web_server_entity:
+                    try:
+                        ze = helper_zone.get_direct_zone_of(http_web_server_entity.name)
+                        direct_zones_of_web_site.add(ze)
+                    except DoesNotExist:
+                        pass      # could be a TLD that are not considered
+                try:
+                    ze = helper_zone.get_direct_zone_of(web_site_domain_name_entity)
+                    direct_zones_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass          # could be a TLD that are not considered
+                for ze in direct_zones_of_web_site:
+                    rows.append([web_site_entity.url.string, ze.name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
-    def test_3_query_direct_zones_from_all_mail_domains(self):
-        print(f"--- QUERY DIRECT ZONES FROM MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+    def execute_query_3(self):
+        start_time = datetime.now()
         # PARAMETER
-        mdes = helper_mail_domain.get_everyone()
         filename = 'mail_domains_direct_zone_dependencies'
         # QUERY
-        print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
+        print(f"--- QUERY DIRECT ZONES OF ALL MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        result = helper_application_queries.do_query_3()
+        rows = ['mail_domain', 'zone_name']
+        for tupl in result:
+            rows.append([tupl[0].name.string, tupl[1].name])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def test_3_query_direct_zones_of_all_mail_domains(self):
+        start_time = datetime.now()
+        print(f"--- QUERY DIRECT ZONES OF ALL MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        # PARAMETER
+        mail_domain_entities = helper_mail_domain.get_everyone()
+        filename = 'mail_domains_direct_zone_dependencies'
+        # QUERY
+        print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
         rows = list()
         rows.append(['mail_domain', 'zone_name'])
-        for mde in mdes:
-            mail_domain_dne = mde.name
-            try:
-                mses = helper_mail_server.get_every_of(mde)
-            except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            zone_name_dependencies_of_mde = set()
-            try:
-                mail_domain_direct_zone = helper_zone.get_direct_zone_of(mail_domain_dne)
-                mail_domain_direct_zone_name = mail_domain_direct_zone.name
-                zone_name_dependencies_of_mde.add(mail_domain_direct_zone_name)
-            except DoesNotExist:
-                pass        # could be a TLD that are not considered
-            for mse in mses:
+        with db.atomic():
+            for mail_domain_entity in mail_domain_entities:
+                #
                 try:
-                    mail_server_server_direct_zone = helper_zone.get_direct_zone_of(mse.name)
+                    mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+                except DoesNotExist as e:
+                    self.fail(f"!!! {str(e)} !!!")
+                #
+                direct_zones_of_mail_domain = set()
+                try:
+                    ze = helper_zone.get_direct_zone_of(mail_domain_entity.name)
+                    direct_zones_of_mail_domain.add(ze)
                 except DoesNotExist:
-                    continue
-                mail_server_server_direct_zone_name = mail_server_server_direct_zone.name
-                zone_name_dependencies_of_mde.add(mail_server_server_direct_zone_name)
-            for zone_name in zone_name_dependencies_of_mde:
-                rows.append([mde.name._second_component_, zone_name])
+                    pass
+                for mail_server_entity in mail_server_entities_of_mail_domain:
+                    try:
+                        ze = helper_zone.get_direct_zone_of(mail_server_entity.name)
+                        direct_zones_of_mail_domain.add(ze)
+                    except DoesNotExist:
+                        pass
+                for ze in direct_zones_of_mail_domain:
+                    rows.append([mail_domain_entity.name.string, ze.name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
-    def test_4_query_zones_from_all_web_sites(self):
-        print(f"--- QUERY ZONES FROM WEB SITES AND ASSOCIATED WEB SERVERS")
+    def execute_query_4(self):
+        start_time = datetime.now()
         # PARAMETER
-        wses = helper_web_site.get_everyone()
         filename = 'web_sites_zone_dependencies'
         # QUERY
-        print(f"Parameters: {len(wses)} web sites retrieved from database.")
-        rows = list()
-        rows.append(['web_site', 'zone_name'])
-        for wse in wses:
-            w_server_es = helper_web_server.get_from_entity_web_site(wse)
-            try:
-                web_site_dne = helper_domain_name.get_from_entity_web_site(wse)
-            except DoesNotExist as e:
-                continue
-            zone_name_dependencies_of_wse = set()
-            try:
-                web_site_direct_zones = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_dne)
-                for ze in web_site_direct_zones:
-                    zone_name_dependencies_of_wse.add(ze.name)
-            except DoesNotExist:
-                pass  # could be a TLD that are not considered
-            for w_server_e in w_server_es:
-                try:
-                    web_server_direct_zones = helper_zone.get_zone_dependencies_of_entity_domain_name(w_server_e.name)
-                    for ze in web_server_direct_zones:
-                        zone_name_dependencies_of_wse.add(ze.name)
-                except DoesNotExist:
-                    pass  # could be a TLD that are not considered
-            for zone_name in zone_name_dependencies_of_wse:
-                rows.append([wse.url._second_component_, zone_name])
+        print(f"--- QUERY ZONE DEPENDENCIES OF WEB SITES AND ASSOCIATED WEB SERVERS")
+        result = helper_application_queries.do_query_4()
+        rows = ['web_site', 'zone_name']
+        for tupl in result:
+            rows.append([tupl[0].url.string, tupl[1].name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
-        PRD = file_utils.get_project_root_directory()
-        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
-    def test_5_query_zones_from_all_mail_domains(self):
-        print(f"--- QUERY ZONES FROM MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+    def test_4_query_zone_dependencies_of_all_web_sites(self):
+        start_time = datetime.now()
+        print(f"--- QUERY ZONE DEPENDENCIES OF WEB SITES AND ASSOCIATED WEB SERVERS")
         # PARAMETER
-        mdes = helper_mail_domain.get_everyone()
-        filename = 'mail_domains_zone_dependencies'
+        web_site_entities = helper_web_site.get_everyone()
+        filename = 'web_sites_zone_dependencies'
         # QUERY
-        print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
+        print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
         rows = list()
-        rows.append(["mail_domain", "zone_name"])
-        for mde in mdes:
-            try:
-                ze_dependencies = helper_application_queries.get_all_zone_dependencies_from_mail_domain(mde)
-            except DoesNotExist as e:
-                self.fail(f"!!! {str(e)} !!!")
-            for ze in ze_dependencies:
-                rows.append([mde.name._second_component_, ze.name])
+        rows.append(['web_site', 'zone_name'])
+        with db.atomic():
+            for web_site_entity in web_site_entities:
+                #
+                https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
+                try:
+                    web_site_domain_name_entity = helper_domain_name.get_of(web_site_entity)
+                except DoesNotExist:
+                    raise
+                #
+                zone_dependencies_of_web_site = set()
+                try:
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(https_web_server_entity.name)
+                    for ze in zes:
+                        zone_dependencies_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass
+                if http_web_server_entity != https_web_server_entity:
+                    try:
+                        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(http_web_server_entity.name)
+                        for ze in zes:
+                            zone_dependencies_of_web_site.add(ze)
+                    except DoesNotExist:
+                        pass
+                try:
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_domain_name_entity)
+                    for ze in zes:
+                        zone_dependencies_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass
+                for ze in zone_dependencies_of_web_site:
+                    rows.append([web_site_entity.url.string, ze.name])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def execute_query_5(self):
+        start_time = datetime.now()
+        # PARAMETER
+        filename = 'mail_domains_zone_dependencies'
+        # QUERY
+        print(f"--- QUERY ZONE DEPENDENCIES OF MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        result = helper_application_queries.do_query_5()
+        rows = ['web_site', 'zone_name']
+        for tupl in result:
+            rows.append([tupl[0].name.string, tupl[1].name])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def test_5_query_zones_dependencies_of_all_mail_domains(self):
+        start_time = datetime.now()
+        print(f"--- QUERY ZONE DEPENDENCIES OF MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        # PARAMETER
+        mail_domain_entities = helper_mail_domain.get_everyone()
+        filename = 'mail_domains_zone_dependencies'
+        # QUERY
+        print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
+        rows = list()
+        rows.append(["mail_domain", "zone_name"])
+        with db.atomic():
+            for mail_domain_entity in mail_domain_entities:
+                #
+                try:
+                    mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+                except DoesNotExist as e:
+                    self.fail(f"!!! {str(e)} !!!")
+                #
+                zone_dependencies_of_web_site = set()
+                try:
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mail_domain_entity.name)
+                    for ze in zes:
+                        zone_dependencies_of_web_site.add(ze)
+                except DoesNotExist:
+                    pass
+                for mail_server_entity in mail_server_entities_of_mail_domain:
+                    try:
+                        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(mail_server_entity.name)
+                        for ze in zes:
+                            zone_dependencies_of_web_site.add(ze)
+                    except DoesNotExist:
+                        pass
+                for ze in zone_dependencies_of_web_site:
+                    rows.append([mail_domain_entity.name.string, ze.name])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        PRD = file_utils.get_project_root_directory()
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def execute_query_6(self):
+        start_time = datetime.now()
+        # PARAMETER
+        filename = 'mail_domains_dependencies'
+        # QUERY
+        print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
+        result = helper_application_queries.do_query_6()
+        rows = ['mail_domain', '#mailservers', '#networks', '#as']
+        for tupl in result:
+            rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
     def test_6_query_number_of_dependencies_of_all_mail_domains(self):
+        start_time = datetime.now()
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
         # PARAMETER
-        mdes = helper_mail_domain.get_everyone()
+        mail_domain_entities = helper_mail_domain.get_everyone()
         filename = 'mail_domains_dependencies'
         only_complete_mail_domain = False
         # QUERY
-        print(f"Parameters: {len(mdes)} mail domains retrieved from database.")
+        print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
         rows = list()
         rows.append(['mail_domain', '#mailservers', '#networks', '#as'])
         count_unresolved_mail_domain = 0
         count_resolved_mail_domain = 0
-        for mde in mdes:
-            is_unresolved = False
-            try:
-                mses = helper_mail_server.get_every_of(mde)
-            except DoesNotExist:
-                is_unresolved = True
-                mses = set()
-            addresses = set()
-            networks = set()
-            autonomous_systems = set()
-            for mse in mses:
+        with db.atomic():
+            for mail_domain_entity in mail_domain_entities:
+                #
                 try:
-                    iaes, dnes = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
-                except (DoesNotExist, NoAvailablePathError):
-                    is_unresolved = True
-                    break
-                for iae in iaes:
-                    addresses.add(iae)
-                    ine = helper_ip_network.get_of(iae)
-                    networks.add(ine)
+                    mail_server_entities_of_mail_domain = helper_mail_server.get_every_of(mail_domain_entity)
+                except DoesNotExist as e:
+                    self.fail(f"!!! {str(e)} !!!")
+                #
+                ip_addresses_of_mail_domain = set()
+                ip_networks_of_mail_domain = set()
+                autonomous_systems_of_mail_domain = set()
+                for mail_server_entity in mail_server_entities_of_mail_domain:
                     try:
-                        ns_ase = helper_autonomous_system.get_of_entity_ip_address(iae)
-                        autonomous_systems.add(ns_ase)
-                    except DoesNotExist:
-                        is_unresolved = True
-                        break
-            if not only_complete_mail_domain and is_unresolved:
-                rows.append([mde.name._second_component_, self.unresolved_value, self.unresolved_value, self.unresolved_value])
-                count_unresolved_mail_domain = count_unresolved_mail_domain + 1
-            else:
-                rows.append([mde.name._second_component_, str(len(addresses)), str(len(networks)), str(len(autonomous_systems))])
-                count_resolved_mail_domain = count_resolved_mail_domain + 1
+                        cname_chain, iaes = helper_domain_name.resolve_a_path(mail_server_entity.name, as_persistence_entities=True)
+                    except NoAvailablePathError:
+                        continue
+                    for iae in iaes:
+                        ip_addresses_of_mail_domain.add(iae)
+                        try:
+                            ine = helper_ip_network.get_of(iae)
+                        except DoesNotExist:
+                            raise
+                        ip_networks_of_mail_domain.add(ine)
+                        try:
+                            ase = helper_autonomous_system.get_of_ip_address(iae)
+                        except DoesNotExist:
+                            continue
+                        autonomous_systems_of_mail_domain.add(ase)
+                rows.append([mail_domain_entity.name.string, str(len(ip_addresses_of_mail_domain)), str(len(ip_networks_of_mail_domain)), str(len(autonomous_systems_of_mail_domain))])
         print(f"Written {len(rows)} rows.")
-        if not only_complete_mail_domain:
-            print(f"---> {count_resolved_mail_domain} complete mail domains.")
-            print(f"---> {count_unresolved_mail_domain} incomplete mail domains.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    def execute_query_7(self):
+        start_time = datetime.now()
+        # PARAMETER
+        filename = 'web_servers_dependencies'
+        # QUERY
+        print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
+        result = helper_application_queries.do_query_7()
+        rows = ['web_server', '#addresses', '#networks', '#as']
+        for tupl in result:
+            rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
     def test_7_query_number_of_dependencies_of_all_web_servers(self):
+        start_time = datetime.now()
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
         # PARAMETER
-        wses = helper_web_server.get_everyone()
+        web_server_entities = helper_web_server.get_everyone()
         filename = 'web_servers_dependencies'
-        only_complete_web_server = False
         # QUERY
-        print(f"Parameters: {len(wses)} web servers retrieved from database.")
+        print(f"Parameters: {len(web_server_entities)} web servers retrieved from database.")
         rows = list()
         rows.append(['web_server', '#addresses', '#networks', '#as'])
-        count_unresolved_web_server = 0
-        count_resolved_web_server = 0
-        for wse in wses:
-            is_unresolved = False
-            ip_networks = set()
-            autonomous_systems = set()
-            try:
-                iaes, alias_dnes = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
-            except DoesNotExist:
-                print(f"{wse.name._second_component_} IS NON-RESOLVABLE")
-                is_unresolved = True
-                iaes = set()
-            for iae in iaes:
-                ine = helper_ip_network.get_of(iae)
-                ip_networks.add(ine)
+        with db.atomic():
+            for web_server_entity in web_server_entities:
+                ip_addresses_of_web_server = set()
+                ip_networks_of_web_server = set()
+                autonomous_systems_of_web_server = set()
                 try:
-                    ase = helper_autonomous_system.get_of_entity_ip_address(iae)
-                except DoesNotExist:
-                    print(f"NO AS FOR ADDRESS {iae.exploded}")
-                    is_unresolved = True
-                    break
-                autonomous_systems.add(ase)
-            if not only_complete_web_server and is_unresolved:
-                rows.append([wse.name._second_component_, self.unresolved_value, self.unresolved_value, self.unresolved_value])
-                count_unresolved_web_server = count_unresolved_web_server + 1
-            else:
-                rows.append([wse.name._second_component_, str(len(iaes)), str(len(ip_networks)), str(len(autonomous_systems))])
-                count_resolved_web_server = count_resolved_web_server + 1
+                    cname_chain, iaes = helper_domain_name.resolve_a_path(web_server_entity.name, as_persistence_entities=True)
+                except NoAvailablePathError:
+                    continue
+                for iae in iaes:
+                    ip_addresses_of_web_server.add(iae)
+                    try:
+                        ine = helper_ip_network.get_of(iae)
+                    except DoesNotExist:
+                        raise
+                    ip_networks_of_web_server.add(ine)
+                    try:
+                        ase = helper_autonomous_system.get_of_ip_address(iae)
+                    except DoesNotExist:
+                        continue
+                    autonomous_systems_of_web_server.add(ase)
+                rows.append([web_server_entity.name.string, str(len(ip_addresses_of_web_server)), str(len(ip_networks_of_web_server)), str(len(autonomous_systems_of_web_server))])
         print(f"Written {len(rows)} rows.")
-        if not only_complete_web_server:
-            print(f"---> {count_resolved_web_server} complete web servers.")
-            print(f"---> {count_unresolved_web_server} incomplete web servers.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
-    def test_8_query_networks_dependencies(self):
-        print(f"--- QUERY NETWORKS DEPENDENCIES")
+    def execute_query_8(self):
+        start_time = datetime.now()
         # PARAMETER
-        ines = helper_ip_network.get_everyone()
         filename = 'networks_dependencies'
         # QUERY
-        print(f"Parameters: {len(ines)} IP networks retrieved from database.")
+        print(f"--- QUERY NETWORKS DEPENDENCIES")
+        result = helper_application_queries.do_query_8()
+        rows = ['network', 'as_number', 'as_description', '#belonging_webservers', '#belonging_mailservers', '#belonging_mailservers', '#zones_entirely_contained', '#website_directzones_entirely_contained', '#maildomain_directzones_entirely_contained', '#maildomain_directzone_entirely_contained']
+        for tupl in result:
+            rows.append([
+                tupl[0].compressed_notation,
+                str(tupl[1].number),
+                tupl[1].description,
+                str(len(tupl[2])),
+                str(len(tupl[3])),
+                str(len(tupl[4])),
+                str(len(tupl[5])),
+                str(len(tupl[6])),
+                str(len(tupl[7]))
+            ])
+        print(f"Written {len(rows)} rows.")
+        # EXPORTING
+        file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
+        ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"--- END ---\n")
+
+    #TODO
+    def test_8_query_networks_dependencies(self):
+        start_time = datetime.now()
+        print(f"--- QUERY NETWORKS DEPENDENCIES")
+        # PARAMETER
+        network_entities = helper_ip_network.get_everyone()
+        filename = 'networks_dependencies'
+        # QUERY
+        print(f"Parameters: {len(network_entities)} IP networks retrieved from database.")
         rows = list()
-        rows.append(['network', 'as_number', '#webservers', '#mailservers', '#nameservers', '#direct_zone_nameservers', '#zones_entire_contained', '#nr_websites', '#nr_maildomains', '#ap_websites', '#ap_maildomains'])
-        direct_zones = helper_zone.get_everyone_that_is_direct_zone()
-        all_mail_domains = helper_mail_domain.get_everyone()
-        all_web_sites = helper_web_site.get_everyone()
-        for ine in ines:
-            try:
-                ase = helper_autonomous_system.get_of_entity_ip_network(ine)
-            except DoesNotExist:
-                continue
-            try:
-                network_iaes = helper_ip_address.get_all_of_entity_network(ine)
-            except DoesNotExist:
-                raise       # should never happen
-            web_servers = set()
-            mail_servers = set()
-            name_servers = set()
-            dz_name_servers = set()
-            zones = set()
-            ns_web_sites = set()
-            ns_mail_domains = set()
-            ap_web_sites = set()
-            ap_mail_domains = set()
-            for iae in network_iaes:
-                access_path_dnes = helper_ip_address.resolve_reversed_access_path(iae, add_dne_along_the_chain=True)
-                # webservers
-                for dne in access_path_dnes:
-                    try:
-                        wse, wse_dne = helper_web_server.get(dne.string)
-                        web_servers.add(wse)
-                    except DoesNotExist:
-                        pass
-                # mailservers
-                for dne in access_path_dnes:
-                    try:
-                        mse = helper_mail_server.get(dne.string)
-                        mail_servers.add(mse)
-                    except DoesNotExist:
-                        pass
-                # nameservers
-                for dne in access_path_dnes:
-                    try:
-                        nse, nse_dne = helper_name_server.get(dne.string)
-                        name_servers.add(nse)
-                    except DoesNotExist:
-                        pass
+        rows.append(['network', 'as_number', 'as_description', '#belonging_webservers', '#belonging_mailservers', '#belonging_mailservers', '#zones_entirely_contained', '#website_directzones_entirely_contained', '#maildomain_directzones_entirely_contained', '#maildomain_directzone_entirely_contained'])
+        with db.atomic():
+            for network_entity in network_entities:
+                try:
+                    autonomous_system = helper_autonomous_system.get_of_entity_ip_network(network_entity)
+                except DoesNotExist:
+                    print(f"{network_entity.compressed_notation} does not exist..")
+                    continue
+                try:
+                    dnes = helper_domain_name.get_everyone_from_ip_network(network_entity)
+                except NoDisposableRowsError:
+                    raise
+                try:
+                    belonging_webservers = helper_web_server.filter_domain_names(dnes)
+                except NoDisposableRowsError:
+                    belonging_webservers = set()
+                try:
+                    belonging_mailservers = helper_mail_server.filter_domain_names(dnes)
+                except NoDisposableRowsError:
+                    belonging_mailservers = set()
+                try:
+                    belonging_nameservers = helper_mail_server.filter_domain_names(dnes)
+                except NoDisposableRowsError:
+                    belonging_nameservers = set()
+                try:
+                    zones_entirely_contained = helper_zone.get_entire_zones_from_nameservers_pool(belonging_nameservers)
+                except NoDisposableRowsError:
+                    zones_entirely_contained = set()
+                try:
+                    direct_zones = helper_direct_zone.get_from_zone_dataset(zones_entirely_contained)
+                except NoDisposableRowsError:
+                    direct_zones = set()
+                website_directzones_entirely_contained = set()
+                maildomain_directzones_entirely_contained = set()
+                # TODO
 
-            # dz_name_servers
-            for ze in direct_zones:
-                try:
-                    nses = helper_name_server.get_all_from_zone_entity(ze)
-                except DoesNotExist:
-                    continue
-                for nse in nses:
-                    try:
-                        nse_ines = helper_ip_network.get_of_entity_domain_name(nse.name)
-                    except (DoesNotExist, NoAvailablePathError):
-                        continue
-                    if ine in nse_ines:
-                        dz_name_servers.add(nse)
 
-            # zones
-            zo_dict = dict()        # to save up time from too much queries
-            for nse in name_servers:
-                zes = helper_zone.get_all_of_entity_name_server(nse)
-                for ze in zes:
-                    try:
-                        zo = zo_dict[ze.name]
-                    except KeyError:
-                        zo = helper_zone.get_zone_object_from_zone_entity(ze)
-                        zo_dict[ze.name] = zo
-                    try:
-                        all_nse_in_ine = ApplicationQueryExportingCSVTestCase.are_all_name_servers_of_zone_object_in_network(zo, ine)
-                    except NoAvailablePathError:
-                        all_nse_in_ine = False
-                    if all_nse_in_ine:
-                        zones.add(ze)
-            # ns_websites
-            for ze in zones:
-                dnes = helper_domain_name.get_from_direct_zone(ze)
-                for dne in dnes:
-                    try:
-                        wsdnas = helper_web_site_domain_name.get_from_entity_domain_name(dne)
-                        for wsdna in wsdnas:
-                            ns_web_sites.add(wsdna.web_site)
-                    except DoesNotExist:
-                        pass
-            # ns_mail_domains
-            for ze in zones:
-                dnes = helper_domain_name.get_from_direct_zone(ze)
-                for dne in dnes:
-                    try:
-                        mde = helper_mail_domain.get(dne.string)
-                        ns_mail_domains.add(mde)
-                    except DoesNotExist:
-                        pass
-            # ap_mail_domains
-            for mde in all_mail_domains:
-                try:
-                    mses = helper_mail_server.get_every_of(mde)
-                except DoesNotExist:
-                    continue
-                ip_addresses = set()
-                unresolved = False
-                for mse in mses:
-                    try:
-                        iaes, alias_dne = helper_domain_name.resolve_access_path(mse.name, get_only_first_address=False)
-                    except (DoesNotExist, NoAvailablePathError):
-                        unresolved = True
-                        break
-                    for iae in iaes:
-                        ip_addresses.add(iae)
-                if unresolved:
-                    pass
-                else:
-                    if ApplicationQueryExportingCSVTestCase.are_all_ip_addresses_in_ip_network(ip_addresses, ine):
-                        ap_mail_domains.add(mde)
-            # ap_websites
-            for web_site_e in all_web_sites:
-                try:
-                    wses = helper_web_server.get_from_entity_web_site(web_site_e)
-                except DoesNotExist:
-                    continue
-                ip_addresses = set()
-                unresolved = False
-                for wse in wses:
-                    try:
-                        iaes, alias_dne = helper_domain_name.resolve_access_path(wse.name, get_only_first_address=False)
-                    except (DoesNotExist, NoAvailablePathError):
-                        unresolved = True
-                        break
-                    for iae in iaes:
-                        ip_addresses.add(iae)
-                if unresolved:
-                    pass
-                else:
-                    if ApplicationQueryExportingCSVTestCase.are_all_ip_addresses_in_ip_network(ip_addresses, ine):
-                        ap_web_sites.add(web_site_e)
-            if len(dz_name_servers) > len(name_servers):
-                print(f"!!! ERROR !!!")
-            rows.append([ine.compressed_notation, ase.number, len(web_servers), len(mail_servers), len(name_servers), len(dz_name_servers), len(zones), len(ns_web_sites), len(ns_mail_domains), len(ap_web_sites), len(ap_mail_domains)])
+
+                rows.append([
+                    network_entity.compressed_notation,
+                    str(autonomous_system.number),
+                    autonomous_system.description,
+                    str(len(belonging_webservers)),
+                    str(len(belonging_mailservers)),
+                    str(len(belonging_nameservers)),
+                    str(len(zones_entirely_contained)),
+                    str(len(website_directzones_entirely_contained)),
+                    str(len(maildomain_directzones_entirely_contained))
+                ])
         print(f"Written {len(rows)} rows.")
         # EXPORTING
         PRD = file_utils.get_project_root_directory()
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", PRD)
         ApplicationQueryExportingCSVTestCase.write_csv_file(file, self.separator, rows)
+        print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END ---\n")
 
 

@@ -1,13 +1,12 @@
 import ipaddress
+from datetime import datetime
 from typing import List, Set, Tuple
 import selenium
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DomainName import DomainName
-from entities.SchemeUrl import SchemeUrl
 from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.Url import Url
 from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
-from entities.resolvers.ROVPageScraper import RowPrefixesTable
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
@@ -19,9 +18,10 @@ from exceptions.TableNotPresentError import TableNotPresentError
 from exceptions.UnknownReasonError import UnknownReasonError
 from persistence import helper_autonomous_system, helper_ip_range_tsv, helper_ip_range_rov, helper_web_server, \
     helper_web_site_lands, helper_script_server, helper_script_site_lands, helper_script_withdraw, helper_script, \
-    helper_script_site, helper_paths, helper_network_numbers, helper_rov, helper_prefixes_table
+    helper_script_site, helper_paths, helper_network_numbers, helper_rov, helper_prefixes_table, helper_script_hosted_on
 from persistence.BaseModel import IpAddressDependsAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation,\
     ScriptSiteLandsAssociation, MailDomainComposedAssociation, AccessAssociation, db
+from utils import datetime_utils, string_utils
 
 
 class DatabaseEntitiesCompleter:
@@ -56,6 +56,7 @@ class DatabaseEntitiesCompleter:
         :param unresolved_entities: All the unresolved entities.
         :type unresolved_entities: Set[UnresolvedEntityWrapper]
         """
+        start_time = datetime.now()
         wslas = list()
         swas = list()
         sslas = list()
@@ -84,6 +85,7 @@ class DatabaseEntitiesCompleter:
         self.do_complete_unresolved_script_sites_landing(sslas)
         self.do_complete_unresolved_mail_domain(mdcas)
         self.do_complete_unresolved_ip_address_depends_association(iadas)
+        print(f"Total database completion execution time is: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print("********** END DATABASE COMPLETION ELABORATION **********\n")
 
     def do_complete_domain_names_with_no_access(self, aas: List[AccessAssociation]) -> None:
@@ -95,7 +97,7 @@ class DatabaseEntitiesCompleter:
                 domain_name = DomainName(aa.domain_name.string)
                 print(f"association[{i+1}/{len(aas)}]: ", end='')
                 try:
-                    a_path = self.resolvers_wrapper.dns_resolver.resolve_access_path(domain_name)
+                    a_path = self.resolvers_wrapper.dns_resolver.resolve_a_path(domain_name)
                 except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                     print(f"{domain_name} not resolved...")
                     continue
@@ -120,7 +122,7 @@ class DatabaseEntitiesCompleter:
                     continue
                 print(f"--> Landed on: {result.url}")
                 server_entity = helper_web_server.insert(result.server)
-                helper_web_site_lands.insert(wsla.web_site, https, server_entity, result.url.is_https())
+                helper_web_site_lands.insert(wsla.web_site, https, result.url, server_entity)
                 wsla.delete_instance()
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
@@ -130,9 +132,8 @@ class DatabaseEntitiesCompleter:
         print(f"\n\nSTART UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
         with db.atomic():
             for i, swa in enumerate(swas):
-                is_https = bool(swa.https)
-                url = Url(swa.web_site)
-                if is_https:
+                url = Url(swa.web_site.url.string)
+                if swa.https:
                     scheme_url = url.https()
                 else:
                     scheme_url = url.http()
@@ -142,16 +143,19 @@ class DatabaseEntitiesCompleter:
                 except selenium.common.exceptions.WebDriverException:
                     print(f"--> Can't resolve scripts...")
                     continue
-                for script in scripts:
+                if len(scripts) == 0:
+                    print(f"--> Url doesn't provide main frame scripts")
+                for j, script in enumerate(scripts):
                     url_script = Url(script.src)
-                    scheme_url_script = SchemeUrl(script.src)
                     se = helper_script.insert(script.src)
-                    helper_script_withdraw.insert(swa.web_site, se, scheme_url_script.is_https(), script.integrity)
+                    helper_script_withdraw.insert(swa.web_site, se, swa.https, script.integrity)
                     # completing script site - server
                     script_site_entity = helper_script_site.insert(url_script)
+                    helper_script_hosted_on.insert(se, script_site_entity)
                     helper_script_site_lands.insert(script_site_entity, True, None, None)
                     helper_script_site_lands.insert(script_site_entity, False, None, None)
-                    # TODO: manca effettivo landing
+                    print(f"--> script[{j+1}/{len(scripts)}]: integrity={script.integrity}, src={script.src}")
+                    # TODO: manca effettivo landing che viene fatto successivamente
                 swa.delete_instance()
         print(f"END UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
 
@@ -161,17 +165,16 @@ class DatabaseEntitiesCompleter:
         print(f"\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
         with db.atomic():
             for i, ssla in enumerate(sslas):
-                site = Url(ssla.script_site)
-                https = bool(ssla.starting_https)
-                print(f"association[{i+1}/{len(sslas)}]: scheme={https}, url={site}")
+                site = Url(ssla.script_site.url.string)
+                print(f"association[{i+1}/{len(sslas)}]: scheme={string_utils.stamp_https_from_bool(ssla.starting_https)}, url={site}")
                 try:
-                    result = self.resolvers_wrapper.landing_resolver.do_single_request(site, https)
+                    result = self.resolvers_wrapper.landing_resolver.do_single_request(site, ssla.starting_https)
                 except Exception:
                     print(f"--> Can't resolve landing...")
                     continue
                 print(f"--> Landed on: {result.url}")
                 server_entity = helper_script_server.insert(result.server)
-                helper_script_site_lands.insert(ssla.script_site, https, server_entity, result.url.is_https())
+                helper_script_site_lands.insert(ssla.script_site, ssla.starting_https, result.url, server_entity)
                 ssla.delete_instance()
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
 
@@ -231,6 +234,8 @@ class DatabaseEntitiesCompleter:
                     ase = helper_autonomous_system.insert(entry)
                     helper_network_numbers.insert(irte, ase)
 
+                    iada.ip_range_tsv = irte
+
                     ase_dict[ase.number] = ase
                 else:
                     ase = helper_autonomous_system.get_of_entity_ip_range_tsv(ip_range_tsv_entity)
@@ -269,7 +274,8 @@ class DatabaseEntitiesCompleter:
                     re = helper_rov.insert(row)
                     ase = ase_dict[as_number]
                     helper_prefixes_table.insert(irre, re, ase)
-                    q = IpAddressDependsAssociation.update(ip_range_rov=irre)\
+                    q = IpAddressDependsAssociation\
+                        .update(ip_range_tsv=ip_address_depends_dict[ip_address].ip_range_tsv, ip_range_rov=irre)\
                         .where(IpAddressDependsAssociation.ip_address == ip_address_depends_dict[ip_address].ip_address)
                     q.execute()
             print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")

@@ -1,11 +1,7 @@
 import ipaddress
 from typing import Tuple, List
-
 from entities.SchemeUrl import SchemeUrl
 from entities.Url import Url
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
-from exceptions.InvalidUrlError import InvalidUrlError
-from utils import domain_name_utils, url_utils
 import os
 from pathlib import Path
 import requests

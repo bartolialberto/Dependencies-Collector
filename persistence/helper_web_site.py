@@ -1,12 +1,10 @@
 from typing import Set
 from peewee import DoesNotExist
-
 from entities.Url import Url
-from exceptions.InvalidUrlError import InvalidUrlError
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_url
 from persistence.BaseModel import WebSiteEntity, ScriptServerEntity, ScriptSiteLandsAssociation, \
-    ScriptHostedOnAssociation, ScriptWithdrawAssociation, WebServerEntity, WebSiteLandsAssociation
-from utils import url_utils
+    ScriptHostedOnAssociation, ScriptWithdrawAssociation, WebServerEntity, WebSiteLandsAssociation, ZoneEntity
 
 
 def insert(url: Url) -> WebSiteEntity:
@@ -44,6 +42,18 @@ def get_all_from_entity_web_server(wse: WebServerEntity) -> Set[WebSiteEntity]:
     for row in query:
         result.add(row.web_site)
     return result
+
+
+def get_of(wse: WebServerEntity) -> Set[WebSiteEntity]:
+    query = WebSiteLandsAssociation.select()\
+        .where(WebSiteLandsAssociation.web_server == wse)
+    result = set()
+    for row in query:
+        result.add(row.web_site)
+    if len(result) == 0:
+        raise NoDisposableRowsError
+    else:
+        return result
 
 
 def get_everyone() -> Set[WebSiteEntity]:

@@ -39,19 +39,6 @@ def parse_file_path(string: str) -> Tuple[str, str]:
     return filename, file_extension
 
 
-def parse_file_extension(string: str) -> str:   # with the dot
-    """
-    Given a path return the extension of the file with the starting dot. In any other case returns ''.
-
-    :param string: The path.
-    :type string: str
-    :return: The extension with the starting dot. '' is returned if there is not valid file pointed by the string path.
-    :rtype: str
-    """
-    filename, file_extension = parse_file_path(string)
-    return file_extension
-
-
 def search_for_file_type_in_subdirectory(subdirectory_name: str, extension: str, project_root_directory=Path.cwd()) -> List[Path]:   # extension with point
     """
     Given (the correct) path of the project root directory (PRD), this method searches for files of a certain extension

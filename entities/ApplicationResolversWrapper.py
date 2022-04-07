@@ -176,7 +176,7 @@ class ApplicationResolversWrapper:
             self.web_site_script_dependencies = self.do_script_dependencies_resolving()
 
             # extracting
-            self.script_script_site_dependencies, script_sites = self._extract_script_hosting_dependencies()
+            self.script_script_site_dependencies, script_sites = self.extract_script_hosting_dependencies()
 
             self.landing_script_sites_results = self.do_script_site_landing_resolving(script_sites)
 
@@ -230,7 +230,7 @@ class ApplicationResolversWrapper:
         results = self.landing_resolver.resolve_sites(web_sites)
         for web_site in results.keys():
             self.error_logger.add_entries(results[web_site].error_logs)
-        print(f"END WEB SITE LANDING RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END WEB SITE LANDING RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
     def do_script_site_landing_resolving(self, script_sites: Set[Url]) -> Dict[Url, LandingSiteResult]:
@@ -247,7 +247,7 @@ class ApplicationResolversWrapper:
         results = self.landing_resolver.resolve_sites(script_sites)
         for script_site in results.keys():
             self.error_logger.add_entries(results[script_site].error_logs)
-        print(f"END SCRIPT SITE LANDING RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END SCRIPT SITE LANDING RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
     def do_mail_servers_resolving(self, mail_domains: List[DomainName]) -> MultipleMailDomainResolvingResult:
@@ -263,7 +263,7 @@ class ApplicationResolversWrapper:
         start_execution_time = datetime.now()
         results = self.dns_resolver.resolve_multiple_mail_domains(mail_domains)
         self.error_logger.add_entries(results.error_logs)
-        print(f"END MAIL DOMAINS RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END MAIL DOMAINS RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
     def do_dns_resolving(self, domain_names: List[DomainName]) -> MultipleDnsZoneDependenciesResult:
@@ -280,7 +280,7 @@ class ApplicationResolversWrapper:
         self.dns_resolver.cache.take_temp_snapshot()
         results = self.dns_resolver.resolve_multiple_domains_dependencies(domain_names)
         self.error_logger.add_entries(results.error_logs)
-        print(f"END DNS DEPENDENCIES RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END DNS DEPENDENCIES RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
     def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[Url, LandingSiteResult], do_mail_domains: bool) -> AutonomousSystemResolutionResults:
@@ -396,10 +396,10 @@ class ApplicationResolversWrapper:
                     pass
         else:
             pass
-        print(f"END IP-AS RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END IP-AS RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
-    def do_script_dependencies_resolving(self) -> Dict[str, ScriptDependenciesResult]:
+    def do_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
         """
         This method executes web sites script dependencies resolving.
         It takes the landing web site resolution results saved in this object.
@@ -472,7 +472,7 @@ class ApplicationResolversWrapper:
                     self.error_logger.add_entry(ErrorLog(e, http_result.url.string, str(e)))
                 script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, http_scripts)
             print('')
-        print(f"END SCRIPT DEPENDENCIES RESOLVER ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END SCRIPT DEPENDENCIES RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return script_dependencies_result
 
     def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping, sequential_selenium_exceptions_threshold=10) -> ASResolverResultForROVPageScraping:
@@ -518,7 +518,7 @@ class ApplicationResolversWrapper:
                     print(f"!!! {str(exc)} !!!")
                     reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
                     self.error_logger.add_entry(ErrorLog(exc, server, str(exc)))
-        print(f"END ROV PAGE SCRAPING ({datetime_utils.compute_delta_and_print(start_execution_time)})")
+        print(f"END ROV PAGE SCRAPING ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return reformat
 
     def _extract_domain_names_from_preamble(self, mail_domains: List[DomainName]) -> List[DomainName]:
@@ -576,7 +576,7 @@ class ApplicationResolversWrapper:
                 list_utils.append_with_no_duplicates(domain_names, http_result.server)
         return domain_names
 
-    def _extract_script_hosting_dependencies(self) -> Tuple[Dict[MainFrameScript, Set[Url]], Set[Url]]:
+    def extract_script_hosting_dependencies(self) -> Tuple[Dict[MainFrameScript, Set[Url]], Set[Url]]:
         """
         This method extracts the hosting association from each script.
         It means it extracts script sites from scripts and the binding between such script and such script sites.

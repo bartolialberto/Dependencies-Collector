@@ -12,43 +12,6 @@ def get_local_ip() -> str:
     return socket.gethostbyname(socket.gethostname())
 
 
-def is_ip_address(string: str) -> bool:
-    """
-    Control if a string is a valid ip address.
-
-    :param string: A string.
-    :type string: str
-    :return: True or False.
-    :rtype: bool
-    """
-    try:
-        ipaddress.ip_address(string)
-        return True
-    except ValueError:
-        return False
-
-
-def is_in_ip_range(ip: ipaddress.IPv4Address, start_ip_range: ipaddress.IPv4Address, end_ip_range: ipaddress.IPv4Address) -> bool:
-    """
-    Given a range of ip address, it controls if another ip address is contained in such range.
-    Remember this is not commutative: if an address is contained between address A (start_ip_range) and address B
-    (end_ip_range), it is not contained between address B (end_ip_range) and address A (start_ip_range).
-
-    :param ip: Ip address to query in the range.
-    :type ip: ipaddress.IPv4Address
-    :param start_ip_range: Start of the range.
-    :type start_ip_range: ipaddress.IPv4Address
-    :param end_ip_range: End of the range.
-    :type end_ip_range: ipaddress.IPv4Address
-    :return: True or False.
-    :rtype: bool
-    """
-    if start_ip_range <= ip <= end_ip_range:
-        return True
-    else:
-        return False
-
-
 def is_in_network(ip: ipaddress.IPv4Address, network: ipaddress.IPv4Network) -> bool:
     """
     Given a network, it controls if a certain ip address is contained in such network.
