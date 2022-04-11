@@ -259,7 +259,6 @@ class WebSiteLandsAssociation(BaseModel):
 
     class Meta:
         db_table = 'web_site_lands'
-        # primary_key = CompositeKey('web_site', 'web_server', 'starting_https')
         primary_key = CompositeKey('web_site', 'starting_https')
 
 
@@ -346,7 +345,7 @@ class ScriptHostedOnAssociation(BaseModel):
 
     class Meta:
         db_table = 'script_hosted_on'
-        primary_key = CompositeKey('script_site', 'script')
+        primary_key = CompositeKey('script')
 
 
 class ScriptSiteLandsAssociation(BaseModel):
@@ -361,7 +360,6 @@ class ScriptSiteLandsAssociation(BaseModel):
 
     class Meta:
         db_table = 'script_site_lands'
-        # primary_key = CompositeKey('script_site', 'script_server', 'starting_https')
         primary_key = CompositeKey('script_site', 'starting_https')
 
 
@@ -374,10 +372,11 @@ class AccessAssociation(BaseModel):
 
     class Meta:
         db_table = 'access'
+        primary_key = CompositeKey('domain_name', 'ip_address')
 
 
 class IpAddressDependsAssociation(BaseModel):
-    ip_address = ForeignKeyField(IpAddressEntity, primary_key=True)
+    ip_address = ForeignKeyField(IpAddressEntity)
     ip_network = ForeignKeyField(IpNetworkEntity)
     ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, null=True)
     ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
@@ -387,7 +386,7 @@ class IpAddressDependsAssociation(BaseModel):
 
     class Meta:
         db_table = 'ip_address_depends'
-        # primary_key = CompositeKey('ip_address', 'ip_network', 'ip_range_tsv', 'ip_range_rov')
+        primary_key = CompositeKey('ip_address')
 
 
 class PrefixesTableAssociation(BaseModel):
@@ -400,7 +399,7 @@ class PrefixesTableAssociation(BaseModel):
 
     class Meta:
         db_table = 'prefixes_table'
-        primary_key = CompositeKey('ip_range_rov', 'rov', 'autonomous_system')
+        primary_key = CompositeKey('ip_range_rov')
 
 
 class NetworkNumbersAssociation(BaseModel):
@@ -412,6 +411,7 @@ class NetworkNumbersAssociation(BaseModel):
 
     class Meta:
         db_table = 'network_numbers'
+        primary_key = CompositeKey('ip_range_tsv')
 
 
 class WebSiteDomainNameAssociation(BaseModel):

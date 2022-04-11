@@ -79,17 +79,29 @@ def do_query_2() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
                 raise
             #
             direct_zones_of_web_site = set()
-            try:
-                ze = helper_zone.get_direct_zone_of(https_web_server_entity.name)
-                direct_zones_of_web_site.add(ze)
-            except DoesNotExist:
-                pass          # could be a TLD that are not considered
-            if http_web_server_entity != https_web_server_entity:
+            if https_web_server_entity is None:
+                pass
+            else:
                 try:
-                    ze = helper_zone.get_direct_zone_of(http_web_server_entity.name)
-                    direct_zones_of_web_site.add(ze)
+                    ze = helper_zone.get_direct_zone_of(https_web_server_entity.name)
+                    if ze is None:
+                        pass
+                    else:
+                        direct_zones_of_web_site.add(ze)
                 except DoesNotExist:
-                    pass      # could be a TLD that are not considered
+                    raise
+            if http_web_server_entity != https_web_server_entity:
+                if http_web_server_entity is None:
+                    pass
+                else:
+                    try:
+                        ze = helper_zone.get_direct_zone_of(http_web_server_entity.name)
+                        if ze is None:
+                            pass
+                        else:
+                            direct_zones_of_web_site.add(ze)
+                    except DoesNotExist:
+                        raise
             try:
                 ze = helper_zone.get_direct_zone_of(web_site_domain_name_entity)
                 direct_zones_of_web_site.add(ze)
@@ -115,15 +127,21 @@ def do_query_3() -> List[Tuple[MailDomainEntity, ZoneEntity]]:
             direct_zones_of_mail_domain = set()
             try:
                 ze = helper_zone.get_direct_zone_of(mail_domain_entity.name)
-                direct_zones_of_mail_domain.add(ze)
+                if ze is None:
+                    pass
+                else:
+                    direct_zones_of_mail_domain.add(ze)
             except DoesNotExist:
-                pass
+                raise
             for mail_server_entity in mail_server_entities_of_mail_domain:
                 try:
                     ze = helper_zone.get_direct_zone_of(mail_server_entity.name)
-                    direct_zones_of_mail_domain.add(ze)
+                    if ze is None:
+                        pass
+                    else:
+                        direct_zones_of_mail_domain.add(ze)
                 except DoesNotExist:
-                    pass
+                    raise
             for ze in direct_zones_of_mail_domain:
                 result.append((mail_domain_entity, ze))
     return result
@@ -143,19 +161,25 @@ def do_query_4() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
                 raise
             #
             zone_dependencies_of_web_site = set()
-            try:
-                zes = helper_zone.get_zone_dependencies_of_entity_domain_name(https_web_server_entity.name)
-                for ze in zes:
-                    zone_dependencies_of_web_site.add(ze)
-            except DoesNotExist:
+            if https_web_server_entity is None:
                 pass
-            if http_web_server_entity != https_web_server_entity:
+            else:
                 try:
-                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(http_web_server_entity.name)
+                    zes = helper_zone.get_zone_dependencies_of_entity_domain_name(https_web_server_entity.name)
                     for ze in zes:
                         zone_dependencies_of_web_site.add(ze)
                 except DoesNotExist:
                     pass
+            if http_web_server_entity != https_web_server_entity:
+                if http_web_server_entity is None:
+                    pass
+                else:
+                    try:
+                        zes = helper_zone.get_zone_dependencies_of_entity_domain_name(http_web_server_entity.name)
+                        for ze in zes:
+                            zone_dependencies_of_web_site.add(ze)
+                    except DoesNotExist:
+                        pass
             try:
                 zes = helper_zone.get_zone_dependencies_of_entity_domain_name(web_site_domain_name_entity)
                 for ze in zes:

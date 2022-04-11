@@ -111,7 +111,7 @@ class DatabaseEntitiesCompleter:
         print(f"\n\nSTART UNRESOLVED WEB SITES LANDING RESOLUTION")
         with db.atomic():
             for i, wsla in enumerate(wslas):
-                site = Url(wsla.web_site)
+                site = Url(wsla.web_site.url.string)
                 https = bool(wsla.starting_https)
                 print(f"association[{i+1}/{len(wslas)}]: scheme={https}, url={site}")
                 try:

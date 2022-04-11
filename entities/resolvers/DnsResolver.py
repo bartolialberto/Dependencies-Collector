@@ -4,7 +4,7 @@ from dns.name import Name
 from entities.DomainName import DomainName
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.paths.APath import APath
-from entities.paths.CNAMEChain import CNAMEPath
+from entities.paths.CNAMEPath import CNAMEPath
 from entities.paths.Path import Path
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
@@ -201,7 +201,6 @@ class DnsResolver:
                     print(f"!!! {str(e)} ==> mail domain {mail_domain} is unresolved.!!!")
                     result.add_unresolved_mail_server_access(mail_server)
                     continue
-                    # TODO: should propagate to log in the error_logger
                 result.add_mail_server_access(a_path)
         return result
 
@@ -244,8 +243,6 @@ class DnsResolver:
         error_logs = list()
         start_cache_length = len(self.cache.cache)
         elaboration_domains = domain.parse_subdomains(self.consider_tld, self.consider_tld, True)
-        if len(elaboration_domains) == 0:
-            raise InvalidDomainNameError(domain.string)  # TODO: giusto???
         zone_dependencies = set()  # si va a popolare con ogni iterazione
         cname_exception = False
         for_direct_zones = [domain]

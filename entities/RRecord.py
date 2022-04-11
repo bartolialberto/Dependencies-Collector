@@ -114,43 +114,6 @@ class RRecord:
         return hash((self.name, self.type))
 
     @staticmethod
-    def parse_mail_server_from_value(value: str) -> str:
-        """
-        This static method parse the mail server from the value string belonging in the values field of a RR.
-
-        :param value: A string.
-        :type value: str
-        :return: The mail server parsed.
-        :rtype: str
-        """
-        split_value = value.split(' ')
-        return split_value[1]       # TODO: se Ã¨ un IP? Da gestire
-
-    @staticmethod
-    def construct_cname_rrs_from_list_access_path(domain_names: List[str]) -> List['RRecord']:      # FORWARD DECLARATIONS (REFERENCES)
-        """
-        This method takes a list of strings that should represents an access path or a name resolution path, and returns
-        such list as a path of CNAME RRs.
-
-        :param domain_names: An access path or name resolution path of domain names.
-        :type domain_names: List[str]
-        :return: A list of CNAME RRs.
-        :rtype: List[RRecord]
-        """
-        if len(domain_names) == 0:
-            raise ValueError
-        elif len(domain_names) == 1:
-            raise ValueError
-        else:
-            result = list()
-            prev_domain_name = domain_names[0]
-            for domain_name in domain_names[1:]:
-                result.append(RRecord(DomainName(prev_domain_name), TypesRR.CNAME, [domain_name]))
-                prev_domain_name = domain_name
-
-            return result
-
-    @staticmethod
     def construct_objects(type_rr: TypesRR, values: List[str]) -> List[DomainName or IPv4Address]:
         if type_rr == TypesRR.A:
             obj_values = list()

@@ -402,13 +402,11 @@ class ApplicationResolversWrapper:
         print(f"END IP-AS RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
 
-
     def do_set_None_for_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
         script_dependencies_result = dict()
         for website in self.landing_web_sites_results.keys():
             script_dependencies_result[website] = ScriptDependenciesResult(None, None)
         return script_dependencies_result
-
 
     def do_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
         """
@@ -426,53 +424,25 @@ class ApplicationResolversWrapper:
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
 
-            if https_result is None and http_result is None:
-                print(f"!!! Neither HTTPS nor HTTP landing possible for: {website} !!!")
-                script_dependencies_result[website] = ScriptDependenciesResult(None, None)
-            elif https_result is None and http_result is not None:
-                # HTTPS
-                print(f"******* via HTTPS *******")
+            print(f"******* via HTTPS *******")
+            if https_result is None:
                 print(f"--> No landing possible")
-                # HTTP
-                print(f"******* via HTTP *******")
-                try:
-                    http_scripts = self.script_resolver.search_script_application_dependencies(http_result.url)
-                    for i, script in enumerate(http_scripts):
-                        print(f"script[{i+1}/{len(http_scripts)}]: integrity={script.integrity}, src={script.src}")
-                    script_dependencies_result[website] = ScriptDependenciesResult(None, http_scripts)
-                except selenium.common.exceptions.WebDriverException as e:
-                    print(f"!!! {str(e)} !!!")
-                    http_scripts = None
-                    self.error_logger.add_entry(ErrorLog(e, http_result.url.string, str(e)))
-            elif http_result is None and https_result is not None:
-                # HTTP
-                print(f"******* via HTTP *******")
-                print(f"--> No landing possible")
-                # HTTPS
-                print(f"******* via HTTPS *******")
+                https_scripts = None
+            else:
                 try:
                     https_scripts = self.script_resolver.search_script_application_dependencies(https_result.url)
                     for i, script in enumerate(https_scripts):
-                        print(f"script[{i+1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
+                        print(f"script[{i + 1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
                     script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, None)
                 except selenium.common.exceptions.WebDriverException as e:
                     print(f"!!! {str(e)} !!!")
                     https_scripts = None
                     self.error_logger.add_entry(ErrorLog(e, https_result.url.string, str(e)))
+            print(f"******* via HTTP *******")
+            if http_result is None:
+                print(f"--> No landing possible")
+                http_scripts = None
             else:
-                # HTTPS
-                print(f"******* via HTTPS *******")
-                try:
-                    https_scripts = self.script_resolver.search_script_application_dependencies(https_result.url)
-                    for i, script in enumerate(https_scripts):
-                        print(f"script[{i+1}/{len(https_scripts)}]: integrity={script.integrity}, src={script.src}")
-                except selenium.common.exceptions.WebDriverException as e:
-                    print(f"!!! {str(e)} !!!")
-                    https_scripts = None
-                    self.error_logger.add_entry(ErrorLog(e, https_result.url.string, str(e)))
-
-                # HTTP
-                print(f"******* via HTTP *******")
                 try:
                     http_scripts = self.script_resolver.search_script_application_dependencies(http_result.url)
                     for i, script in enumerate(http_scripts):
@@ -481,12 +451,12 @@ class ApplicationResolversWrapper:
                     print(f"!!! {str(e)} !!!")
                     http_scripts = None
                     self.error_logger.add_entry(ErrorLog(e, http_result.url.string, str(e)))
-                script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, http_scripts)
+            script_dependencies_result[website] = ScriptDependenciesResult(https_scripts, http_scripts)
             print('')
         print(f"END SCRIPT DEPENDENCIES RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return script_dependencies_result
 
-    def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping, sequential_selenium_exceptions_threshold=10) -> ASResolverResultForROVPageScraping:
+    def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping) -> ASResolverResultForROVPageScraping:
         """
         This method executes the ROVPage scraping from the IpAsDatabase resolution results (reformatted).
         Empirically it has been noticed that selenium raises a WebDriverException (after a long timer) sometimes and
@@ -510,13 +480,13 @@ class ApplicationResolversWrapper:
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.TimeoutException) as exc:
                 print(f"!!! {str(exc)} !!!")
                 for ip_address in reformat.results[as_number].keys():
-                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
             except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError) as exc:
                 print(f"!!! {str(exc)} !!!")
                 for ip_address in reformat.results[as_number].keys():
-                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)
                 self.error_logger.add_entry(ErrorLog(exc, "AS"+str(as_number), str(exc)))
                 continue
             for ip_address in reformat.results[as_number].keys():
@@ -527,7 +497,7 @@ class ApplicationResolversWrapper:
                     print(f"--> for {ip_address}: ({server}) found row: {str(row)}")
                 except (TableNotPresentError, TableEmptyError, NetworkNotFoundError) as exc:
                     print(f"!!! {str(exc)} !!!")
-                    reformat.results[as_number][ip_address].insert_rov_entry(None)      # TODO: dovrebbero essere diversi
+                    reformat.results[as_number][ip_address].insert_rov_entry(None)
                     self.error_logger.add_entry(ErrorLog(exc, server, str(exc)))
         print(f"END ROV PAGE SCRAPING ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return reformat
@@ -545,26 +515,21 @@ class ApplicationResolversWrapper:
         domain_names = set()
         for website in self.landing_web_sites_results.keys():
             # adding domain names from web sites
-            # list_utils.append_with_no_duplicates(domain_names, website.domain_name())
             domain_names.add(website.domain_name())
             # adding domain names from web servers
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
             if https_result is not None:
-                # list_utils.append_with_no_duplicates(domain_names, https_result.server)
                 domain_names.add(https_result.server)
             if http_result is not None:
-                # list_utils.append_with_no_duplicates(domain_names, http_result.server)
                 domain_names.add(http_result.server)
         # adding mail domains
         for mail_domain in mail_domains:
-            # list_utils.append_with_no_duplicates(domain_names, mail_domain)
             domain_names.add(mail_domain)
         # adding mail servers
         for mail_domain in self.mail_domains_results.dependencies.keys():
             if self.mail_domains_results.dependencies[mail_domain] is not None:
                 for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers_paths.keys():
-                    # list_utils.append_with_no_duplicates(domain_names, mail_server)
                     domain_names.add(mail_server)
         # return domain_names
         return list(domain_names)

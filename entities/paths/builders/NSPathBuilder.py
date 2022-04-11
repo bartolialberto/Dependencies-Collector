@@ -1,6 +1,6 @@
 from asyncio import InvalidStateError
 
-from entities.paths.CNAMEChain import CNAMEPath
+from entities.paths.CNAMEPath import CNAMEPath
 from entities.paths.NSPath import NSPath
 from entities.paths.Path import Path
 from entities.RRecord import RRecord

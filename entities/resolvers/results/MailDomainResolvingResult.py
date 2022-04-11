@@ -10,7 +10,6 @@ from exceptions.NoAvailablePathError import NoAvailablePathError
 from utils import domain_name_utils
 
 
-# TODO: docs
 class MailDomainResolvingResult:
     """
     This class represents the result of mail server dependencies resolving.

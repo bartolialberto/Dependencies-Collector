@@ -34,7 +34,6 @@ def get_everyone() -> Set[IpNetworkEntity]:
 
 
 def get_of(iae: IpAddressEntity) -> IpNetworkEntity:
-    # TODO: testare... Ha l'attributo ip_network??
     try:
         iada = IpAddressDependsAssociation.get(IpAddressDependsAssociation.ip_address == iae)
         return iada.ip_network

@@ -7,7 +7,6 @@ from persistence import helper_application_queries
 from utils import file_utils, csv_utils, datetime_utils
 
 
-# TODO: eccezioni nelle query...
 class ApplicationQueryCSVExportCase(unittest.TestCase):
     @staticmethod
     def write_csv_file(file: Path, separator: str, rows: List[List[str]]) -> None:
@@ -40,7 +39,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
         result = helper_application_queries.do_query_1()
-        rows = ["zone_name", "#nameservers", "#networks", "#as"]
+        rows = [["zone_name", "#nameservers", "#networks", "#as"]]
         for tupl in result:
             rows.append([tupl[0].name, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
         print(f"Written {len(rows)} rows.")
@@ -57,7 +56,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY DIRECT ZONES OF ALL WEB SITES AND ASSOCIATED WEB SERVERS")
         result = helper_application_queries.do_query_2()
-        rows = ['web_site', 'zone_name']
+        rows = [['web_site', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].url.string, tupl[1].name])
         print(f"Written {len(rows)} rows.")
@@ -74,7 +73,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY DIRECT ZONES OF ALL MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
         result = helper_application_queries.do_query_3()
-        rows = ['mail_domain', 'zone_name']
+        rows = [['mail_domain', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].name.string, tupl[1].name])
         print(f"Written {len(rows)} rows.")
@@ -91,7 +90,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY ZONE DEPENDENCIES OF WEB SITES AND ASSOCIATED WEB SERVERS")
         result = helper_application_queries.do_query_4()
-        rows = ['web_site', 'zone_name']
+        rows = [['web_site', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].url.string, tupl[1].name])
         print(f"Written {len(rows)} rows.")
@@ -108,7 +107,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY ZONE DEPENDENCIES OF MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
         result = helper_application_queries.do_query_5()
-        rows = ['web_site', 'zone_name']
+        rows = [['mail_domain', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].name.string, tupl[1].name])
         print(f"Written {len(rows)} rows.")
@@ -125,7 +124,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
         result = helper_application_queries.do_query_6()
-        rows = ['mail_domain', '#mailservers', '#networks', '#as']
+        rows = [['mail_domain', '#mailservers', '#networks', '#as']]
         for tupl in result:
             rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
         print(f"Written {len(rows)} rows.")
@@ -142,7 +141,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
         result = helper_application_queries.do_query_7()
-        rows = ['web_server', '#addresses', '#networks', '#as']
+        rows = [['web_server', '#addresses', '#networks', '#as']]
         for tupl in result:
             rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
         print(f"Written {len(rows)} rows.")
@@ -159,7 +158,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # QUERY
         print(f"--- QUERY NETWORKS DEPENDENCIES")
         result = helper_application_queries.do_query_8()
-        rows = ['network', 'as_number', 'as_description', '#belonging_webservers', '#belonging_mailservers', '#belonging_mailservers', '#zones_entirely_contained', '#website_directzones_entirely_contained', '#maildomain_directzones_entirely_contained', '#maildomain_directzone_entirely_contained']
+        rows = [['network', 'as_number', 'as_description', '#belonging_webservers', '#belonging_mailservers', '#belonging_mailservers', '#zones_entirely_contained', '#website_directzones_entirely_contained', '#maildomain_directzones_entirely_contained', '#maildomain_directzone_entirely_contained']]
         for tupl in result:
             rows.append([
                 tupl[0].compressed_notation,
