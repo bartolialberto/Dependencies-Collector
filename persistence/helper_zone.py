@@ -1,15 +1,11 @@
 from typing import Set, List, Tuple
-from peewee import DoesNotExist, fn
+from peewee import DoesNotExist
 from entities.DomainName import DomainName
-from entities.RRecord import RRecord
 from entities.Zone import Zone
-from entities.enums.TypesRR import TypesRR
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_name_server, helper_alias, helper_domain_name, helper_alias_to_zone, helper_paths
+from persistence import helper_alias, helper_domain_name, helper_alias_to_zone, helper_paths, helper_access
 from persistence.BaseModel import ZoneEntity, DomainNameDependenciesAssociation, ZoneLinksAssociation, \
     DirectZoneAssociation, NameServerEntity, ZoneComposedAssociation, DomainNameEntity
-from utils import domain_name_utils
 
 
 def insert(zone_name: DomainName) -> ZoneEntity:
@@ -18,9 +14,18 @@ def insert(zone_name: DomainName) -> ZoneEntity:
 
 
 def insert_zone_object(zone: Zone) -> ZoneEntity:
-    cname_chain, ze, mses = helper_paths.insert_ns_path(zone.name_path)
+    cname_chain, ze, nses = helper_paths.insert_ns_path(zone.name_path)
     for name_server_a_path in zone.name_servers:
         helper_paths.insert_a_path(name_server_a_path)
+    for name_server in zone.unresolved_name_servers.keys():
+        name_server_nse = None
+        for nse in nses:
+            if nse.name.string == name_server.string:
+                name_server_nse = nse
+        if name_server_nse is None:
+            raise ValueError
+        else:
+            helper_access.insert(name_server_nse.name, None)
     return ze
 
 
@@ -47,56 +52,6 @@ def __inner_resolve_zone_from_path(dne: DomainNameEntity, result: List[DomainNam
             return __inner_resolve_zone_from_path(alias_dne, result)
         except DoesNotExist:
             raise
-
-
-# TODO: TEST ULTERIORI
-def get_zone_object_from_zone_entity(ze: ZoneEntity) -> Zone:
-    try:
-        nses = helper_name_server.get_all_from_zone_name(ze.name)
-    except DoesNotExist:
-        raise
-    zone_name = ze.name
-    zone_name_servers = list(map(lambda nse: nse._second_component_._second_component_, nses))
-    zone_name_aliases = list()
-    zone_name_addresses = list()
-    for nse in nses:
-        try:
-            iaes, chain_dnes = helper_domain_name.resolve_a_path(nse.name, get_only_first_address=False)
-        except (DoesNotExist, NoAvailablePathError):
-            continue        # TODO
-        prev = nse.name._second_component_
-        for a_dne in chain_dnes[1:]:
-            zone_name_aliases.append(RRecord(prev, TypesRR.CNAME, a_dne.string))
-            prev = a_dne.string
-        ip_addresses = list(map(lambda iae: iae.exploded_notation, iaes))
-        zone_name_addresses.append(RRecord(nse.name._second_component_, TypesRR.A, ip_addresses))
-    return Zone(zone_name, zone_name_servers, zone_name_aliases, zone_name_addresses, list())
-
-
-def get_zone_object_from_zone_name(zone_name: str) -> Zone:
-    zn = domain_name_utils.standardize_for_application(zone_name)
-    try:
-        ze = get(zn)
-    except DoesNotExist:
-        raise
-    return get_zone_object_from_zone_entity(ze)
-
-
-def get_all_of_entity_name_server(nse: NameServerEntity) -> Set[ZoneEntity]:
-    query = ZoneComposedAssociation.select()\
-        .where(ZoneComposedAssociation.name_server == nse)
-    result = set()
-    for row in query:
-        result.add(row.zone)
-    return result
-
-
-def get_everyone_that_is_direct_zone() -> Set[ZoneEntity]:
-    result = set()
-    query = DirectZoneAssociation.select()
-    for row in query:
-        result.add(row.zone)
-    return result
 
 
 def get_everyone() -> Set[ZoneEntity]:
@@ -135,26 +90,6 @@ def get_zone_dependencies_of_zone_name(zone_name: DomainName) -> Set[ZoneEntity]
     for row in query:
         result.add(row.dependency)
     return result
-
-
-def get_direct_zone_object_of(domain_name_param: DomainNameEntity or DomainName or str) -> Zone:
-    if isinstance(domain_name_param, DomainNameEntity):
-        dne = domain_name_param
-    elif isinstance(domain_name_param, DomainName):
-        try:
-            dne = helper_domain_name.get(domain_name_param)
-        except DoesNotExist:
-            raise
-    else:
-        try:
-            dne = helper_domain_name.get(DomainName(domain_name_param))
-        except DoesNotExist:
-            raise
-    try:
-        dza = DirectZoneAssociation.get((DirectZoneAssociation.domain_name == dne) & (DirectZoneAssociation.zone.is_null(False)))
-    except DoesNotExist:
-        raise
-    return get_zone_object_from_zone_name(dza.zone.name)
 
 
 def get_direct_zone_of(dne: DomainNameEntity) -> ZoneEntity:

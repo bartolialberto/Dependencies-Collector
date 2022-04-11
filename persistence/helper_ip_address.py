@@ -1,24 +1,13 @@
 import ipaddress
 from typing import Set, List, Union
 from peewee import DoesNotExist
-
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_domain_name
-from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation, IpNetworkEntity, \
-    IpAddressDependsAssociation, AliasAssociation
+from persistence.BaseModel import IpAddressEntity, DomainNameEntity, AccessAssociation, AliasAssociation
 
 
-def insert(address_param: Union[str, ipaddress.IPv4Address]) -> IpAddressEntity:
-    address = None
-    if isinstance(address_param, ipaddress.IPv4Address):
-        address = address_param
-    else:
-        try:
-            address = ipaddress.IPv4Address(address_param)
-        except ValueError:
-            raise
-    iae, created = IpAddressEntity.get_or_create(exploded_notation=address.exploded)
+def insert(ip_address: ipaddress.IPv4Address) -> IpAddressEntity:
+    iae, created = IpAddressEntity.get_or_create(exploded_notation=ip_address.exploded)
     return iae
 
 
@@ -67,18 +56,6 @@ def get_all_of(dne: DomainNameEntity) -> Set[IpAddressEntity]:
     query = AccessAssociation.select()\
         .where((AccessAssociation.domain_name == dne) & (AccessAssociation.ip_address.is_null(False)))
     result = set()
-    for row in query:
-        result.add(row.ip_address)
-    if len(result) == 0:
-        raise NoDisposableRowsError
-    else:
-        return result
-
-
-def get_all_of_entity_network(ine: IpNetworkEntity) -> Set[IpAddressEntity]:
-    result = set()
-    query = IpAddressDependsAssociation.select()\
-        .where(IpAddressDependsAssociation.ip_network == ine)
     for row in query:
         result.add(row.ip_address)
     if len(result) == 0:

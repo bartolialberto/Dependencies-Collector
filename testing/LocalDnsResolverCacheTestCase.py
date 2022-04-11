@@ -1,20 +1,14 @@
 import unittest
+from entities.DomainName import DomainName
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
+from entities.RRecord import RRecord
+from entities.enums.TypesRR import TypesRR
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
-from exceptions.NoRecordInCacheError import NoRecordInCacheError
+from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
 from utils import file_utils
 
 
-# EXAMPLES (aliases path)
-# dns.unipd.it. --- alias --> ipdunivx.unipd.it. ---> IP ADDRESS
-# www.units.it --- alias --> units09.cineca.it. ---> IP ADDRESS
-# only A resource record: dns.cnr.it
-# only NS resource record: com
-# EXAMPLES (zones from nameserver)
-# nameserver.cnr.it. nameserver of 5 zones: it., nic.it., cnr.it., ge.cnr.it., ieiit.cnr.it.
-# e.dns.br. nameserver of 2 zones: br., dns.br.
-# a1-67.akam.net. nameserver of 1 zone: akam.net.
 class LocalDnsResolverCacheTestCase(unittest.TestCase):
     cache_filename_in_output_folder = None
     cache = None
@@ -27,67 +21,39 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         PRD = file_utils.get_project_root_directory()
         cls.cache = LocalDnsResolverCache()
         try:
-            cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder+'.csv', take_snapshot=False, project_root_directory=PRD)
+            cls.cache.load_csv_from_output_folder(cls.cache_filename_in_output_folder, take_snapshot=False, project_root_directory=PRD)
         except FilenameNotFoundError as e:
             print(f"!!! {str(e)} !!!")
             exit(-1)
         print(f"STARTING CACHE WITH {len(cls.cache.cache)} RECORDS")
 
     def test_1_resolving_path(self):
+        print(f"\n------- [1] START PATH RESOLVING TEST -------")
         # PARAMETER
-        domain_name = 'www.units.it.'
-        as_string = True
+        domain_name = DomainName('www.units.it.')
+        type_rr = TypesRR.A
         # TEST
         print(f"\n------- [1] START PATH RESOLVING -------")
         print(f"Parameter: domain name: {domain_name}")
         try:
-            rr_a, aliases = self.cache.resolve_path(domain_name, TypesRR.A, as_string=as_string)
-            print(f"as_string is set to: {as_string}")
-            print(f"Aliases found through access path:")
-            if as_string:
-                for i, name in enumerate(aliases):
-                    print(f"alias[{i+1}] = {name}")
-            else:
-                for i, rr in enumerate(aliases):
-                    print(f"alias[{i + 1}] = (name={rr._second_component_}, first_value={rr.get_first_value()})")
-            print(f"Resolved RR:")
-            print(f"(name={rr_a._second_component_}, values={rr_a.values})")
-        except NoAvailablePathError:
-            print(f"No path for '{domain_name}'")
-        print(f"------- [1] END PATH RESOLVING -------")
+            path = self.cache.resolve_path(domain_name, type_rr)
+            print(f"{path.stamp()}")
+        except (NoAvailablePathError, ReachedMaximumRecursivePathThresholdError) as e:
+            self.fail(f"!!! {str(e)} !!!")
+        print(f"------- [1] END PATH RESOLVING TEST -------")
 
-    def test_2_resolving_zones_from_nameserver(self):
-        print(f"\n------- [2] START ZONE RESOLVING from nameserver -------")
-        # PARAMETER
-        nameserver = 'nameserver.cnr.it.'
-        # TEST
-        print(f"Parameter: name server: {nameserver}")
-        try:
-            zone_names = self.cache.resolve_zones_from_nameserver(nameserver)
-            for i, zone_name in enumerate(zone_names):
-                print(f"[{i+1}] = {zone_name}")
-        except NoRecordInCacheError:
-            print(f"No zone found from nameserver '{nameserver}'")
-        print(f"------- [2] END ZONE RESOLVING -------")
-
-    def test_3_resolving_nameserver_from_zone_object(self):
-        print(f"\n------- [3] START NAMESERVER FROM ZONE NAME TEST -------")
-        # PARAMETER
-        zone_name = 'dei.unipd.it'
-        # TEST
-        print(f"Parameter: zone name = {zone_name}")
-        try:
-            zone, rr_cnames = self.cache.resolve_zone_object_from_zone_name(zone_name)
-            if len(rr_cnames) == 0:
-                pass
-            else:
-                print(f"Zone name resolution path: {zone.stamp_zone_name_resolution_path()}")
-            for i, nameserver in enumerate(zone.nameservers):
-                rr = zone.resolve_name_server_access_path(nameserver)
-                print(f"for nameserver[{i+1}]: {nameserver}\tresolved = {rr.values}")
-        except (NoAvailablePathError, NoRecordInCacheError) as e:
-            print(f"!!! {str(e)} !!!")
-        print(f"------- [3] END NAMESERVER FROM ZONE NAME TEST -------")
+    def test_2_close_graph_cycling(self):
+        print(f"\n------- [2] START CLOSE GRAPH CYCLING TEST -------")
+        start = DomainName('A')
+        rr1 = RRecord(start, TypesRR.CNAME, ['B'])
+        rr2 = RRecord(DomainName('B'), TypesRR.CNAME, ['C'])
+        rr3 = RRecord(DomainName('C'), TypesRR.CNAME, [start.string])
+        self.cache.add_entries([rr1, rr2, rr3])
+        with self.assertRaises(ReachedMaximumRecursivePathThresholdError):
+            path = self.cache.resolve_path(start, TypesRR.A)
+            print(f"Test1")
+        print(f"Test2")
+        print(f"------- [2] END CLOSE GRAPH CYCLING TEST -------")
 
 
 if __name__ == '__main__':

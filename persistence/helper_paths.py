@@ -7,7 +7,8 @@ from entities.paths.NSPath import NSPath
 from persistence import helper_domain_name, helper_alias, helper_ip_address, helper_access, helper_mail_domain, \
     helper_mail_server, helper_mail_domain_composed, helper_zone, helper_name_server, helper_zone_composed, \
     helper_alias_to_zone
-from persistence.BaseModel import DomainNameEntity, IpAddressEntity, MailDomainEntity, MailServerEntity, ZoneEntity
+from persistence.BaseModel import DomainNameEntity, IpAddressEntity, MailDomainEntity, MailServerEntity, ZoneEntity, \
+    NameServerEntity
 
 
 def insert_a_path(a_path: APath) -> Tuple[List[DomainNameEntity], Set[IpAddressEntity]]:
@@ -76,7 +77,7 @@ def insert_mx_path(mx_path: MXPath) -> Tuple[List[DomainNameEntity], MailDomainE
     return aliases_chain, mail_domain_entity, mail_servers
 
 
-def insert_ns_path(ns_path: NSPath) -> Tuple[List[DomainNameEntity], ZoneEntity, Set[MailServerEntity]]:
+def insert_ns_path(ns_path: NSPath) -> Tuple[List[DomainNameEntity], ZoneEntity, Set[NameServerEntity]]:
     aliases_chain = list()
     name_servers = set()
     last_domain_entity = None

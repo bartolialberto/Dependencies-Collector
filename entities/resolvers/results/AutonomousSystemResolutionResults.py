@@ -1,7 +1,7 @@
 import ipaddress
 
 from entities.DomainName import DomainName
-from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
+from entities.EntryIpAsDatabase import EntryIpAsDatabase
 
 
 class AutonomousSystemResolutionResults:
@@ -120,7 +120,8 @@ class AutonomousSystemResolutionResults:
                 other.no_ip_range_tsv_results[ip_address][0],
                 other.no_ip_range_tsv_results[ip_address][1])
         for ip_address in other.no_as_results.keys():
-            self.add_no_as_result(ip_address, other.no_as_results[ip_address][0])
+            # self.add_no_as_result(ip_address, other.no_as_results[ip_address][0])
+            self.add_no_as_result(ip_address, other.no_as_results[ip_address])
         for server in other.unresolved_servers:
             self.unresolved_servers.add(server)
 

@@ -1,9 +1,7 @@
 import ipaddress
-from typing import List, Set
+from typing import Set
 from peewee import DoesNotExist
-from exceptions.EmptyResultError import EmptyResultError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_ip_address
 from persistence.BaseModel import IpRangeROVEntity, IpAddressDependsAssociation, IpAddressEntity
 
 

@@ -1,11 +1,9 @@
-import ipaddress
-from typing import Set, Union
+from typing import Set
 from peewee import DoesNotExist
-from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
+from entities.EntryIpAsDatabase import EntryIpAsDatabase
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_domain_name, helper_ip_address
-from persistence.BaseModel import AutonomousSystemEntity, IpRangeTSVEntity, NetworkNumbersAssociation, DomainNameEntity, \
-    AccessAssociation, IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity
+from persistence.BaseModel import AutonomousSystemEntity, IpRangeTSVEntity, NetworkNumbersAssociation,\
+    IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity
 
 
 def insert(entry: EntryIpAsDatabase) -> AutonomousSystemEntity:
@@ -41,29 +39,11 @@ def get_of_entity_ip_network(ine: IpNetworkEntity) -> AutonomousSystemEntity:
 
 
 def get_of_entity_ip_range_tsv(irte: IpRangeTSVEntity) -> AutonomousSystemEntity:
-    """
-    query = NetworkNumbersAssociation.select()\
-        .where(NetworkNumbersAssociation.ip_range_tsv == irte)\
-        .limit(1)
-    for row in query:
-        return row.autonomous_system
-    raise DoesNotExist
-    """
-
     try:
         nna = NetworkNumbersAssociation.get(NetworkNumbersAssociation.ip_range_tsv == irte)
         return nna.autonomous_system
     except DoesNotExist:
         raise
-
-
-def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[AutonomousSystemEntity]:
-    iaes, dnes = helper_domain_name.resolve_a_path(dne, get_only_first_address=False)
-    result = set()
-    for iae in iaes:
-        ase = get_of_ip_address(iae)
-        result.add(ase)
-    return result
 
 
 def get_all_ip_addresses_of(ase: AutonomousSystemEntity) -> Set[IpAddressEntity]:
@@ -77,11 +57,3 @@ def get_all_ip_addresses_of(ase: AutonomousSystemEntity) -> Set[IpAddressEntity]
         raise NoDisposableRowsError
     else:
         return result
-
-
-def get_everyone() -> Set[AutonomousSystemEntity]:
-    result = set()
-    query = AutonomousSystemEntity.select()
-    for row in query:
-        result.add(row)
-    return result

@@ -4,6 +4,7 @@ import selenium
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+from entities.SchemeUrl import SchemeUrl
 from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from utils import file_utils
@@ -17,9 +18,9 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
     debug_results = None
 
     @staticmethod
-    def debug_search_all_scripts(headless_browser, url: str) -> List[WebElement]:
+    def debug_search_all_scripts(headless_browser, url: SchemeUrl) -> List[WebElement]:
         try:
-            headless_browser.driver.get(url)
+            headless_browser.driver.get(url.string)
         except selenium.common.exceptions.WebDriverException:
             raise
         return headless_browser.driver.find_elements(By.TAG_NAME, 'script')
@@ -27,8 +28,8 @@ class ScrapeScriptAndIFrameTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        url = 'http://127.0.0.1:3000/'
-        url = 'https://corriere.it/'
+        url = SchemeUrl('http://127.0.0.1:3000/')
+        url = SchemeUrl('https://corriere.it/')
         # ELABORATION
         PRD = file_utils.get_project_root_directory()
         try:

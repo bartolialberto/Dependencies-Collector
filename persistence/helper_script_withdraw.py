@@ -1,4 +1,5 @@
 from typing import Set
+from peewee import DoesNotExist
 from persistence.BaseModel import WebSiteEntity, ScriptEntity, ScriptWithdrawAssociation
 
 
@@ -16,6 +17,14 @@ def get_all_of(wse: WebSiteEntity, https: bool) -> Set[ScriptWithdrawAssociation
     for row in query:
         result.add(row)
     return result
+
+
+def delete_unresolved_row_for(wse: WebSiteEntity, https: bool) -> None:
+    try:
+        swa = ScriptWithdrawAssociation.get((ScriptWithdrawAssociation.web_site == wse) & (ScriptWithdrawAssociation.https == https) & (ScriptWithdrawAssociation.script.is_null(True)))
+        swa.delete_instance()
+    except DoesNotExist:
+        pass
 
 
 def get_unresolved() -> Set[ScriptWithdrawAssociation]:

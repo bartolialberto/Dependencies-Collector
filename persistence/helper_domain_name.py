@@ -8,11 +8,9 @@ from entities.paths.builders.APathBuilder import APathBuilder
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_ip_address, helper_alias, helper_web_site_domain_name, helper_script_site_domain_name
-from persistence.BaseModel import DomainNameEntity, DomainNameDependenciesAssociation, ZoneEntity, \
-    AutonomousSystemEntity, AccessAssociation, IpAddressDependsAssociation, NetworkNumbersAssociation, WebSiteEntity, \
-    ScriptSiteEntity, DirectZoneAssociation, IpAddressEntity, ScriptServerEntity, WebServerEntity, \
-    WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation, IpNetworkEntity
+from persistence import helper_ip_address, helper_alias
+from persistence.BaseModel import DomainNameEntity, IpAddressDependsAssociation, WebSiteEntity, ScriptSiteEntity,\
+    IpAddressEntity, WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation, IpNetworkEntity
 
 
 def insert(domain_name: DomainName) -> DomainNameEntity:
@@ -101,15 +99,6 @@ def get_of(site: Union[WebSiteEntity, ScriptSiteEntity]) -> DomainNameEntity:
             raise
 
 
-def get_all_that_depends_on_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
-    query = DomainNameDependenciesAssociation.select()\
-        .where(DomainNameDependenciesAssociation.zone == ze)
-    result = set()
-    for row in query:
-        result.add(row.domain_name)
-    return result
-
-
 def get_everyone_from_ip_network(ine: IpNetworkEntity) -> Set[DomainNameEntity]:
     iaes = set()
     query = IpAddressDependsAssociation.select() \
@@ -129,39 +118,3 @@ def get_everyone_from_ip_network(ine: IpNetworkEntity) -> Set[DomainNameEntity]:
         raise NoDisposableRowsError
     else:
         return result
-
-
-def get_all_from_entity_autonomous_system(ase: AutonomousSystemEntity) -> Set[DomainNameEntity]:
-    query = AccessAssociation.select() \
-        .join(IpAddressDependsAssociation, on=(AccessAssociation.ip_address == IpAddressDependsAssociation.ip_address)) \
-        .join(NetworkNumbersAssociation, on=(IpAddressDependsAssociation.ip_range_tsv == NetworkNumbersAssociation.ip_range_tsv))\
-        .where(NetworkNumbersAssociation.autonomous_system == ase)
-    result = set()
-    for row in query:
-        result.add(row.domain_name)
-    return result
-
-
-def get_from_entity_web_site(wse: WebSiteEntity) -> DomainNameEntity:
-    try:
-        wsdna = helper_web_site_domain_name.get_from_entity_web_site(wse)
-    except DoesNotExist:
-        raise
-    return wsdna.domain_name
-
-
-def get_from_direct_zone(ze: ZoneEntity) -> Set[DomainNameEntity]:
-    query = DirectZoneAssociation.select()\
-        .where(DirectZoneAssociation.zone == ze)
-    result = set()
-    for row in query:
-        result.add(row.domain_name)
-    return result
-
-
-def get_everyone() -> Set[DomainNameEntity]:
-    query = DomainNameEntity.select()
-    result = set()
-    for row in query:
-        result.add(row)
-    return result

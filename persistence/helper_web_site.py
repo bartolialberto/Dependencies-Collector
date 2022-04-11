@@ -3,8 +3,7 @@ from peewee import DoesNotExist
 from entities.Url import Url
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_url
-from persistence.BaseModel import WebSiteEntity, ScriptServerEntity, ScriptSiteLandsAssociation, \
-    ScriptHostedOnAssociation, ScriptWithdrawAssociation, WebServerEntity, WebSiteLandsAssociation, ZoneEntity
+from persistence.BaseModel import WebSiteEntity, WebServerEntity, WebSiteLandsAssociation
 
 
 def insert(url: Url) -> WebSiteEntity:
@@ -22,26 +21,6 @@ def get(url: Url) -> WebSiteEntity:
         return WebSiteEntity.get(WebSiteEntity.url == ue)
     except DoesNotExist:
         raise
-
-
-def get_all_from_entity_script_server(sse: ScriptServerEntity) -> Set[WebSiteEntity]:
-    query = ScriptWithdrawAssociation.select()\
-        .join(ScriptHostedOnAssociation, on=(ScriptWithdrawAssociation.script == ScriptHostedOnAssociation.script))\
-        .join(ScriptSiteLandsAssociation, on=(ScriptHostedOnAssociation.script_site == ScriptSiteLandsAssociation.script_site))\
-        .where((ScriptSiteLandsAssociation.script_server == sse) & (ScriptWithdrawAssociation.script.is_null(False)))
-    result = set()
-    for row in query:
-        result.add(row.web_site)
-    return result
-
-
-def get_all_from_entity_web_server(wse: WebServerEntity) -> Set[WebSiteEntity]:
-    query = WebSiteLandsAssociation.select()\
-        .where((WebSiteLandsAssociation.web_server == wse) & (WebSiteLandsAssociation.web_server.is_null(False)))
-    result = set()
-    for row in query:
-        result.add(row.web_site)
-    return result
 
 
 def get_of(wse: WebServerEntity) -> Set[WebSiteEntity]:

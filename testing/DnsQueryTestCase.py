@@ -20,17 +20,13 @@ class DnsQueryTestCase(unittest.TestCase):
 
     They can be compared to see if the simplified DnsResolver object of this application is reliable.
     """
-    import_cache_from_output_folder = None
     domain_name = None
     dns_resolver = None
 
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_name = 'platform.twitter.com.'
-        cls.domain_name = 'auslandsschulportal.de'
         cls.domain_name = 'pec.comune.gardonevaltrompia.bs.it.'
-        #cls.domain_name = 'postecert.elpinet.it.'
         cls.type = TypesRR.MX
         # ELABORATION
         cls.dns_resolver = DnsResolver(True)
@@ -41,9 +37,7 @@ class DnsQueryTestCase(unittest.TestCase):
         try:
             answer = self.dns_resolver.resolver.resolve(self.domain_name, self.type.to_string())
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.resolver.YXDOMAIN, Exception) as e:  # name is a domain that does not exist
-            print(f"!!! {str(e)} !!!")
-            print(f"------- [1] END RAW QUERY TEST -------")
-            return
+            self.fail(f"!!! {str(e)} !!!")
         print(f"answer.canonical_name = {answer.canonical_name}")
         print(f"answer.qname = {answer.qname}")
         print(f"answer.nameserver = {answer.nameserver}")

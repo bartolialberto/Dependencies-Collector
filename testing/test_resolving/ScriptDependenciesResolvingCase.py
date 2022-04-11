@@ -6,7 +6,7 @@ from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesReso
 from utils import file_utils
 
 
-class ScriptDependenciesResolvingTestCase(unittest.TestCase):
+class ScriptDependenciesResolvingCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

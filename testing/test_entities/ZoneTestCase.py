@@ -1,6 +1,5 @@
 import unittest
 from entities.DomainName import DomainName
-from entities.Zone import Zone
 from entities.enums.TypesRR import TypesRR
 from entities.resolvers.DnsResolver import DnsResolver
 from exceptions.DomainNonExistentError import DomainNonExistentError

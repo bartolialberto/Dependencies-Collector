@@ -1,4 +1,4 @@
-from typing import Set, List
+from typing import Set
 from persistence.BaseModel import ScriptEntity, ScriptWithdrawAssociation, WebSiteEntity
 
 

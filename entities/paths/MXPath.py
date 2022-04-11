@@ -44,3 +44,9 @@ class MXPath(Path):
             if rr.name == domain_name:
                 return MXPath(self.path[i:])
         raise DomainNameNotInPathError(domain_name)
+
+    def __iter__(self):
+        return self.path.__iter__()
+
+    def __next__(self):
+        return self.path.__iter__().__next__()

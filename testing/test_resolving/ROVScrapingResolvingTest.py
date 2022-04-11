@@ -5,7 +5,7 @@ from entities.resolvers.results.ASResolverResultForROVPageScraping import ASReso
 from utils import file_utils
 
 
-class ROVScrapingResolvingTestCase(unittest.TestCase):
+class ROVScrapingResolvingCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

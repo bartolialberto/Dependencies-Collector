@@ -8,10 +8,8 @@ class DomainName:
         # self.string = domain_name_utils.insert_trailing_point(string)
         self.input_string = string
         self.string = domain_name_utils.standardize_for_application(string)
-        if self.string.startswith(' ') or self.string.startswith('  '):
-            print('')
 
-    def parse_subdomains(self, root_included: bool, self_included: bool) -> List['DomainName']:
+    def parse_subdomains(self, root_included: bool, tld_included: bool, self_included: bool) -> List['DomainName']:
         if '@' in self.string:
             split = self.string.split('@')
             to_be_elaborated = split[-1]
@@ -36,6 +34,8 @@ class DomainName:
             subdomains.append(DomainName(current_domain))
         if not root_included:
             subdomains.pop(0)
+        if not tld_included:
+            subdomains = list(filter(lambda dn: not dn.is_tld(), subdomains))
         if not self_included:
             subdomains.remove(to_be_elaborated)
         return subdomains

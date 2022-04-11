@@ -1,11 +1,9 @@
 from typing import Set
 from peewee import DoesNotExist
 from entities.DomainName import DomainName
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_domain_name, helper_ip_address
-from persistence.BaseModel import MailServerEntity, MailDomainEntity, MailDomainComposedAssociation, IpAddressEntity, \
-    DomainNameEntity
+from persistence import helper_domain_name
+from persistence.BaseModel import MailServerEntity, MailDomainEntity, MailDomainComposedAssociation, DomainNameEntity
 
 
 def insert(mailserver: DomainName) -> MailServerEntity:
@@ -44,11 +42,3 @@ def filter_domain_names(dnes: Set[DomainNameEntity]) -> Set[MailServerEntity]:
         raise NoDisposableRowsError
     else:
         return result
-
-
-def get_everyone() -> Set[MailServerEntity]:
-    query = MailServerEntity.select()
-    result = set()
-    for row in query:
-        result.add(row)
-    return result

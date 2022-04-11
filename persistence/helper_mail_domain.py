@@ -1,9 +1,9 @@
-from typing import Tuple, Set
+from typing import Set
 from peewee import DoesNotExist
-
 from entities.DomainName import DomainName
-from persistence import helper_domain_name, helper_mail_server
-from persistence.BaseModel import DomainNameEntity, MailDomainEntity, MailServerEntity, MailDomainComposedAssociation
+from exceptions.NoDisposableRowsError import NoDisposableRowsError
+from persistence import helper_domain_name
+from persistence.BaseModel import MailDomainEntity, MailServerEntity, MailDomainComposedAssociation
 
 
 def insert(mail_domain: DomainName) -> MailDomainEntity:
@@ -21,6 +21,19 @@ def get(mail_domain: DomainName) -> MailDomainEntity:
         return MailDomainEntity.get(MailDomainEntity.name == dne)
     except DoesNotExist:
         raise
+
+
+def get_every_of(mse: MailServerEntity) -> Set[MailDomainEntity]:
+    query = MailDomainComposedAssociation.select()\
+        .where(MailDomainComposedAssociation.mail_server == mse)
+    result = set()
+    for row in query:
+        result.add(row.mail_domain)
+    if len(result) == 0:
+        raise NoDisposableRowsError
+    else:
+        return result
+
 
 
 def get_everyone() -> Set[MailDomainEntity]:

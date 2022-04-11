@@ -13,7 +13,7 @@ from entities.error_log.ErrorLogger import ErrorLogger
 from utils import file_utils
 
 
-class ZoneDependenciesResolvingTestCase(unittest.TestCase):
+class ZoneDependenciesResolvingCase(unittest.TestCase):
     """
     DEFINITIVE TEST
     This class purpose is to provide some instruments to test the behaviour of the DNS resolver.
@@ -50,11 +50,12 @@ class ZoneDependenciesResolvingTestCase(unittest.TestCase):
         # PARAMETERS
         domain_name_strings = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
         domain_name_strings = ['postecert.elpinet.it']
+        domain_name_strings = ['pec.comune.bologna.it.']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = False
-        cls.perform_zone_dependencies = False
-        cls.perform_name_server_dependencies = False
+        cls.perform_zone_dependencies = True
+        cls.perform_name_server_dependencies = True
         # ELABORATION
         cls.domain_names = DomainName.from_string_list(domain_name_strings)
         cls.PRD = file_utils.get_project_root_directory()
@@ -127,7 +128,7 @@ class ZoneDependenciesResolvingTestCase(unittest.TestCase):
             print(f"Resolving dependencies of zone[{i+1}/{len(all_zones)}]: {zone.name}")
             current_result = self.dns_resolver.resolve_domain_dependencies(zone.name)
             current_result.zone_dependencies.remove(zone)
-            self.assertSetEqual(current_result.zone_dependencies, self.dns_authoritative_results.zone_dependencies_per_zone[zone.name])
+            self.assertSetEqual(current_result.zone_dependencies, self.dns_authoritative_results.zone_dependencies_per_zone[zone])
         print(f"------- [5] END ZONE DEPENDENCIES OF ZONES INTEGRITY TEST -------")
 
     def test_06_zone_dependencies_integrity_of_each_name_server(self):

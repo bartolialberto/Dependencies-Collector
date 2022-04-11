@@ -1,4 +1,4 @@
-from entities.resolvers.ROVPageScraper import RowPrefixesTable
+from entities.RowPrefixesTable import RowPrefixesTable
 from persistence.BaseModel import ROVEntity
 
 

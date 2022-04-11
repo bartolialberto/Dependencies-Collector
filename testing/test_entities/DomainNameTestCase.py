@@ -33,14 +33,14 @@ class DomainNameTestCase(unittest.TestCase):
     def test_03_parse_subdomains_conf1(self):
         print(f"\n------- [3] START SUBDOMAINS PARSING TEST -------")
         # PARAMETERS
-        root_included = True
+        root_and_tld_included = True
         self_included = True
         # TESTING
         print(f"PARAMETERS ---")
-        print(f"root_included: {root_included}")
+        print(f"root_and_tld_included: {root_and_tld_included}")
         print(f"self_included: {self_included}")
         print(f"SUBDOMAINS PARSED:")
-        subdomains = self.domain_name.parse_subdomains(root_included=root_included, self_included=self_included)
+        subdomains = self.domain_name.parse_subdomains(root_included=root_and_tld_included, tld_included=root_and_tld_included, self_included=self_included)
         for i, dn in enumerate(subdomains):
             print(f"[{i+1}/{len(subdomains)}]: {dn.string}")
         print(f"------- [3] END SUBDOMAINS PARSING TEST -------")
@@ -48,14 +48,14 @@ class DomainNameTestCase(unittest.TestCase):
     def test_04_parse_subdomains_conf2(self):
         print(f"\n------- [4] START SUBDOMAINS PARSING TEST -------")
         # PARAMETERS
-        root_included = True
+        root_and_tld_included = True
         self_included = False
         # TESTING
         print(f"PARAMETERS ---")
-        print(f"root_included: {root_included}")
+        print(f"root_and_tld_included: {root_and_tld_included}")
         print(f"self_included: {self_included}")
         print(f"SUBDOMAINS PARSED:")
-        subdomains = self.domain_name.parse_subdomains(root_included=root_included, self_included=self_included)
+        subdomains = self.domain_name.parse_subdomains(root_included=root_and_tld_included, tld_included=root_and_tld_included, self_included=self_included)
         for i, dn in enumerate(subdomains):
             print(f"[{i+1}/{len(subdomains)}]: {dn.string}")
         print(f"------- [4] END SUBDOMAINS PARSING TEST -------")
@@ -63,14 +63,14 @@ class DomainNameTestCase(unittest.TestCase):
     def test_05_parse_subdomains_conf3(self):
         print(f"\n------- [5] START SUBDOMAINS PARSING TEST -------")
         # PARAMETERS
-        root_included = False
+        root_and_tld_included = False
         self_included = False
         # TESTING
         print(f"PARAMETERS ---")
-        print(f"root_included: {root_included}")
+        print(f"root_and_tld_included: {root_and_tld_included}")
         print(f"self_included: {self_included}")
         print(f"SUBDOMAINS PARSED:")
-        subdomains = self.domain_name.parse_subdomains(root_included=root_included, self_included=self_included)
+        subdomains = self.domain_name.parse_subdomains(root_included=root_and_tld_included, tld_included=root_and_tld_included, self_included=self_included)
         for i, dn in enumerate(subdomains):
             print(f"[{i+1}/{len(subdomains)}]: {dn.string}")
         print(f"------- [5] END SUBDOMAINS PARSING TEST -------")

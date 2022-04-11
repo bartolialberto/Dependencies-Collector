@@ -3,7 +3,7 @@ from peewee import DoesNotExist
 from persistence import helper_script_withdraw, helper_web_site
 
 
-class ScriptDependenciesErrorSimulationTestCase(unittest.TestCase):
+class ScriptDependenciesErrorCase(unittest.TestCase):
     def test_1_set_web_site_script_withdraw_association_to_null(self):
         print(f"\n------- [1] START SETTING WEB SITE SCRIPT WITHDRAW ASSOCIATION TO NULL QUERY -------")
         # PARAMETERS

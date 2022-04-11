@@ -1,13 +1,16 @@
 import copy
 from ipaddress import IPv4Address
-from typing import List, Set
+from typing import List, Set, Union, Dict
 
 from entities.paths.APath import APath
 from entities.DomainName import DomainName
 from entities.paths.NSPath import NSPath
 from entities.RRecord import RRecord
 from exceptions.DomainNameNotInPathError import DomainNameNotInPathError
+from exceptions.DomainNonExistentError import DomainNonExistentError
+from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NoAvailablePathError import NoAvailablePathError
+from exceptions.UnknownReasonError import UnknownReasonError
 
 
 class Zone:
@@ -32,7 +35,7 @@ class Zone:
         The resolving RRecord associated with all the nameservers.
     """
 
-    def __init__(self, name_path: NSPath, nameservers_path: List[APath]):
+    def __init__(self, name_path: NSPath, nameservers_path: List[APath], unresolved_nameservers_path: Dict[DomainName, Union[DomainNonExistentError, NoAnswerError, UnknownReasonError]]):
         """
         Instantiate a Zone object initializing all the attributes defined above.
 
@@ -46,62 +49,34 @@ class Zone:
         :param addresses: The list of all RR of type A that resolves all nameservers.
         :type addresses: List[RRecord]
         """
+        if len(name_path.get_resolution().values) != (len(nameservers_path) + len(unresolved_nameservers_path.keys())):
+            raise ValueError
         self.name_path = name_path
         self.name = name_path.get_canonical_name()
         self.name_servers = nameservers_path
+        self.unresolved_name_servers = unresolved_nameservers_path
 
     def nameservers(self, as_strings=False) -> List[str] or List[DomainName]:
         name_servers = list(map(lambda a_path: a_path.get_qname(), self.name_servers))
+        for ns in self.unresolved_name_servers.keys():
+            name_servers.append(ns)
         if as_strings:
             return list(map(lambda ns: ns._second_component_, name_servers))
         else:
             return name_servers
 
-    def resolve_name_server_access_path(self, nameserver: DomainName) -> RRecord:
-        """
-        This method resolves the nameserver into a valid IP address.
-
-        :param nameserver: The name server.
-        :type nameserver: str
-        :raise NoAvailablePathError: If name server has no access path.
-        :return: The RR of type A.
-        :rtype: RRecord
-        """
-        for name_server_ap in self.name_servers:
-            try:
-                return name_server_ap.resolve(nameserver)
-            except DomainNameNotInPathError:
-                pass
-        raise NoAvailablePathError(nameserver.string)
-
-    def is_ip_of_name_servers(self, ip_address: IPv4Address, return_canonical_name=False) -> DomainName:
-        """
-        This method resolves an IP address into a name server of the zone if there's correspondence.
-
-        :param ip_address: An IP address.
-        :type ip_address: ipaddress.IPv4Address
-        :raise ValueError: If there's no correspondence.
-        :return: The name server.
-        :rtype: DomainName
-        """
-        for ap in self.name_servers:
-            rr = ap.get_resolution()
-            if ip_address in rr.values:
-                if return_canonical_name:
-                    return ap.get_canonical_name()
-                else:
-                    return ap.get_qname()
-        raise ValueError
-
     def parse_every_domain_name(self, with_zone_name=False, root_included=False, tld_included=False) -> Set[DomainName]:
         result = set()
         for rr in self.name_path:
-            for name in rr.name.parse_subdomains(root_included=root_included, self_included=True):
+            for name in rr.name.parse_subdomains(root_included, tld_included, True):
                 result.add(name)
         for a_path in self.name_servers:
             for rr in a_path:
-                for name in rr.name.parse_subdomains(root_included=root_included, self_included=True):
+                for name in rr.name.parse_subdomains(root_included, tld_included, True):
                     result.add(name)
+        for unresolved_name_server in self.unresolved_name_servers.keys():
+            for name in unresolved_name_server.parse_subdomains(root_included, tld_included, True):
+                result.add(name)
         if not with_zone_name:
             result.remove(self.name)
         if not root_included:
@@ -119,7 +94,6 @@ class Zone:
             result = new_result
         return result
 
-
     def __str__(self) -> str:
         """
         This method returns a string representation of this object.
@@ -127,7 +101,7 @@ class Zone:
         :return: A string representation of this object.
         :rtype: str
         """
-        return f"{self.name}\t{len(self.name_servers)}#nameservers"
+        return f"{self.name}\t{len(self.name_servers)+len(self.unresolved_name_servers.keys())}#nameservers"
 
     def __eq__(self, other) -> bool:
         """

@@ -289,7 +289,7 @@ def do_query_8() -> List[Tuple[IpNetworkEntity, AutonomousSystemEntity, Set[WebS
             except NoDisposableRowsError:
                 belonging_mailservers = set()
             try:
-                belonging_nameservers = helper_mail_server.filter_domain_names(dnes)
+                belonging_nameservers = helper_name_server.filter_domain_names(dnes)
             except NoDisposableRowsError:
                 belonging_nameservers = set()
             try:
@@ -317,4 +317,3 @@ def do_query_8() -> List[Tuple[IpNetworkEntity, AutonomousSystemEntity, Set[WebS
                 maildomain_directzones_entirely_contained
             ))
     return result
-

@@ -183,10 +183,14 @@ class DnsResolver:
         :rtype: MailDomainResolvingResult
         """
         try:
-            mx_path = self.do_query(mail_domain.string, TypesRR.MX)
-        except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
-            print(f"!!! {str(e)} !!!")
-            raise
+            mx_path = self.cache.resolve_path(mail_domain, TypesRR.MX)
+        except NoAvailablePathError:
+            try:
+                mx_path = self.do_query(mail_domain.string, TypesRR.MX)
+                self.cache.add_path(mx_path)
+            except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
+                print(f"!!! {str(e)} !!!")
+                raise
         result = MailDomainResolvingResult(mx_path)
         for value in mx_path.get_resolution().values:
             if isinstance(value, DomainName):
@@ -239,7 +243,7 @@ class DnsResolver:
         """
         error_logs = list()
         start_cache_length = len(self.cache.cache)
-        elaboration_domains = domain.parse_subdomains(root_included=True, self_included=True)
+        elaboration_domains = domain.parse_subdomains(self.consider_tld, self.consider_tld, True)
         if len(elaboration_domains) == 0:
             raise InvalidDomainNameError(domain.string)  # TODO: giusto???
         zone_dependencies = set()  # si va a popolare con ogni iterazione
@@ -250,7 +254,7 @@ class DnsResolver:
             # is domain a nameserver with aliases?
             try:
                 cname_path = self.resolve_cname(current_domain)
-                for subdomain in cname_path.get_resolution().get_first_value().parse_subdomains(False, False):
+                for subdomain in cname_path.get_resolution().get_first_value().parse_subdomains(self.consider_tld, self.consider_tld, False):
                     list_utils.append_with_no_duplicates(elaboration_domains, subdomain)
                 for rr in cname_path.get_aliases_chain():
                     for_direct_zones.append(rr.name)
@@ -276,6 +280,14 @@ class DnsResolver:
                 list_utils.append_with_no_duplicates(elaboration_domains, name)
             zone_dependencies.add(zone)
 
+        """
+        try:
+            zone_with_same_name = self.__parse_zone_with_same_name_of__(domain, zone_dependencies)
+            zone_dependencies.remove(zone_with_same_name)
+        except ValueError:
+            pass
+        """
+
         zone_dependencies_per_nameserver, zone_dependencies_per_zone = self.extract_zone_dependencies(zone_dependencies)
 
         for name_server in zone_dependencies_per_nameserver.keys():
@@ -283,6 +295,12 @@ class DnsResolver:
         direct_zones = self.extract_direct_zones(for_direct_zones, zone_dependencies)
         print(f"Dependencies recap: {len(zone_dependencies)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_dependencies, direct_zones, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
+
+    def __parse_zone_with_same_name_of__(self, domain_name: DomainName, zone_dataset: Set[Zone]) -> Zone:
+        for zone in zone_dataset:
+            if zone.name == domain_name:
+                return zone
+        raise ValueError
 
     def resolve_cname(self, name: DomainName) -> CNAMEPath:
         """
@@ -384,7 +402,7 @@ class DnsResolver:
                 raise NotWantedTLDError
             print(f"Depends on zone: {rr_answer.name}\t\t\t[NON-AUTHORITATIVE]")
             for value in rr_answer.values:
-                for domain in value.parse_subdomains(root_included=False, self_included=True):
+                for domain in value.parse_subdomains(self.consider_tld, self.consider_tld, True):
                     names_to_be_elaborated.add(domain)
         except NoRecordInCacheError:
             try:
@@ -402,7 +420,7 @@ class DnsResolver:
                 total_path = total_path_builder.complete_resolution(current_path.get_resolution()).build()
                 rr_answer = total_path.get_resolution()
                 for value in rr_answer.values:
-                    for domain in value.parse_subdomains(root_included=False, self_included=True):
+                    for domain in value.parse_subdomains(root_included=self.consider_tld, tld_included=self.consider_tld, self_included=True):
                         names_to_be_elaborated.add(domain)
                 if self.consider_tld == False and last_domain_name.is_tld():
                     raise NotWantedTLDError
@@ -410,6 +428,7 @@ class DnsResolver:
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                 raise
 
+        unresolved_name_servers_a_path = dict()
         name_servers_a_path = list()
         for name_server in total_path.get_resolution().values:
             try:
@@ -423,7 +442,7 @@ class DnsResolver:
                     name_servers_a_path.append(a_path)
                     continue
                 except (DomainNonExistentError, UnknownReasonError) as e:
-                    error_logs_to_be_added.append(ErrorLog(e, name_server.string, str(e)))
+                    pass
                 except (NoAnswerError, NoAvailablePathError):
                     pass
                 # normal elaboration
@@ -432,9 +451,10 @@ class DnsResolver:
                     self.cache.add_path(a_path)
                 except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
                     error_logs_to_be_added.append(ErrorLog(e, name_server.string, str(e)))
+                    unresolved_name_servers_a_path[name_server] = e
                     continue
             name_servers_a_path.append(a_path)
-        zone = Zone(total_path, name_servers_a_path)
+        zone = Zone(total_path, name_servers_a_path, unresolved_name_servers_a_path)
         return zone, names_to_be_elaborated, error_logs_to_be_added
 
     def extract_zone_dependencies(self, zone_set: Set[Zone], with_self_zone=False) -> Tuple[Dict[DomainName, Set[Zone]], Dict[Zone, Set[Zone]]]:
@@ -464,6 +484,14 @@ class DnsResolver:
             # resolve zone dependencies of name server
             for name_server_a_path in zone.name_servers:
                 name_server = name_server_a_path.get_qname()
+                try:
+                    zone_dependencies_per_name_server[name_server]
+                except KeyError:
+                    zone_dependencies_per_name_server[name_server] = set()
+                zones = self.parse_zone_dependencies_of_name_server(name_server, zone_set)
+                for zone_name in zones:
+                    zone_dependencies_per_name_server[name_server].add(zone_name)
+            for name_server in zone.unresolved_name_servers.keys():
                 try:
                     zone_dependencies_per_name_server[name_server]
                 except KeyError:
@@ -578,7 +606,7 @@ class DnsResolver:
         :return: A list of Zone (the application-defined object).
         :rtype: List[Zone]
         """
-        subdomains = name.parse_subdomains(root_included=True, self_included=False)
+        subdomains = name.parse_subdomains(self.consider_tld, self.consider_tld, False)
         result = list()
         for subdomain in subdomains:
             for zone in zone_set:
@@ -611,7 +639,7 @@ class DnsResolver:
             raise
         self.cache.add_path(cname_path)
         name_to_be_elaborated = list()
-        for dn in name_server.parse_subdomains(True, True):
+        for dn in name_server.parse_subdomains(self.consider_tld, self.consider_tld, True):
             name_to_be_elaborated.append(dn)
         #
         try:
@@ -660,7 +688,7 @@ class DnsResolver:
         :return: The direct zone name.
         :rtype: str
         """
-        for_zone_name_subdomains = list(reversed(domain_name.parse_subdomains(root_included=True, self_included=False)))
+        for_zone_name_subdomains = list(reversed(domain_name.parse_subdomains(self.consider_tld, self.consider_tld, False)))
         for current_domain in for_zone_name_subdomains:
             for zone in zone_set:
                 if current_domain == zone.name:

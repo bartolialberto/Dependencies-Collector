@@ -6,7 +6,8 @@ from typing import List, Dict, Tuple, Set
 import selenium
 from entities.DomainName import DomainName
 from entities.Url import Url
-from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver, MainFrameScript
+from entities.resolvers.ScriptDependenciesResolver import ScriptDependenciesResolver
+from entities.MainFrameScript import MainFrameScript
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
 from entities.resolvers.IpAsDatabase import IpAsDatabase
@@ -179,6 +180,8 @@ class ApplicationResolversWrapper:
             self.script_script_site_dependencies, script_sites = self.extract_script_hosting_dependencies()
 
             self.landing_script_sites_results = self.do_script_site_landing_resolving(script_sites)
+        else:
+            self.web_site_script_dependencies = self.do_set_None_for_script_dependencies_resolving()
 
         # merging
         self.total_dns_results.merge(current_dns_results)
@@ -398,6 +401,14 @@ class ApplicationResolversWrapper:
             pass
         print(f"END IP-AS RESOLVER ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return results
+
+
+    def do_set_None_for_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
+        script_dependencies_result = dict()
+        for website in self.landing_web_sites_results.keys():
+            script_dependencies_result[website] = ScriptDependenciesResult(None, None)
+        return script_dependencies_result
+
 
     def do_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
         """

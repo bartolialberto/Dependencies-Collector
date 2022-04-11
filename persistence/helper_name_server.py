@@ -3,9 +3,7 @@ from peewee import DoesNotExist
 from entities.DomainName import DomainName
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_domain_name, helper_zone
-from persistence.BaseModel import NameServerEntity, DomainNameEntity, ZoneComposedAssociation, ZoneEntity, \
-    AccessAssociation, IpAddressEntity
-from utils import domain_name_utils
+from persistence.BaseModel import NameServerEntity, DomainNameEntity, ZoneComposedAssociation, ZoneEntity
 
 
 def insert(name_server: DomainName) -> NameServerEntity:
@@ -39,21 +37,12 @@ def get_zone_nameservers(ze: ZoneEntity) -> Set[NameServerEntity]:
         return result
 
 
-def get_all_from_zone_name(zone_name: str) -> Set[NameServerEntity]:
-    zn = domain_name_utils.insert_trailing_point(zone_name)
+def get_all_from_zone_name(zone_name: DomainName) -> Set[NameServerEntity]:
     try:
-        ze = helper_zone.get(zn)
+        ze = helper_zone.get(zone_name)
     except DoesNotExist:
         raise
     return get_zone_nameservers(ze)
-
-
-def get_everyone() -> Set[NameServerEntity]:
-    query = NameServerEntity.select()
-    result = set()
-    for row in query:
-        result.add(row)
-    return result
 
 
 def filter_domain_names(dnes: Set[DomainNameEntity]) -> Set[NameServerEntity]:
@@ -66,14 +55,3 @@ def filter_domain_names(dnes: Set[DomainNameEntity]) -> Set[NameServerEntity]:
         raise NoDisposableRowsError
     else:
         return result
-
-
-def get_unresolved() -> Set[NameServerEntity]:
-    query = NameServerEntity.select()\
-        .join_from(NameServerEntity, DomainNameEntity)\
-        .join_from(DomainNameEntity, AccessAssociation)\
-        .where(AccessAssociation.ip_address.is_null(True))
-    result = set()
-    for row in query:
-        result.add(row)
-    return result

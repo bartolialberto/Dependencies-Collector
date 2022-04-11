@@ -1,9 +1,8 @@
 import csv
 from ipaddress import IPv4Address
 from pathlib import Path as PPath
-from typing import List, Tuple
+from typing import List
 from entities.DomainName import DomainName
-from entities.Zone import Zone
 from entities.paths.builders.APathBuilder import APathBuilder
 from entities.paths.builders.CNAMEPathBuilder import CNAMEPathBuilder
 from entities.paths.builders.MXPathBuilder import MXPathBuilder
@@ -12,7 +11,7 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
 from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
-from utils import file_utils, csv_utils, list_utils, domain_name_utils, resource_records_utils
+from utils import file_utils, csv_utils, resource_records_utils
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
@@ -159,7 +158,7 @@ class LocalDnsResolverCache:
         """
         try:
             inner_result = self.__inner_resolve_path(domain_name, rr_type_wanted, path_builder=None)
-        except NoAvailablePathError:
+        except (NoAvailablePathError, ReachedMaximumRecursivePathThresholdError):
             raise
         return inner_result
 
@@ -203,47 +202,6 @@ class LocalDnsResolverCache:
                 return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, path_builder=path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name.string)
-
-    def resolve_zone_object_from_zone_name(self, zone_name: DomainName) -> Zone:
-        """
-        This method searches the Zone (the application-defined object) corresponding to the zone name parameter.
-        It is 'constructed' searching for all the nameservers of the zone and the aliases.
-
-        :param zone_name: The zone name.
-        :type zone_name: DomainName
-        :raise NoRecordInCacheError: If there is no a NS RR corresponding to the zone name parameter.
-        :raise NoAvailablePathError: If there is no access path for a name server of the zone.
-        :return: The Zone (the application-defined object).
-        :rtype: Zone
-        """
-        try:
-            ns_path = self.resolve_path(zone_name, TypesRR.NS)
-        except NoRecordInCacheError:
-            raise
-        name_servers = list()
-        for name_server in ns_path.get_resolution().values:
-            try:
-                a_path = self.resolve_path(name_server, TypesRR.A)
-            except NoAvailablePathError:
-                raise
-            name_servers.append(a_path)
-        return Zone(ns_path, name_servers)
-
-    def resolve_zones_from_nameserver(self, nameserver: DomainName) -> List[str]:
-        """
-        This method checks if the nameserver parameter is 'nameserver of the zone' of some zones in the cache.
-        If it so, a list of zone names is returned.
-
-        :param nameserver: A domain name.
-        :type nameserver: DomainName
-        :return: A list of zone names that has such nameserver (or aliases associated to it) as 'nameserver of the zone'.
-        :rtype: List[str]
-        """
-        result = []
-        for rr in self.cache:
-            if rr.type == TypesRR.NS and nameserver in rr.values:
-                list_utils.append_with_no_duplicates(result, rr.name)
-        return result
 
     def load_csv(self, path: str, take_snapshot=True) -> None:
         """
@@ -466,7 +424,7 @@ class LocalDnsResolverCache:
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder("SNAPSHOTS", "temp_dns_cache.csv", project_root_directory=project_root_directory)
+        file = file_utils.set_file_in_folder("SNAPSHOTS", "dns_cache.csv", project_root_directory=project_root_directory)
         if not file.exists():
             pass
         with file.open('w', encoding='utf-8', newline='') as f:

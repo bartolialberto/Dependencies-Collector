@@ -6,7 +6,12 @@ from utils import file_utils
 
 
 def take_temporary_snapshot(web_sites: List[Url], mail_domains: List[DomainName], complete_unresolved_database: bool, consider_tld: bool, execute_script_resolving: bool, execute_rov_scraping: bool) -> None:
-    take_temp_snapshot_of_string_list(list(map(lambda u: u.original(), web_sites)), 'temp_web_sites')
+    def auxiliary(url: Url):
+        try:
+            return url.original()
+        except ValueError:
+            return url.second_component()
+    take_temp_snapshot_of_string_list(list(map(lambda u: auxiliary(u), web_sites)), 'temp_web_sites')
     take_temp_snapshot_of_string_list(list(map(lambda dn: dn.string, mail_domains)), 'temp_mail_domains')
     take_temp_snapshot_of_flags(complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping, 'temp_flags')
 

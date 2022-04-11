@@ -4,9 +4,8 @@ from typing import List, Set, Tuple
 import selenium
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DomainName import DomainName
-from entities.UnresolvedEntityWrapper import UnresolvedEntityWrapper
 from entities.Url import Url
-from entities.resolvers.IpAsDatabase import EntryIpAsDatabase
+from entities.EntryIpAsDatabase import EntryIpAsDatabase
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
@@ -129,6 +128,9 @@ class DatabaseEntitiesCompleter:
     def do_complete_unresolved_web_sites_scripts_withdraw(self, swas: List[ScriptWithdrawAssociation]) -> None:
         if len(swas) == 0:
             return
+        if not self.resolvers_wrapper.execute_script_resolving:
+            print(f"\n> execute_script_resolving is set to False. If you want to perform completion of script dependencies switch the execute_script_resolving flag to True in the next execution..")
+            return
         print(f"\n\nSTART UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
         with db.atomic():
             for i, swa in enumerate(swas):
@@ -206,10 +208,8 @@ class DatabaseEntitiesCompleter:
                 mdca.delete_instance()
         print(f"END UNRESOLVED MAIL DOMAIN RESOLUTION")
 
-
     def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]):
         if len(iadas) == 0:
-            print(f"Nothing to do.\nEND UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
             return
         if not self.resolvers_wrapper.execute_rov_scraping:
             print(f"\n> execute_rov_scraping is set to False. If you want to perform completion of ROV entities switch the execute_rov_scraping flag to True in the next execution..")

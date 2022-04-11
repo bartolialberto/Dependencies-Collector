@@ -259,7 +259,8 @@ class WebSiteLandsAssociation(BaseModel):
 
     class Meta:
         db_table = 'web_site_lands'
-        primary_key = CompositeKey('web_site', 'web_server', 'starting_https')
+        # primary_key = CompositeKey('web_site', 'web_server', 'starting_https')
+        primary_key = CompositeKey('web_site', 'starting_https')
 
 
 class ZoneComposedAssociation(BaseModel):
@@ -360,7 +361,8 @@ class ScriptSiteLandsAssociation(BaseModel):
 
     class Meta:
         db_table = 'script_site_lands'
-        primary_key = CompositeKey('script_site', 'script_server', 'starting_https')
+        # primary_key = CompositeKey('script_site', 'script_server', 'starting_https')
+        primary_key = CompositeKey('script_site', 'starting_https')
 
 
 class AccessAssociation(BaseModel):
@@ -375,7 +377,7 @@ class AccessAssociation(BaseModel):
 
 
 class IpAddressDependsAssociation(BaseModel):
-    ip_address = ForeignKeyField(IpAddressEntity)
+    ip_address = ForeignKeyField(IpAddressEntity, primary_key=True)
     ip_network = ForeignKeyField(IpNetworkEntity)
     ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, null=True)
     ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
@@ -385,7 +387,7 @@ class IpAddressDependsAssociation(BaseModel):
 
     class Meta:
         db_table = 'ip_address_depends'
-        primary_key = CompositeKey('ip_address', 'ip_network', 'ip_range_tsv', 'ip_range_rov')
+        # primary_key = CompositeKey('ip_address', 'ip_network', 'ip_range_tsv', 'ip_range_rov')
 
 
 class PrefixesTableAssociation(BaseModel):

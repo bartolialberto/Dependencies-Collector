@@ -73,7 +73,6 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     :rtype: List[str]
     """
     result_list = list()
-    search_result = None
     try:
         search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename, project_root_directory)
     except FilenameNotFoundError:
@@ -96,7 +95,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=False, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=True, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:

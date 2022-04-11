@@ -3,7 +3,7 @@ from entities.DomainName import DomainName
 from persistence import helper_domain_name, helper_ip_address
 
 
-class GettingAPathFromDomainName(unittest.TestCase):
+class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
     dne = None
     domain_name = None
 

@@ -1,11 +1,9 @@
-from typing import List, Set, Tuple
+from typing import Set, Tuple
 from peewee import DoesNotExist
 from entities.DomainName import DomainName
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_web_site, helper_domain_name, helper_ip_address
-from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, IpNetworkEntity, \
-    IpAddressEntity, DomainNameEntity, IpAddressDependsAssociation
+from persistence import helper_domain_name
+from persistence.BaseModel import WebServerEntity, WebSiteEntity, WebSiteLandsAssociation, DomainNameEntity
 
 
 def insert(name: DomainName) -> WebServerEntity:
@@ -54,18 +52,6 @@ def get_from(wse: WebSiteEntity) -> Tuple[WebServerEntity, WebServerEntity]:
         return https_web_server, http_web_server
     else:
         raise NoDisposableRowsError
-
-
-def get_from_entity_web_site(wse: WebSiteEntity) -> Set[WebServerEntity]:
-    query = WebSiteLandsAssociation.select() \
-        .where((WebSiteLandsAssociation.web_site == wse) & (WebSiteLandsAssociation.web_server.is_null(False)))
-    result = set()
-    for row in query:
-        result.add(row.web_server)
-    if len(result) == 0:
-        raise NoDisposableRowsError
-    else:
-        return result
 
 
 def filter_domain_names(dnes: Set[DomainNameEntity]) -> Set[WebServerEntity]:

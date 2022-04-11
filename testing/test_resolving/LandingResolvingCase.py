@@ -4,7 +4,7 @@ from entities.resolvers.DnsResolver import DnsResolver
 from entities.resolvers.LandingResolver import LandingResolver
 
 
-class LandingTestCase(unittest.TestCase):
+class LandingResolvingCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

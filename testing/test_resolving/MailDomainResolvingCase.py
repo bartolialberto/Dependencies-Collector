@@ -5,7 +5,7 @@ from entities.resolvers.DnsResolver import DnsResolver
 from utils import file_utils
 
 
-class MailDomainResolvingTestCase(unittest.TestCase):
+class MailDomainResolvingCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

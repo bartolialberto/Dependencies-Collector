@@ -4,7 +4,7 @@ from entities.Url import Url
 from persistence import helper_web_site, helper_web_site_lands, helper_script_site, helper_script_site_lands
 
 
-class LandingErrorSimulationTestCase(unittest.TestCase):
+class LandingErrorCase(unittest.TestCase):
     def test_01_set_web_site_lands_association_to_null(self):
         print(f"\n------- [1] START SETTING WEB SITE LANDING ASSOCIATION TO NULL QUERY -------")
         # PARAMETERS

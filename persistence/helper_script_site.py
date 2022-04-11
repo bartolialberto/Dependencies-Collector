@@ -1,8 +1,7 @@
-from typing import Set
 from peewee import DoesNotExist
 from entities.Url import Url
 from persistence import helper_url
-from persistence.BaseModel import ScriptSiteEntity, WebSiteEntity, ScriptHostedOnAssociation, ScriptWithdrawAssociation
+from persistence.BaseModel import ScriptSiteEntity
 
 
 def insert(url: Url) -> ScriptSiteEntity:
@@ -18,13 +17,3 @@ def get(url: Url) -> ScriptSiteEntity:
         raise
     sse = ScriptSiteEntity.get(ScriptSiteEntity.url == ue)
     return sse
-
-
-def get_from_entity_web_site(wse: WebSiteEntity) -> Set[ScriptSiteEntity]:
-    query = ScriptHostedOnAssociation.select()\
-        .join(ScriptWithdrawAssociation, on=(ScriptHostedOnAssociation.script == ScriptWithdrawAssociation.script))\
-        .where((ScriptWithdrawAssociation.web_site == wse) & (ScriptWithdrawAssociation.script.is_null(False)))
-    result = set()
-    for row in query:
-        result.add(row.script_site)
-    return result

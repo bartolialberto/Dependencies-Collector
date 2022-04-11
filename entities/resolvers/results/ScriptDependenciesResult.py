@@ -1,5 +1,5 @@
 from typing import Set
-from entities.resolvers.ScriptDependenciesResolver import MainFrameScript
+from entities.MainFrameScript import MainFrameScript
 
 
 class ScriptDependenciesResult:

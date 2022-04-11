@@ -1,19 +1,12 @@
 import ipaddress
-from typing import Set, Union
+from typing import Set
 from peewee import DoesNotExist
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
-from persistence import helper_domain_name, helper_ip_address
-from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity, DomainNameEntity
+from persistence.BaseModel import IpNetworkEntity, IpAddressDependsAssociation, IpAddressEntity
 from utils import network_utils
 
 
-def insert(network_parameter: str or ipaddress.IPv4Network) -> IpNetworkEntity:
-    ip_network = None
-    if isinstance(network_parameter, str):
-        ip_network = ipaddress.IPv4Network(network_parameter)
-    else:
-        ip_network = network_parameter
+def insert(ip_network: ipaddress.IPv4Network) -> IpNetworkEntity:
     ine, created = IpNetworkEntity.get_or_create(compressed_notation=ip_network.compressed)
     return ine
 
@@ -59,18 +52,3 @@ def get_all_addresses_of(ine: IpNetworkEntity) -> Set[IpNetworkEntity]:
         raise NoDisposableRowsError
     else:
         return result
-
-
-def get_of_entity_domain_name(dne: DomainNameEntity) -> Set[IpNetworkEntity]:
-    try:
-        iaes, dnes = helper_domain_name.resolve_a_path(dne, get_only_first_address=False)
-    except (NoAvailablePathError, DoesNotExist):
-        raise
-    result = set()
-    for iae in iaes:
-        try:
-            ine = get_of(iae)
-        except DoesNotExist:
-            raise
-        result.add(ine)
-    return result
