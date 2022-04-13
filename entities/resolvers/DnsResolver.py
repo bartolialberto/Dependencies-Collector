@@ -245,7 +245,7 @@ class DnsResolver:
         elaboration_domains = domain.parse_subdomains(self.consider_tld, self.consider_tld, True)
         zone_dependencies = set()  # si va a popolare con ogni iterazione
         cname_exception = False
-        for_direct_zones = [domain]
+        for_direct_zones = {domain}
         print(f"Cache has {start_cache_length} entries.")
         for current_domain in elaboration_domains:
             # is domain a nameserver with aliases?
@@ -254,9 +254,9 @@ class DnsResolver:
                 for subdomain in cname_path.get_resolution().get_first_value().parse_subdomains(self.consider_tld, self.consider_tld, False):
                     list_utils.append_with_no_duplicates(elaboration_domains, subdomain)
                 for rr in cname_path.get_aliases_chain():
-                    for_direct_zones.append(rr.name)
-                for_direct_zones.append(cname_path.get_resolution().name)
-                for_direct_zones.append(cname_path.get_resolution().get_first_value())
+                    for_direct_zones.add(rr.name)
+                for_direct_zones.add(cname_path.get_resolution().name)
+                for_direct_zones.add(cname_path.get_resolution().get_first_value())
             except NoAvailablePathError:
                 cname_path = current_domain
             except (DomainNonExistentError, UnknownReasonError, ReachedMaximumRecursivePathThresholdError) as e:
@@ -288,7 +288,7 @@ class DnsResolver:
         zone_dependencies_per_nameserver, zone_dependencies_per_zone = self.extract_zone_dependencies(zone_dependencies)
 
         for name_server in zone_dependencies_per_nameserver.keys():
-            for_direct_zones.append(name_server)
+            for_direct_zones.add(name_server)
         direct_zones = self.extract_direct_zones(for_direct_zones, zone_dependencies)
         print(f"Dependencies recap: {len(zone_dependencies)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_dependencies, direct_zones, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
@@ -650,7 +650,7 @@ class DnsResolver:
         total_path = total_path_builder.complete_resolution(a_path.get_resolution()).build()
         return total_path, name_to_be_elaborated
 
-    def extract_direct_zones(self, domain_names: List[DomainName], zone_set: Set[Zone]) -> Dict[DomainName, Zone or None]:
+    def extract_direct_zones(self, domain_names: Set[DomainName], zone_set: Set[Zone]) -> Dict[DomainName, Zone or None]:
         """
         This method extracts the direct zone of the domain name parameter from the zone_list parameter used as data
         pool.

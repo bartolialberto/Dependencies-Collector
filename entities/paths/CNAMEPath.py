@@ -1,11 +1,10 @@
-from typing import List
+from typing import List, Union
 from entities.DomainName import DomainName
 from entities.paths.Path import Path
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from exceptions.DomainNameNotInPathError import DomainNameNotInPathError
 from exceptions.PathIntegrityError import PathIntegrityError
-from exceptions.UselessMethodInvocationError import UselessMethodInvocationError
 
 
 class CNAMEPath(Path):
@@ -20,8 +19,15 @@ class CNAMEPath(Path):
     def get_resolution(self) -> RRecord:
         return self.path[-1]
 
-    def get_aliases_chain(self) -> List[RRecord]:
-        return self.path[0:-1]
+    def get_aliases_chain(self, as_resource_records=True) -> Union[List[RRecord], List[DomainName]]:
+        if as_resource_records:
+            return self.path[0:-1]
+        else:
+            result = list()
+            result.append(self.path[0].name)
+            for rr in self.path[0:-1]:
+                result.append(rr.get_first_value())
+            return result
 
     def get_canonical_name(self) -> DomainName:
         return self.get_resolution().name

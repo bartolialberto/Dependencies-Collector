@@ -1,7 +1,7 @@
 import abc
 from utils import resource_records_utils
 from abc import ABC
-from typing import List
+from typing import List, Union
 from entities.DomainName import DomainName
 from entities.RRecord import RRecord
 
@@ -12,7 +12,7 @@ class Path(ABC):
         pass
 
     @abc.abstractmethod
-    def get_aliases_chain(self) -> List[RRecord]:
+    def get_aliases_chain(self, as_resource_records=True) -> Union[List[RRecord], List[DomainName]]:
         pass
 
     @abc.abstractmethod

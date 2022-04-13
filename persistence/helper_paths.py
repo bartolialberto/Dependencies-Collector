@@ -28,7 +28,7 @@ def insert_a_path(a_path: APath) -> Tuple[List[DomainNameEntity], Set[IpAddressE
     return aliases_chain, addresses
 
 
-def insert_a_path_for_mail_servers(a_path: APath, mail_domain_entity: MailDomainEntity) -> Tuple[List[DomainNameEntity], Set[IpAddressEntity]]:
+def insert_a_path_for_mail_servers(a_path: APath, mail_domain_entity: MailDomainEntity) -> Tuple[MailServerEntity, List[DomainNameEntity], Set[IpAddressEntity]]:
     aliases_chain = list()
     addresses = set()
     if len(a_path.get_aliases_chain()) == 0:
@@ -52,7 +52,7 @@ def insert_a_path_for_mail_servers(a_path: APath, mail_domain_entity: MailDomain
         ipe = helper_ip_address.insert(value)
         helper_access.insert(dne_canonical, ipe)
         addresses.add(ipe)
-    return aliases_chain, addresses
+    return mse, aliases_chain, addresses
 
 
 def insert_mx_path(mx_path: MXPath) -> Tuple[List[DomainNameEntity], MailDomainEntity, Set[MailServerEntity]]:

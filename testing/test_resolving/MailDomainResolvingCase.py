@@ -16,7 +16,7 @@ class MailDomainResolvingCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        domain_name_strings = ['postecert.elpinet.it']
+        domain_name_strings = ['pec.comune.bologna.it']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         # ELABORATION

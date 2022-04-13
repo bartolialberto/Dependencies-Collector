@@ -159,7 +159,7 @@ class ApplicationResolversWrapper:
         """
         self.landing_web_sites_results = self.do_web_site_landing_resolving(set(web_sites))
         self.mail_domains_results = self.do_mail_servers_resolving(mail_domains)
-        return self._extract_domain_names_from_preamble(mail_domains)
+        return self._extract_domain_names_from_preamble()
 
     def do_midst_execution(self, domain_names: List[DomainName]) -> List[DomainName]:
         """
@@ -502,7 +502,7 @@ class ApplicationResolversWrapper:
         print(f"END ROV PAGE SCRAPING ({datetime_utils.compute_delta_and_stamp(start_execution_time)})")
         return reformat
 
-    def _extract_domain_names_from_preamble(self, mail_domains: List[DomainName]) -> List[DomainName]:
+    def _extract_domain_names_from_preamble(self) -> List[DomainName]:
         """
         This method extract domain names from the PREAMBLE execution: this means it extract them from the landing web
         sites resolution results (saved in this object), input mail domains and from the mail servers resolved.
@@ -516,22 +516,31 @@ class ApplicationResolversWrapper:
         for website in self.landing_web_sites_results.keys():
             # adding domain names from web sites
             domain_names.add(website.domain_name())
-            # adding domain names from web servers
+            # adding domain names from web servers and aliases associated
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
             if https_result is not None:
-                domain_names.add(https_result.server)
+                for dn in https_result.a_path.get_aliases_chain(as_resource_records=False):
+                    domain_names.add(dn)
             if http_result is not None:
-                domain_names.add(http_result.server)
-        # adding mail domains
-        for mail_domain in mail_domains:
-            domain_names.add(mail_domain)
-        # adding mail servers
+                for dn in https_result.a_path.get_aliases_chain(as_resource_records=False):
+                    domain_names.add(dn)
+        # adding mail domain, mail servers and aliases associated
         for mail_domain in self.mail_domains_results.dependencies.keys():
+            if self.mail_domains_results.dependencies[mail_domain] is None:
+                domain_names.add(mail_domain)
+            else:
+                mail_domain_path = self.mail_domains_results.dependencies[mail_domain].mail_domain_path
+                for dn in mail_domain_path.get_aliases_chain(as_resource_records=False):
+                    domain_names.add(dn)
             if self.mail_domains_results.dependencies[mail_domain] is not None:
                 for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers_paths.keys():
-                    domain_names.add(mail_server)
-        # return domain_names
+                    mail_server_path = self.mail_domains_results.dependencies[mail_domain].mail_servers_paths[mail_server]
+                    if mail_server_path is None:
+                        domain_names.add(mail_server)
+                    else:
+                        for dn in mail_server_path.get_aliases_chain(as_resource_records=False):
+                            domain_names.add(dn)
         return list(domain_names)
 
     def _extract_domain_names_from_landing_script_sites_results(self) -> List[DomainName]:

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Set
 from peewee import DoesNotExist
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
+from entities.DomainName import DomainName
 from entities.Url import Url
 from entities.resolvers.results.ASResolverResultForROVPageScraping import ASResolverResultForROVPageScraping
 from entities.resolvers.results.LandingSiteResult import LandingSiteResult
@@ -181,12 +182,16 @@ def insert_mail_servers_resolving(results: MultipleMailDomainResolvingResult) ->
                         # helper_mail_domain_composed.insert(mde, mse)
                         data_source.append({key_mde: mde, key_mse: None})
                         helper_access.insert(mse.name, None)
-                    else:
-                        dnes, ipes = helper_paths.insert_a_path_for_mail_servers(results.dependencies[mail_domain].mail_servers_paths[mail_server], mde)
 
                         #
+                        domain_name_dict[DomainName(mse.name.string)] = mse.name
+                    else:
+                        mse, dnes, ipes = helper_paths.insert_a_path_for_mail_servers(results.dependencies[mail_domain].mail_servers_paths[mail_server], mde)
+
+                        #
+                        domain_name_dict[DomainName(mse.name.string)] = mse.name
                         for dne in dnes:
-                            domain_name_dict[mail_server] = dne
+                            domain_name_dict[DomainName(dne.string)] = dne
             #
             domain_name_dict[mail_domain] = mde.name
 
