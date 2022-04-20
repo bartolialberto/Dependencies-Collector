@@ -51,8 +51,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         self.cache.add_entries([rr1, rr2, rr3])
         with self.assertRaises(ReachedMaximumRecursivePathThresholdError):
             path = self.cache.resolve_path(start, TypesRR.A)
-            print(f"Test1")
-        print(f"Test2")
+            print(f"resolving path didn't raise ReachedMaximumRecursivePathThresholdError...")
         print(f"------- [2] END CLOSE GRAPH CYCLING TEST -------")
 
 

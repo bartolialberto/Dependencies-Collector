@@ -3,6 +3,13 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="\SNAPSHOTS\dns_cache.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\SNAPSHOTS\temp_dns_cache.csv">
           <value>
             <Attribute>
@@ -11,20 +18,6 @@
           </value>
         </entry>
         <entry key="\output\dns_cache.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value=";" />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\output\error_logs.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value=";" />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\output\unresolved_entities.csv">
           <value>
             <Attribute>
               <option name="separator" value=";" />

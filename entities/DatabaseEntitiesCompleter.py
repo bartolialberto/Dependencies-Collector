@@ -12,6 +12,7 @@ from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundErr
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAnswerError import NoAnswerError
+from exceptions.NotROVStateTypeError import NotROVStateTypeError
 from exceptions.TableEmptyError import TableEmptyError
 from exceptions.TableNotPresentError import TableNotPresentError
 from exceptions.UnknownReasonError import UnknownReasonError
@@ -96,7 +97,7 @@ class DatabaseEntitiesCompleter:
                 domain_name = DomainName(aa.domain_name.string)
                 print(f"association[{i+1}/{len(aas)}]: ", end='')
                 try:
-                    a_path = self.resolvers_wrapper.dns_resolver.resolve_a_path(domain_name)
+                    a_path = self.resolvers_wrapper.dns_resolver.resolve_access_path(domain_name)
                 except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                     print(f"{domain_name} not resolved...")
                     continue
@@ -239,7 +240,11 @@ class DatabaseEntitiesCompleter:
                     ase_dict[ase.number] = ase
                 else:
                     ase = helper_autonomous_system.get_of_entity_ip_range_tsv(ip_range_tsv_entity)
-                    entries = self.resolvers_wrapper.ip_as_database.get_entries_from_as_number(ase.number)
+                    try:
+                        entries = self.resolvers_wrapper.ip_as_database.get_entries_from_as_number(ase.number)
+                    except AutonomousSystemNotFoundError:
+                        print(f"No entry found for AS{ase.number}...")
+                        continue
                     for entry in entries:
                         try:
                             ip_range_tsv, networks = entry.get_network_of_ip(ip_address)
@@ -249,7 +254,6 @@ class DatabaseEntitiesCompleter:
                     if ip_range_tsv is None:
                         print(f"For {ip_address} no IP range .tsv computed..")
                         continue
-
                     ase_dict[ase.number] = ase
                 results.add_complete_result(ip_address, DomainName('PLACEHOLDER_'+str(i)), entry, ip_range_tsv)
                 ip_address_depends_dict[ip_address] = iada
@@ -260,7 +264,7 @@ class DatabaseEntitiesCompleter:
                 try:
                     self.resolvers_wrapper.rov_page_scraper.load_as_page(as_number)
                 except (selenium.common.exceptions.WebDriverException, TableNotPresentError, TableEmptyError,
-                        NetworkNotFoundError):
+                        NetworkNotFoundError, NotROVStateTypeError):
                     print(f"Can't load AS{as_number} page..")
                     continue
                 for ip_address in reformat.results[as_number].keys():
@@ -270,7 +274,7 @@ class DatabaseEntitiesCompleter:
                         print(f"--> for {ip_address} no row found..")
                         continue
                     print(f"--> for {ip_address}: found row: {str(row)}")
-                    irre = helper_ip_range_rov.insert(row.prefix.compressed)
+                    irre = helper_ip_range_rov.insert(row.prefix)
                     re = helper_rov.insert(row)
                     ase = ase_dict[as_number]
                     helper_prefixes_table.insert(irre, re, ase)

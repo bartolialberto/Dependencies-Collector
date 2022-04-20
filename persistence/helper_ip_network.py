@@ -41,7 +41,7 @@ def get_of(iae: IpAddressEntity) -> IpNetworkEntity:
         raise
 
 
-def get_all_addresses_of(ine: IpNetworkEntity) -> Set[IpNetworkEntity]:
+def get_all_addresses_of(ine: IpNetworkEntity) -> Set[IpAddressEntity]:
     query = IpAddressDependsAssociation.select()\
         .where(IpAddressDependsAssociation.ip_network == ine)
     result = set()

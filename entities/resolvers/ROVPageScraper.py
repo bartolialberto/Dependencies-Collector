@@ -54,11 +54,11 @@ class ROVPageScraper:
             self.headless_browser.driver.get(url_page)
         except selenium.common.exceptions.TimeoutException:
             self.headless_browser.close_and_reopen()
-            self.prefixes_table.clear()
+            self.prefixes_table = list()
             self.current_as_number = -1
             raise
         except selenium.common.exceptions.WebDriverException:
-            self.prefixes_table.clear()
+            self.prefixes_table = list()
             self.current_as_number = -1
             raise
 
@@ -90,13 +90,7 @@ class ROVPageScraper:
             self.current_as_number = as_number
             try:
                 self.scrape_prefixes_table_from_page()
-            except TableNotPresentError:
-                raise
-            except ValueError:
-                raise
-            except TableEmptyError:
-                raise
-            except NotROVStateTypeError:
+            except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError):
                 raise
 
     def scrape_prefixes_table_from_page(self) -> List[RowPrefixesTable]:

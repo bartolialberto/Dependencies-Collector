@@ -5,8 +5,7 @@ from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence.BaseModel import IpRangeROVEntity, IpAddressDependsAssociation, IpAddressEntity
 
 
-def insert(compressed_notation: str) -> IpRangeROVEntity:
-    network = ipaddress.IPv4Network(compressed_notation)
+def insert(network: ipaddress.IPv4Network) -> IpRangeROVEntity:
     irre, created = IpRangeROVEntity.get_or_create(compressed_notation=network.compressed)
     return irre
 

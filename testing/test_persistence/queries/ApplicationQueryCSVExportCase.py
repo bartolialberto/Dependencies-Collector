@@ -16,11 +16,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
                 for row in rows:
                     writer.writerow(row)
                 f.close()
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
 
     @classmethod

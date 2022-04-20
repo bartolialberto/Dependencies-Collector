@@ -27,7 +27,8 @@ class DnsQueryTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         # PARAMETERS
         cls.domain_name = 'mail.pec.comune.bologna.it.'
-        cls.type = TypesRR.A
+        cls.domain_name = 'www.amazon.it.'
+        cls.type = TypesRR.NS
         # ELABORATION
         cls.dns_resolver = DnsResolver(True)
         print(f"PARAMETER: {cls.domain_name}")

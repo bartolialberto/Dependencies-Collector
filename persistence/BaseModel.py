@@ -233,6 +233,7 @@ class ROVEntity(BaseModel):
 
     class Meta:
         db_table = 'rov'
+        primary_hey = CompositeKey('state', 'visibility')
 
 
 class AliasAssociation(BaseModel):
@@ -399,12 +400,12 @@ class PrefixesTableAssociation(BaseModel):
 
     class Meta:
         db_table = 'prefixes_table'
-        primary_key = CompositeKey('ip_range_rov')
+        primary_key = CompositeKey('ip_range_rov', 'autonomous_system')
 
 
 class NetworkNumbersAssociation(BaseModel):
     ip_range_tsv = ForeignKeyField(IpRangeTSVEntity)
-    autonomous_system = ForeignKeyField(AutonomousSystemEntity)      # era null=True
+    autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
     def __str__(self):
         return f"<ip_range_tsv={self.ip_range_tsv}, autonomous_system={self.autonomous_system}>"

@@ -162,7 +162,7 @@ class LocalDnsResolverCache:
             raise
         return inner_result
 
-    def __inner_resolve_path(self, domain_name: DomainName, rr_type_resolution: TypesRR, path_builder=None, count_invocations_threshold=1000, count_invocations=0) -> Path:
+    def __inner_resolve_path(self, domain_name: DomainName, rr_type_resolution: TypesRR, path_builder=None, count_invocations_threshold=100, count_invocations=1) -> Path:
         """
         This method is the real resolver for the path of a domain name. It's recursive.
 

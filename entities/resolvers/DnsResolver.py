@@ -1,6 +1,8 @@
 from typing import List, Tuple, Dict, Set
 import dns.resolver
 from dns.name import Name
+
+from entities.DictLocalDnsResolverCache import DictLocalDnsResolverCache
 from entities.DomainName import DomainName
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.paths.APath import APath
@@ -55,6 +57,7 @@ class DnsResolver:
         """
         self.resolver = dns.resolver.Resolver()
         self.cache = LocalDnsResolverCache()
+        # self.cache = DictLocalDnsResolverCache()
         self.consider_tld = consider_tld
 
     def do_query(self, name: str, type_rr: TypesRR) -> Path:

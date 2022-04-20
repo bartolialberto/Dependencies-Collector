@@ -10,6 +10,7 @@ login.microsoftonline.com. --CNAME-> ak.privatelink.msidentity.com. --CNAME--> w
 
 > Query NS che presentano RR CNAME:
 cdn-auth.digidentity.eu. --CNAME-> d1hljz92zxtrmu.cloudfront.net. ==NS=> [ns-1340.awsdns-39.org., ns-214.awsdns-26.com., ns-2007.awsdns-58.co.uk., ns-530.awsdns-02.net.]
+www.amazon.it. --CNAME-> tp.6ca7af544-frontier.amazon.it. --CNAME-> d1zf2p7ylo2ros.cloudfront.net. ==NS=> [ns-624.awsdns-14.net., ns-1318.awsdns-36.org., ns-1973.awsdns-54.co.uk., ns-108.awsdns-13.com.]
 
 > Nomi di dominio che, mediante RR CNAME, puntano allo stesso nome di dominio:
 mx.pec.prometeo.com. e mx.registerpec.it. puntano entrambi ad mx.cert.legalmail.it.

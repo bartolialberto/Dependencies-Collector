@@ -287,7 +287,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
                 ip_range_tsv = finals.results[as_number][ip_address].ip_range_tsv
                 row_prefixes_table = finals.results[as_number][ip_address].entry_rov_page
                 if row_prefixes_table is not None:
-                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix.compressed)
+                    irre = helper_ip_range_rov.insert(row_prefixes_table.prefix)
                     # re = helper_rov.insert(row_prefixes_table.rov_state.to_string(), row_prefixes_table.visibility)
                     re = helper_rov.insert(row_prefixes_table)
                     helper_prefixes_table.insert(irre, re, ase)

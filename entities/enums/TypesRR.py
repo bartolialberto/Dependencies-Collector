@@ -51,3 +51,6 @@ class TypesRR(Enum):
         :rtype: str
         """
         return self.to_string()
+
+    def __hash__(self) -> int:
+        return hash(self.to_string())

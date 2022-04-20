@@ -136,11 +136,8 @@ class IpAsDatabase:
         """
         entries = set()
         for entry in self.entries:
-            if int(entry.as_number) == as_number:
-                try:
-                    entries.add(entry)
-                except ValueError:
-                    raise
+            if entry.as_number == as_number:
+                entries.add(entry)
         if len(entries) == 0:
             raise AutonomousSystemNotFoundError(as_number)
         else:
