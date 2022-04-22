@@ -7,6 +7,6 @@ def insert(dne: DomainNameEntity, ze: ZoneEntity) -> DomainNameDependenciesAssoc
     return nda
 
 
-def bulk_inserts(data_source: List[Dict[str, Union[DomainNameEntity, ZoneEntity]]]) -> None:
+def bulk_upserts(data_source: List[Dict[str, Union[DomainNameEntity, ZoneEntity]]]) -> None:
     DomainNameDependenciesAssociation.insert_many(data_source).on_conflict_replace().execute()
 

@@ -43,5 +43,6 @@ www.netflix.com/it-en/login
 
 > Risposte particolari:
 auslandsschulportal.de presenta RR MX con values: 0 .
+e-parliament.de. presenta RR MX con values: 0 .
 postecert.elpinet.it. presenta RR MX con solo un indirizzo IP come values: [62.241.4.37]
 pec.comune.gardonevaltrompia.bs.it. presenta RR MX un valore: 10 mx.cert.legalmail.it.comune.gardonevaltrompia.bs.it.

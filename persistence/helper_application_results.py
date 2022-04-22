@@ -21,7 +21,7 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_web_site_domain_name, \
     helper_script_site_domain_name, helper_paths
 from persistence.BaseModel import db, MailDomainComposedAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation, \
-    ScriptSiteLandsAssociation, AccessAssociation, IpAddressDependsAssociation
+    ScriptSiteLandsAssociation, AccessAssociation, IpAddressDependsAssociation, DirectZoneAssociation
 from utils import datetime_utils, file_utils, csv_utils, string_utils
 
 
@@ -92,10 +92,14 @@ def insert_landing_web_sites_results(result: Dict[Url, LandingSiteResult]):
 
 
 def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
-    data_source = list()
-    key_dne = 'domain_name'
-    key_ze = 'zone'
+    dependencies_data_source = list()
+    key_dependencies_dne = 'domain_name'
+    key_dependencies_ze = 'zone'
+    direct_zones_data_source = list()
+    key_direct_zones_dne = 'domain_name'
+    key_direct_zones_ze = 'zone'
     with db.atomic():       # peewee transaction
+        # all zone dataset
         for domain_name in dns_results.zone_dependencies_per_domain_name.keys():
             try:
                 dne = domain_name_dict[domain_name]
@@ -111,8 +115,7 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
                 except KeyError:
                     ze = helper_zone.insert_zone_object(zone)
                     zone_dict[zone.name] = ze
-                # helper_domain_name_dependencies.insert(dne, ze)
-                data_source.append({key_dne: dne, key_ze: ze})
+                dependencies_data_source.append({key_dependencies_dne: dne, key_dependencies_ze: ze})
 
         for zone in dns_results.zone_dependencies_per_zone.keys():
             try:
@@ -144,8 +147,7 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
                 except KeyError:
                     ze_dep = helper_zone.insert(zone.name)
                     zone_dict[zone.name] = ze_dep
-                # helper_domain_name_dependencies.insert(nse_dne, ze_dep)
-                data_source.append({key_dne: nse_dne, key_ze: ze_dep})
+                dependencies_data_source.append({key_dependencies_dne: nse_dne, key_dependencies_ze: ze_dep})
 
         for domain_name in dns_results.direct_zones.keys():
             try:
@@ -153,16 +155,19 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
             except KeyError:
                 dne = helper_domain_name.insert(domain_name)
             if dns_results.direct_zones[domain_name] is None:
-                helper_direct_zone.insert(dne, None)
+                # helper_direct_zone.insert(dne, None)
+                direct_zones_data_source.append({key_direct_zones_dne: dne, key_direct_zones_ze: None})
             else:
                 try:
                     direct_ze = zone_dict[dns_results.direct_zones[domain_name].name]
                 except KeyError:
-                    direct_ze = helper_zone.insert(dns_results.direct_zones[domain_name].name)
-                helper_direct_zone.insert(dne, direct_ze)
+                    direct_ze = helper_zone.get(dns_results.direct_zones[domain_name].name)
+                # helper_direct_zone.insert(dne, direct_ze)
+                direct_zones_data_source.append({key_direct_zones_dne: dne, key_direct_zones_ze: direct_ze})
 
     with db.atomic():  # peewee transaction
-        helper_domain_name_dependencies.bulk_inserts(data_source)
+        helper_domain_name_dependencies.bulk_upserts(dependencies_data_source)
+        helper_direct_zone.bulk_upserts(direct_zones_data_source)
 
 
 def insert_mail_servers_resolving(results: MultipleMailDomainResolvingResult) -> None:
@@ -173,13 +178,11 @@ def insert_mail_servers_resolving(results: MultipleMailDomainResolvingResult) ->
         for mail_domain in results.dependencies.keys():
             mde = helper_mail_domain.insert(mail_domain)
             if results.dependencies[mail_domain] is None:
-                # helper_mail_domain_composed.insert(mde, None)
                 data_source.append({key_mde: mde, key_mse: None})
             else:
                 for mail_server in results.dependencies[mail_domain].mail_servers_paths.keys():
                     if results.dependencies[mail_domain].mail_servers_paths[mail_server] is None:
                         mse = helper_mail_server.insert(mail_server)
-                        # helper_mail_domain_composed.insert(mde, mse)
                         data_source.append({key_mde: mde, key_mse: None})
                         helper_access.insert(mse.name, None)
 
@@ -196,7 +199,7 @@ def insert_mail_servers_resolving(results: MultipleMailDomainResolvingResult) ->
             domain_name_dict[mail_domain] = mde.name
 
     with db.atomic():  # peewee transaction
-        helper_mail_domain_composed.bulk_inserts(data_source)
+        helper_mail_domain_composed.bulk_upserts(data_source)
 
 
 def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[Url, ScriptDependenciesResult], script_script_site_dependencies: Dict[MainFrameScript, Set[Url]]) -> None:
@@ -315,7 +318,7 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
             data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: None})
 
     with db.atomic():  # peewee transaction
-        helper_ip_address_depends.bulk_inserts(data_source)
+        helper_ip_address_depends.bulk_upserts(data_source)
 
         # they can be only name servers and in the insert_zone_object method invoked from the insert_dns_results, this
         # error is already persisted in the DB
@@ -368,24 +371,31 @@ def dump_all_unresolved_entities(project_root_folder=Path.cwd(), separator=';', 
     file = file_utils.set_file_in_folder('output', 'unresolved_entities.csv', project_root_folder)
     with file.open('w', encoding='utf-8', newline='') as f:
         write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{separator}"))
+        write.writerow(['table_name', 'class_type', 'reason_phrase'])
         for unresolved_entity in unresolved_entities:
             to_be_written = list()
             if isinstance(unresolved_entity, WebSiteLandsAssociation):
+                to_be_written.append(WebSiteLandsAssociation._meta.table_name)
                 to_be_written.append(WebSiteLandsAssociation.__name__)
                 to_be_written.append(f"Web site: {unresolved_entity.web_site.url.string} with starting scheme: {string_utils.stamp_https_from_bool(unresolved_entity.starting_https)} can't land")
             elif isinstance(unresolved_entity, ScriptWithdrawAssociation):
+                to_be_written.append(ScriptWithdrawAssociation._meta.table_name)
                 to_be_written.append(ScriptWithdrawAssociation.__name__)
                 to_be_written.append(f"Can't resolve scripts of web site: {unresolved_entity.web_site.url.string} on scheme: {string_utils.stamp_https_from_bool(unresolved_entity.https)}")
             elif isinstance(unresolved_entity, ScriptSiteLandsAssociation):
+                to_be_written.append(ScriptSiteLandsAssociation._meta.table_name)
                 to_be_written.append(ScriptSiteLandsAssociation.__name__)
                 to_be_written.append(f"Script site: {unresolved_entity.script_site.url.string} with starting scheme: {string_utils.stamp_https_from_bool(unresolved_entity.starting_https)} can't land")
             elif isinstance(unresolved_entity, AccessAssociation):
+                to_be_written.append(AccessAssociation._meta.table_name)
                 to_be_written.append(AccessAssociation.__name__)
                 to_be_written.append(f"Can't resolve an A type RR of domain name: {unresolved_entity.domain_name.string}")
             elif isinstance(unresolved_entity, MailDomainComposedAssociation):
+                to_be_written.append(MailDomainComposedAssociation._meta.table_name)
                 to_be_written.append(MailDomainComposedAssociation.__name__)
                 to_be_written.append(f"Can't resolve a MX type RR of mail domain: {unresolved_entity.mail_domain.name.string}")
             elif isinstance(unresolved_entity, IpAddressDependsAssociation):
+                to_be_written.append(IpAddressDependsAssociation._meta.table_name)
                 to_be_written.append(IpAddressDependsAssociation.__name__)
                 if unresolved_entity.ip_range_tsv is None and unresolved_entity.ip_range_rov is None:
                     to_be_written.append(f"IP address: {unresolved_entity.ip_address.exploded_notation} has both IP range unresolved")

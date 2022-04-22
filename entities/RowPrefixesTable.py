@@ -1,5 +1,4 @@
 import ipaddress
-
 from entities.enums.ROVStates import ROVStates
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
 

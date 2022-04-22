@@ -1,8 +1,6 @@
 from typing import List, Tuple, Dict, Set
 import dns.resolver
 from dns.name import Name
-
-from entities.DictLocalDnsResolverCache import DictLocalDnsResolverCache
 from entities.DomainName import DomainName
 from entities.LocalDnsResolverCache import LocalDnsResolverCache
 from entities.paths.APath import APath
@@ -57,7 +55,6 @@ class DnsResolver:
         """
         self.resolver = dns.resolver.Resolver()
         self.cache = LocalDnsResolverCache()
-        # self.cache = DictLocalDnsResolverCache()
         self.consider_tld = consider_tld
 
     def do_query(self, name: str, type_rr: TypesRR) -> Path:
@@ -135,7 +132,7 @@ class DnsResolver:
         except NoAvailablePathError:
             try:
                 a_path = self.do_query(web_site_domain_name.string, TypesRR.A)
-                self.cache.add_path(a_path, control_for_no_duplicates=True)
+                self.cache.add_path(a_path)
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                 raise
         return a_path
@@ -280,14 +277,6 @@ class DnsResolver:
                 list_utils.append_with_no_duplicates(elaboration_domains, name)
             zone_dependencies.add(zone)
 
-        """
-        try:
-            zone_with_same_name = self.__parse_zone_with_same_name_of__(domain, zone_dependencies)
-            zone_dependencies.remove(zone_with_same_name)
-        except ValueError:
-            pass
-        """
-
         zone_dependencies_per_nameserver, zone_dependencies_per_zone = self.extract_zone_dependencies(zone_dependencies)
 
         for name_server in zone_dependencies_per_nameserver.keys():
@@ -359,7 +348,7 @@ class DnsResolver:
             raise ReachedMaximumRecursivePathThresholdError(name.string)
         # path.append(name)
         try:
-            rr_answer = self.cache.lookup_first(name, TypesRR.CNAME)
+            rr_answer = self.cache.lookup(name, TypesRR.CNAME)
         except NoRecordInCacheError:
             try:
                 current_cname_path = self.do_query(name.string, TypesRR.CNAME)
@@ -396,7 +385,7 @@ class DnsResolver:
             last_domain_name = cname_param.get_resolution().get_first_value()
             total_path_builder = NSPathBuilder.from_cname_path(cname_param)
         try:
-            rr_answer = self.cache.lookup_first(last_domain_name, TypesRR.NS)
+            rr_answer = self.cache.lookup(last_domain_name, TypesRR.NS)
             total_path = total_path_builder.complete_resolution(rr_answer).build()
             if self.consider_tld == False and last_domain_name.is_tld():
                 raise NotWantedTLDError
@@ -408,12 +397,6 @@ class DnsResolver:
             try:
                 current_path = self.do_query(last_domain_name.string, TypesRR.NS)
                 self.cache.add_path(current_path)
-                """
-                if isinstance(cname_param, CNAMEPath):
-                    total_path_builder = NSPathBuilder.from_cname_path(cname_param)
-                else:
-                    total_path_builder = NSPathBuilder()
-                """
                 for rr in current_path.get_aliases_chain():
                     names_to_be_elaborated.add(rr.get_first_value())
                     total_path_builder.add_alias(rr)

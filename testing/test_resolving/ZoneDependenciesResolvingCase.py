@@ -2,14 +2,6 @@ import unittest
 from entities.DomainName import DomainName
 from entities.resolvers.DnsResolver import DnsResolver
 from entities.error_log.ErrorLogger import ErrorLogger
-
-
-# DOMAIN NAME LIST EXAMPLES
-# ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-# ['unipd.it', 'dei.unipd.it', 'www.units.it', 'units.it', 'dia.units.it']
-# ['google.it']
-# ['ocsp.digicert.com']
-# ['modor.verisign.net']
 from utils import file_utils
 
 
@@ -48,9 +40,8 @@ class ZoneDependenciesResolvingCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        domain_name_strings = ['cdn-auth.digidentity.eu.', 'twitter.com', 'accounts.google.com', 'login.microsoftonline.com', 'www.facebook.com', 'auth.digidentity.eu', 'clave-dninbrt.seg-social.gob.es', 'pasarela.clave.gob.es', 'unipd.it', 'dei.unipd.it', 'units.it']
-        domain_name_strings = ['postecert.elpinet.it']
         domain_name_strings = ['pec.comune.bologna.it.']
+        domain_name_strings = ['www.dradis.netflix.com', 'www.us-east-1.internal.dradis.netflix.com.']
         cls.cache_filename = 'cache_from_dns_test'
         cls.error_logs_filename = 'error_logs_from_test'
         cls.consider_tld = False
@@ -73,36 +64,20 @@ class ZoneDependenciesResolvingCase(unittest.TestCase):
         print(f"\n------- [1] START EQUALITY FROM CACHE TEST -------")
         print(f"authoritative results: {len(self.dns_authoritative_results.zone_dependencies_per_domain_name.keys())} domain names")
         print(f"cache results: {len(self.dns_cache_results.zone_dependencies_per_domain_name.keys())} domain names")
-        self.maxDiff = None
         self.assertSetEqual(set(self.dns_authoritative_results.zone_dependencies_per_domain_name.keys()), set(self.dns_cache_results.zone_dependencies_per_domain_name.keys()))
         self.assertDictEqual(self.dns_authoritative_results.zone_dependencies_per_domain_name, self.dns_cache_results.zone_dependencies_per_domain_name)
         print(f"------- [1] END EQUALITY FROM CACHE TEST -------")
 
-    def test_02_are_there_duplicates_in_cache(self):
-        print(f"\n------- [2] START DUPLICATES IN CACHE RESULTS TEST -------")
-        duplicates = list()
-        for i, rr in enumerate(self.dns_resolver.cache.cache):
-            for j, comp in enumerate(self.dns_resolver.cache.cache):
-                if i != j and rr == comp:
-                    duplicates.append(rr)
-        if len(duplicates) != 0:
-            print(f"\n\nPrinting cache duplicates (will be doubled):")
-            for i, elem in enumerate(duplicates):
-                print(f"duplicates[{i+1}] = {str(elem)}")
-        print(f"number of duplicates = {len(duplicates)}")
-        self.assertEqual(0, len(duplicates))
-        print(f"------- [2] END DUPLICATES IN CACHE RESULTS TEST -------")
-
-    def test_03_zone_zone_dependencies_integrity(self):
-        print(f"\n------- [3] START CHECK BETWEEN ZONE RESULTS TEST -------")
+    def test_02_zone_zone_dependencies_integrity(self):
+        print(f"\n------- [2] START CHECK BETWEEN ZONE RESULTS TEST -------")
         print(f"authoritative results: {len(self.dns_authoritative_results.zone_dependencies_per_zone.keys())} zones")
         print(f"cache results: {len(self.dns_cache_results.zone_dependencies_per_zone.keys())} zones")
         self.assertSetEqual(set(self.dns_authoritative_results.zone_dependencies_per_zone.keys()), set(self.dns_cache_results.zone_dependencies_per_zone.keys()))
         self.assertDictEqual(self.dns_authoritative_results.zone_dependencies_per_zone, self.dns_cache_results.zone_dependencies_per_zone)
-        print(f"------- [3] END CHECK BETWEEN ZONE RESULTS TEST -------")
+        print(f"------- [2] END CHECK BETWEEN ZONE RESULTS TEST -------")
 
-    def test_04_nameservers_zone_dependencies_integrity(self):
-        print(f"\n------- [4] START CHECK BETWEEN NAMESERVER RESULTS TEST -------")
+    def test_03_nameservers_zone_dependencies_integrity(self):
+        print(f"\n------- [3] START CHECK BETWEEN NAMESERVER RESULTS TEST -------")
         print(f"authoritative results: {len(self.dns_authoritative_results.zone_dependencies_per_name_server.keys())} nameservers")
         print(f"cache results: {len(self.dns_cache_results.zone_dependencies_per_name_server.keys())} nameservers")
         set_auth = set(self.dns_authoritative_results.zone_dependencies_per_name_server.keys())
@@ -112,12 +87,12 @@ class ZoneDependenciesResolvingCase(unittest.TestCase):
                 print(f"IT'S = {elem}")
         self.assertSetEqual(set(self.dns_authoritative_results.zone_dependencies_per_name_server.keys()), set(self.dns_cache_results.zone_dependencies_per_name_server.keys()))
         self.assertDictEqual(self.dns_authoritative_results.zone_dependencies_per_name_server, self.dns_authoritative_results.zone_dependencies_per_name_server)
-        print(f"------- [4] END CHECK BETWEEN NAMESERVER RESULTS TEST -------")
+        print(f"------- [3] END CHECK BETWEEN NAMESERVER RESULTS TEST -------")
 
-    def test_05_zone_dependencies_integrity_of_each_zone(self):
+    def test_04_zone_dependencies_integrity_of_each_zone(self):
         if not self.perform_zone_dependencies:
             self.skipTest('')
-        print(f"\n------- [5] START ZONE DEPENDENCIES OF ZONES INTEGRITY TEST -------")
+        print(f"\n------- [4] START ZONE DEPENDENCIES OF ZONES INTEGRITY TEST -------")
         all_zones = set()
         for domain_name in self.dns_authoritative_results.zone_dependencies_per_domain_name.keys():
             all_zones = all_zones.union(self.dns_authoritative_results.zone_dependencies_per_domain_name[domain_name])
@@ -129,12 +104,12 @@ class ZoneDependenciesResolvingCase(unittest.TestCase):
             current_result = self.dns_resolver.resolve_domain_dependencies(zone.name)
             current_result.zone_dependencies.remove(zone)
             self.assertSetEqual(current_result.zone_dependencies, self.dns_authoritative_results.zone_dependencies_per_zone[zone])
-        print(f"------- [5] END ZONE DEPENDENCIES OF ZONES INTEGRITY TEST -------")
+        print(f"------- [4] END ZONE DEPENDENCIES OF ZONES INTEGRITY TEST -------")
 
-    def test_06_zone_dependencies_integrity_of_each_name_server(self):
+    def test_05_zone_dependencies_integrity_of_each_name_server(self):
         if not self.perform_name_server_dependencies:
             self.skipTest('')
-        print(f"\n------- [6] START ZONE DEPENDENCIES OF NAMESERVERS INTEGRITY TEST -------")
+        print(f"\n------- [5] START ZONE DEPENDENCIES OF NAMESERVERS INTEGRITY TEST -------")
         all_name_servers = set()
         for name_server in self.dns_authoritative_results.zone_dependencies_per_name_server.keys():
             all_name_servers.add(name_server)
@@ -145,9 +120,9 @@ class ZoneDependenciesResolvingCase(unittest.TestCase):
             print(f"Resolving dependencies of nameserver[{i + 1}/{len(all_name_servers)}]: {name_server}")
             current_result = self.dns_resolver.resolve_domain_dependencies(name_server)
             self.assertSetEqual(current_result.zone_dependencies, self.dns_authoritative_results.zone_dependencies_per_name_server[name_server])
-        print(f"------- [6] END ZONE DEPENDENCIES OF NAMESERVERS INTEGRITY TEST -------")
+        print(f"------- [5] END ZONE DEPENDENCIES OF NAMESERVERS INTEGRITY TEST -------")
 
-    def test_10_export_results(self):
+    def test_06_export_results(self):
         self.dns_resolver.cache.write_to_csv_in_output_folder(filename=self.cache_filename, project_root_directory=self.PRD)
         print(f"\n**** cache written in 'output' folder: file is named '{self.cache_filename}'")
         logger = ErrorLogger()

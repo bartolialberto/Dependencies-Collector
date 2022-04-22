@@ -9,7 +9,7 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or
     return iada
 
 
-def bulk_inserts(data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]) -> None:
+def bulk_upserts(data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]) -> None:
     IpAddressDependsAssociation.insert_many(data_source).on_conflict_replace().execute()
 
 

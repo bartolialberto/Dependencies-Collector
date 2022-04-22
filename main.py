@@ -14,12 +14,11 @@ from persistence.BaseModel import db, close_database
 from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils
 
 
-def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[str]:
+def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[Url]:
     """
     Start of the application: getting the websites, and returning them as a list of string.
-    They can be set from command line and from a file name web_pages.txt put in the input folder in which each website is
-    written per line. The application will control first the command line and then the file. If no website is set
-    neither in the 2 ways, the application will start with 2 default websites show its behaviour.
+    They can be set from a file name web_pages.txt put in the input folder in which each website is
+    written per line. If no website is set the application will start with 2 default websites to show its behaviour.
     Such websites are: google.it/doodles, www.youtube.it/feed/explore.
 
     :param default_websites: The default websites to use when no one is set by the user.
@@ -29,18 +28,18 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
     lines = get_input_generic_file('web_pages.txt', default_websites, project_root_directory=project_root_directory)
-    values = list()
+    values = set()
     for line in lines:
         try:
-            values.append(line)
+            values.add(Url(line))
         except InvalidUrlError:
             pass
     for i, value in enumerate(values):
         print(f"> [{i+1}/{len(lines)}]: {value}")
-    return values
+    return list(values)
 
 
-def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), project_root_directory=Path.cwd()) -> List[str]:
+def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), project_root_directory=Path.cwd()) -> List[DomainName]:
     """
     Start of the application: getting the mail domains, and returning them as a list of string.
     They can be set from command line and from a file name mail_domains.txt put in the input folder in which each mail
@@ -55,9 +54,12 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), pr
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
     lines = get_input_generic_file('mail_domains.txt', default_mail_domains, project_root_directory=project_root_directory)
+    values = set()
+    for line in lines:
+        values.add(DomainName(line))
     for i, value in enumerate(lines):
         print(f"> [{i+1}/{len(lines)}]: {value}")
-    return lines
+    return list(values)
 
 
 def get_input_generic_file(input_filename: str, default_values: tuple, project_root_directory=Path.cwd()) -> List[str]:
@@ -134,16 +136,14 @@ def get_input_application_flags(default_complete_unresolved_database=False, defa
 
 if __name__ == "__main__":
     print("********** START APPLICATION **********")
-    headless_browser_is_instantiated = False
+    resolvers = None
     try:
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
         print(f"Server: {str(db)}")
         # application input
-        input_websites = list(map(lambda s: Url(s), get_input_websites()))
-        input_websites = list_utils.remove_duplicates(input_websites)
-        input_mail_domains = list(map(lambda s: DomainName(s), get_input_mail_domains()))
-        input_mail_domains = list_utils.remove_duplicates(input_mail_domains)
+        input_websites = get_input_websites()
+        input_mail_domains = get_input_mail_domains()
         complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
@@ -178,7 +178,8 @@ if __name__ == "__main__":
         print(f"!!! str: {str(e)} !!!")
     finally:
         # closing
-        if resolvers.headless_browser_is_instantiated:
-            resolvers.headless_browser.close()
+        if resolvers is not None:
+            if resolvers.headless_browser_is_instantiated:
+                resolvers.headless_browser.close()
         close_database()
     print("********** APPLICATION END **********")

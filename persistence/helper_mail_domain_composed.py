@@ -7,7 +7,7 @@ def insert(mde: MailDomainEntity, mse: MailServerEntity or None) -> MailDomainCo
     return mdca
 
 
-def bulk_inserts(data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]) -> None:
+def bulk_upserts(data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]) -> None:
     MailDomainComposedAssociation.insert_many(data_source).on_conflict_replace().execute()
 
 

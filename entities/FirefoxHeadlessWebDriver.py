@@ -25,6 +25,7 @@ class FirefoxHeadlessWebDriver:
     driver : seleniumwire.webdriver.Firefox
         Actual object of the web driver.
     """
+    time_out_in_seconds = 30
 
     def __init__(self, project_root_directory=Path.cwd()):
         """
@@ -62,8 +63,8 @@ class FirefoxHeadlessWebDriver:
             self.driver = webdriver.Firefox(service=self.service, options=self.options)
         except selenium.common.exceptions.WebDriverException:
             raise
-        self.driver.set_page_load_timeout(30)       # [s]
-        self.driver.implicitly_wait(10)  # SAFETY
+        self.driver.set_page_load_timeout(self.time_out_in_seconds)       # [s]
+        # self.driver.implicitly_wait(10)  # SAFETY
 
     def close(self) -> None:
         """
@@ -83,5 +84,5 @@ class FirefoxHeadlessWebDriver:
             self.driver = webdriver.Firefox(service=self.service, options=self.options)
         except selenium.common.exceptions.WebDriverException:
             raise
-        self.driver.set_page_load_timeout(30)  # [s]
-        self.driver.implicitly_wait(10)  # SAFETY
+        self.driver.set_page_load_timeout(self.time_out_in_seconds)  # [s]
+        # self.driver.implicitly_wait(10)  # SAFETY

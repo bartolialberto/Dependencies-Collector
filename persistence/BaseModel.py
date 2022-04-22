@@ -10,11 +10,12 @@ db = SqliteDatabase(str(db_file))
 db.connect()
 
 
+# TODO: start_database method...?
+
+
 def handle_tables_creation():       # executed at the end of the file
-    if len(db.get_tables()) > 18:
-        pass
-    else:
-        db.create_tables([
+    # 33 entities and associations
+    all_application_tables = {
             BaseModel,
             DomainNameEntity,
             UrlEntity,
@@ -49,8 +50,13 @@ def handle_tables_creation():       # executed at the end of the file
             NetworkNumbersAssociation,
             ScriptSiteDomainNameAssociation,
             WebSiteDomainNameAssociation,
-            AliasToZoneAssociation],    # 33 entities and associations
-            safe=True)
+            AliasToZoneAssociation}
+    all_application_tables_str = set(map(lambda model: model._meta.table_name, all_application_tables))
+    current_database_tables_str = db.get_tables()       # nome delle tabelle
+    if all_application_tables_str.issubset(current_database_tables_str):
+        pass
+    else:
+        db.create_tables(all_application_tables, safe=True)
 
 
 def close_database():
@@ -300,7 +306,7 @@ class DomainNameDependenciesAssociation(BaseModel):
 
 
 class DirectZoneAssociation(BaseModel):
-    domain_name = ForeignKeyField(DomainNameEntity)
+    domain_name = ForeignKeyField(DomainNameEntity, primary_key=True)
     zone = ForeignKeyField(ZoneEntity, null=True)
 
     def __str__(self):
@@ -308,7 +314,7 @@ class DirectZoneAssociation(BaseModel):
 
     class Meta:
         db_table = 'direct_zone'
-        primary_key = CompositeKey('domain_name', 'zone')
+        # primary_key = CompositeKey('domain_name', 'zone')
 
 
 class MailDomainComposedAssociation(BaseModel):
@@ -377,7 +383,7 @@ class AccessAssociation(BaseModel):
 
 
 class IpAddressDependsAssociation(BaseModel):
-    ip_address = ForeignKeyField(IpAddressEntity)
+    ip_address = ForeignKeyField(IpAddressEntity, primary_key=True)
     ip_network = ForeignKeyField(IpNetworkEntity)
     ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, null=True)
     ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
@@ -387,7 +393,7 @@ class IpAddressDependsAssociation(BaseModel):
 
     class Meta:
         db_table = 'ip_address_depends'
-        primary_key = CompositeKey('ip_address')
+        # primary_key = CompositeKey('ip_address')
 
 
 class PrefixesTableAssociation(BaseModel):

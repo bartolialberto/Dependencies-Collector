@@ -1,15 +1,11 @@
 import copy
-from ipaddress import IPv4Address
 from typing import List, Set, Union, Dict
-
 from entities.paths.APath import APath
 from entities.DomainName import DomainName
 from entities.paths.NSPath import NSPath
 from entities.RRecord import RRecord
-from exceptions.DomainNameNotInPathError import DomainNameNotInPathError
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError
-from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.UnknownReasonError import UnknownReasonError
 
 
