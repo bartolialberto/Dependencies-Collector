@@ -10,10 +10,7 @@ from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
-from entities.paths.builders.APathBuilder import APathBuilder
-from entities.paths.builders.CNAMEPathBuilder import CNAMEPathBuilder
-from entities.paths.builders.MXPathBuilder import MXPathBuilder
-from entities.paths.builders.NSPathBuilder import NSPathBuilder
+from entities.paths.PathBuilder import PathBuilder
 from entities.resolvers.results.MailDomainResolvingResult import MailDomainResolvingResult
 from entities.resolvers.results.DnsZoneDependenciesResult import DnsZoneDependenciesResult
 from entities.resolvers.results.MultipleMailDomainResolvingResult import MultipleMailDomainResolvingResult
@@ -44,7 +41,7 @@ class DnsResolver:
         The cache used to handle requests.
     consider_tld : bool
         Flag that tells if the resolver has to consider TLDs. This means that when a TLD is encountered in the
-        elaboration, it is avoided and from the its name servers it is not deducted any other domain name to elaborate.
+        elaboration, it is avoided and from its name servers it is not deducted any other domain name to elaborate.
     """
     def __init__(self, consider_tld: bool):
         """
@@ -60,9 +57,6 @@ class DnsResolver:
     def do_query(self, name: str, type_rr: TypesRR) -> Path:
         """
         This method executes a real DNS query. It takes the domain name and the type as parameters.
-        The result is a RR containing all the values in the values field, and a list of RRs of type CNAME containing (in
-        the values field) all the aliases found in the resolving path. If the latter has no aliases then the list of
-        aliases is empty.
 
         :param name: Name parameter.
         :type name: str
@@ -75,23 +69,14 @@ class DnsResolver:
         :return: A tuple containing the RR result and a list of RR containing the alias path.
         :rtype: Tuple[RRecord, List[RRecord]]
         """
-        if type_rr == TypesRR.A:
-            path_builder = APathBuilder()
-        elif type_rr == TypesRR.NS:
-            path_builder = NSPathBuilder()
-        elif type_rr == TypesRR.CNAME:
-            path_builder = CNAMEPathBuilder()
-        elif type_rr == TypesRR.MX:
-            path_builder = MXPathBuilder()
-        else:
-            raise ValueError
+        path_builder = PathBuilder()
         try:
             answer = self.resolver.resolve(name, type_rr.to_string())
             canonical_name = None
             for cname in answer.chaining_result.cnames:
                 for key in cname.items.keys():
                     current_rr = RRecord(DomainName(str(cname.name)), TypesRR.CNAME, [str(key.target)])
-                    path_builder.add_alias(current_rr)
+                    path_builder.add_cname(current_rr)
                     canonical_name = str(key.target)
             if canonical_name is None:
                 canonical_name = name
@@ -113,25 +98,23 @@ class DnsResolver:
         except Exception as e:  # fail because of another reason...
             raise UnknownReasonError(message=str(e))
 
-    def resolve_access_path(self, web_site_domain_name: DomainName) -> APath:
+    def resolve_a_path(self, domain_name: DomainName) -> APath:
         """
-        This method resolves the domain name parameter (supposed to be extracted from an URL) in all the alias to
-        follow before the IP address is resolved.
+        This method resolves the domain name parameter A type query.
 
-        :param web_site_domain_name: A domain name.
-        :type web_site_domain_name: DomainName
+        :param domain_name: A domain name.
+        :type domain_name: DomainName
         :raise NoAnswerError: If such error happen.
         :raise DomainNonExistentError: If such error happen.
         :raise UnknownReasonError: If such error happen.
-        :return: A tuple containing first the A type RR answer, and then a list of CNAME type RR that represents the
-        access path.
-        :rtype: Tuple[RRecord, List[RRecord]]
+        :return: The path result.
+        :rtype: APath
         """
         try:
-            a_path = self.cache.resolve_path(web_site_domain_name, TypesRR.A)
+            a_path = self.cache.resolve_path(domain_name, TypesRR.A)
         except NoAvailablePathError:
             try:
-                a_path = self.do_query(web_site_domain_name.string, TypesRR.A)
+                a_path = self.do_query(domain_name.string, TypesRR.A)
                 self.cache.add_path(a_path)
             except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                 raise
@@ -141,11 +124,11 @@ class DnsResolver:
         """
         This method resolves the mail servers dependencies of multiple mail domains.
         If something goes wrong, exceptions are not raised but the error_logs of the result will be populated with what
-        went wrong.
+        went wrong and the respective results will be set to None.
 
         :param mail_domains: A list of mail domains.
-        :param mail_domains: List[str]
-        :return: A MultipleDnsMailServerDependenciesResult object.
+        :param mail_domains: List[DomainName]
+        :return: A MultipleMailDomainResolvingResult object.
         :rtype: MultipleMailDomainResolvingResult
         """
         final_results = MultipleMailDomainResolvingResult()
@@ -174,7 +157,7 @@ class DnsResolver:
         This method resolves the mail servers dependencies of a mail domain.
 
         :param mail_domain: A mail domain.
-        :type mail_domain: str
+        :type mail_domain: DomainName
         :raise InvalidDomainNameError: If mail domain is not a well-formatted domain name or email address.
         :raise DomainNonExistentError: If query response says that name is a non-existent domain.
         :raise NoAnswerError: If query has no response.
@@ -196,10 +179,11 @@ class DnsResolver:
             if isinstance(value, DomainName):
                 mail_server = value
                 try:
-                    a_path = self.resolve_access_path(mail_server)
+                    a_path = self.resolve_a_path(mail_server)
                 except (NoAnswerError, UnknownReasonError, DomainNonExistentError) as e:
                     print(f"!!! {str(e)} ==> mail domain {mail_domain} is unresolved.!!!")
-                    result.add_unresolved_mail_server_access(mail_server)
+                    # result does not require to set None in the inner dictionary, it is set by default.
+                    # result.add_unresolved_mail_server_access(mail_server)
                     continue
                 result.add_mail_server_access(a_path)
         return result
@@ -211,7 +195,7 @@ class DnsResolver:
         went wrong.
 
         :param domain_list: A list of domain names.
-        :type domain_list: List[str]
+        :type domain_list: List[DomainName]
         :param reset_cache_per_elaboration: Flag that indicates if cache should be cleared after each domain name
         resolving. Useful only for testing.
         :type reset_cache_per_elaboration: bool
@@ -225,7 +209,7 @@ class DnsResolver:
                     self.cache.clear()
                 print(f"Looking at zone dependencies for domain[{i+1}/{len(domain_list)}]: {domain} ..")
                 resolver_result = self.resolve_domain_dependencies(domain)
-                final_results.merge_single_resolver_result(domain, resolver_result)
+                final_results.join_single_resolver_result(domain, resolver_result)
             except InvalidDomainNameError as e:
                 final_results.error_logs.append(ErrorLog(e, domain.string, str(e)))
         return final_results
@@ -236,7 +220,6 @@ class DnsResolver:
 
         :param domain: A domain name.
         :type domain: DomainName
-        :raise InvalidDomainNameError: If domain name parameter is not a well-formatted domain name.
         :return: A DnsZoneDependenciesResult object.
         :rtype: DnsZoneDependenciesResult
         """
@@ -252,7 +235,7 @@ class DnsResolver:
                 cname_path = self.resolve_cname(current_domain)
                 for subdomain in cname_path.get_resolution().get_first_value().parse_subdomains(self.consider_tld, self.consider_tld, False):
                     list_utils.append_with_no_duplicates(elaboration_domains, subdomain)
-                for rr in cname_path.get_aliases_chain():
+                for rr in cname_path.get_cname_chain():
                     for_direct_zones.add(rr.name)
                 for_direct_zones.add(cname_path.get_resolution().name)
                 for_direct_zones.add(cname_path.get_resolution().get_first_value())
@@ -309,11 +292,11 @@ class DnsResolver:
         except (DomainNonExistentError, UnknownReasonError, ReachedMaximumRecursivePathThresholdError):
             raise
         try:
-            return cname_path_builder.complete().build()
+            return cname_path_builder.complete_as_cnamepath().build()
         except IndexError:
             raise NoAvailablePathError(name.string)
 
-    def __inner_resolve_cname(self, name: DomainName, path_builder: NSPathBuilder or None, count_invocations_threshold=1000, count_invocations=0) -> CNAMEPathBuilder:
+    def __inner_resolve_cname(self, name: DomainName, path_builder: PathBuilder or None, count_invocations_threshold=1000, count_invocations=0) -> PathBuilder:
         """
         Recursive auxiliary method used in the 'resolve_cname' method.
 
@@ -333,7 +316,7 @@ class DnsResolver:
         :rtype: List[str]
         """
         if path_builder is None:
-            path_builder = CNAMEPathBuilder()
+            path_builder = PathBuilder()
         else:
             pass
         count_invocations = count_invocations + 1
@@ -350,7 +333,7 @@ class DnsResolver:
                 return path_builder
             except (DomainNonExistentError, UnknownReasonError):
                 raise
-        path_builder.add_alias(rr_answer)
+        path_builder.add_cname(rr_answer)
         return self.__inner_resolve_cname(rr_answer.get_first_value(), path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
 
     def resolve_zone(self, cname_param: CNAMEPath or DomainName) -> Tuple[Zone, List[DomainName], List[ErrorLog]]:
@@ -372,10 +355,10 @@ class DnsResolver:
         names_to_be_elaborated = set()
         if isinstance(cname_param, DomainName):
             last_domain_name = cname_param
-            total_path_builder = NSPathBuilder()
+            total_path_builder = PathBuilder()
         else:
             last_domain_name = cname_param.get_resolution().get_first_value()
-            total_path_builder = NSPathBuilder.from_cname_path(cname_param)
+            total_path_builder = PathBuilder.from_cname_path(cname_param)
         try:
             rr_answer = self.cache.lookup(last_domain_name, TypesRR.NS)
             total_path = total_path_builder.complete_resolution(rr_answer).build()
@@ -389,9 +372,9 @@ class DnsResolver:
             try:
                 current_path = self.do_query(last_domain_name.string, TypesRR.NS)
                 self.cache.add_path(current_path)
-                for rr in current_path.get_aliases_chain():
+                for rr in current_path.get_cname_chain():
                     names_to_be_elaborated.add(rr.get_first_value())
-                    total_path_builder.add_alias(rr)
+                    total_path_builder.add_cname(rr)
                 total_path = total_path_builder.complete_resolution(current_path.get_resolution()).build()
                 rr_answer = total_path.get_resolution()
                 for value in rr_answer.values:
@@ -564,9 +547,9 @@ class DnsResolver:
         except NoAvailablePathError:
             raise
         #
-        total_path_builder = APathBuilder.from_cname_path(cname_path)
+        total_path_builder = PathBuilder.from_cname_path(cname_path)
         for rr in a_path.get_aliases_chain():
-            total_path_builder.add_alias(rr)
+            total_path_builder.add_cname(rr)
         total_path = total_path_builder.complete_resolution(a_path.get_resolution()).build()
         return total_path, name_to_be_elaborated
 

@@ -6,8 +6,8 @@ class ErrorLog:
 
     Attributes
     ----------
-    error_type : str
-        The name of the error.
+    exception : BaseException
+        The exception raised.
     entity_cause : str
         A string representation of the entity that caused the problem.
     reason_phrase : str
@@ -30,14 +30,21 @@ class ErrorLog:
 
     def __str__(self) -> str:
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return f"{self.error_type}\t{self.entity_cause}\t{self.reason_phrase}"
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: any) -> bool:
+        """
+        This method returns a boolean for comparing 2 objects equality.
+
+        :param other:
+        :return: The result of the comparison.
+        :rtype: bool
+        """
         if isinstance(other, ErrorLog):
             return self.error_type == other.error_type and self.entity_cause == other.entity_cause
         else:

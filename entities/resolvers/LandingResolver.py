@@ -3,7 +3,8 @@ import requests
 from entities.Url import Url
 from entities.error_log.ErrorLog import ErrorLog
 from entities.resolvers.DnsResolver import DnsResolver
-from entities.resolvers.results.LandingSiteResult import LandingSiteResult, InnerLandingSiteSingleSchemeResult
+from entities.resolvers.results.LandingSiteResult import LandingSiteResult
+from entities.resolvers.results.LandingSiteSingleSchemeResult import LandingSiteSingleSchemeResult
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
@@ -108,7 +109,7 @@ class LandingResolver:
             error_logs.append(ErrorLog(exc, url.http().string, str(exc)))
         return LandingSiteResult(https_result, http_result, error_logs)
 
-    def do_single_request(self, site: Url, https: bool) -> InnerLandingSiteSingleSchemeResult:
+    def do_single_request(self, site: Url, https: bool) -> LandingSiteSingleSchemeResult:
         """
         This methods actually executes a HTTP GET request; it constructs a HTTP URL from the site parameter using HTTPS
         or HTTP scheme according to the https parameter.
@@ -128,7 +129,7 @@ class LandingResolver:
         and ReadTimeout errors.
         :raise requests.exceptions.RequestException: There was an ambiguous exception that occurred while handling your
         :return: A InnerLandingSiteSingleSchemeResult object.
-        :rtype: InnerLandingSiteSingleSchemeResult
+        :rtype: LandingSiteSingleSchemeResult
         """
         try:
             landing_url, redirection_path, hsts, ip = requests_utils.resolve_landing_page(site, as_https=https)
@@ -160,7 +161,7 @@ class LandingResolver:
             # There was an ambiguous exception that occurred while handling your request.
             raise
         try:
-            a_path = self.dns_resolver.resolve_access_path(landing_url.domain_name())
+            a_path = self.dns_resolver.resolve_a_path(landing_url.domain_name())
         except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
             raise
-        return InnerLandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, a_path)
+        return LandingSiteSingleSchemeResult(landing_url, redirection_path, hsts, a_path)

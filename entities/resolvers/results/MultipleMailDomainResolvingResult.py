@@ -1,3 +1,4 @@
+from typing import Optional
 from entities.DomainName import DomainName
 from entities.error_log.ErrorLog import ErrorLog
 from entities.resolvers.results.MailDomainResolvingResult import MailDomainResolvingResult
@@ -13,7 +14,7 @@ class MultipleMailDomainResolvingResult:
 
     Attributes
     ----------
-    dependencies : Dict[str, DnsMailServersDependenciesResult] or None
+    dependencies : Dict[DomainName, Optional[DnsMailServersDependenciesResult]]
         Such dictionary.
     error_logs : List[ErrorLog]
         A list of error logs occurred during resolving.
@@ -26,12 +27,12 @@ class MultipleMailDomainResolvingResult:
         self.dependencies = dict()
         self.error_logs = list()
 
-    def add_dependency(self, mail_domain: DomainName, mail_servers_dependency: MailDomainResolvingResult or None):
+    def add_dependency(self, mail_domain: DomainName, mail_servers_dependency: Optional[MailDomainResolvingResult]):
         """
         This method adds a new mail domain resolution. None value is used to indicate that the resolving went wrong.
 
         :param mail_domain: A mail domain.
-        :type mail_domain: str
+        :type mail_domain: DomainName
         :param mail_servers_dependency: A DnsMailServersDependenciesResult object.
         :type mail_servers_dependency: MailDomainResolvingResult or None
         """

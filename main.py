@@ -145,18 +145,18 @@ if __name__ == "__main__":
         # application input
         input_websites = get_input_websites()
         input_mail_domains = get_input_mail_domains()
-        complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping = get_input_application_flags()
+        complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_resolving = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
-        resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_scraping)
+        resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_resolving)
         if complete_unresolved_database:
             completer = DatabaseEntitiesCompleter(resolvers)
-            unresolved_entities = helper_application_results.get_unresolved_entities()
+            unresolved_entities = helper_application_results.get_unresolved_entities(execute_script_resolving, execute_rov_resolving)
             completer.do_complete_unresolved_entities(unresolved_entities)
         # auxiliary elaborations
         print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
-        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_scraping)    # for future error reproducibility
+        snapshot_utils.take_temporary_snapshot(input_websites, input_mail_domains, complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_resolving)    # for future error reproducibility
         # actual elaboration of all resolvers
         start_execution_time = datetime.now()
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         # export dns cache, error_logs and unresolved entities
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()
         resolvers.error_logger.write_to_csv_in_output_folder()
-        helper_application_results.dump_all_unresolved_entities(execute_rov_scraping=execute_rov_scraping)
+        helper_application_results.dump_all_unresolved_entities(execute_rov_scraping=execute_rov_resolving)
         print(f"Total application execution time is: {datetime_utils.compute_delta_and_stamp(start_execution_time)}")
     except Exception as e:
         take_snapshot(e)

@@ -18,7 +18,7 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
 
     def test_01_integrity_between_as_persistence_entities_flag(self):
         print(f"\n------- [1] START QUERY -------")
-        cnames_from_a_path = list(map(lambda dn: dn.string, self.a_path.get_aliases_chain(as_resource_records=False)))
+        cnames_from_a_path = list(map(lambda dn: dn.string, self.a_path.get_cname_chain(as_resource_records=False)))
         addresses_from_a_path = set(map(lambda ia: ia.exploded, self.a_path.get_resolution().values))
         print(f"from APath: {self.a_path.stamp()}")
 
@@ -46,7 +46,7 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
             iae = helper_ip_address.get(ip_address)
             tmp = helper_ip_address.resolve_reversed_a_path(iae, as_reversed=False)
             from_elaboration = list(map(lambda dn: dn.string, tmp))
-            true_elaboration = list(map(lambda dn: dn.string, self.a_path.get_aliases_chain(as_resource_records=False)))
+            true_elaboration = list(map(lambda dn: dn.string, self.a_path.get_cname_chain(as_resource_records=False)))
             print(f"--> true values: {true_elaboration}")
             print(f"--> elaboration: {from_elaboration}")
             self.assertListEqual(true_elaboration, from_elaboration)

@@ -45,12 +45,19 @@ class TypesRR(Enum):
 
     def __str__(self):
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return self.to_string()
 
     def __hash__(self) -> int:
+        """
+        This method returns the hash of this object. Should be defined alongside the __eq__ method with the same
+        returning value from 2 objects.
+
+        :return: Hash of this object.
+        :rtype: int
+        """
         return hash(self.to_string())

@@ -4,7 +4,8 @@ from exceptions.NotROVStateTypeError import NotROVStateTypeError
 
 class ROVStates(Enum):
     """
-    This class represents all the states of a ROV in the ROVPage (web page).
+    This class represents all the states of a prefix's ROV State in the web page:
+            https://stats.labs.apnic.net/roa/ASXXX?c=IT&l=1&v=4&t=thist&d=thisd
 
     """
     UNK = "UNK",
@@ -43,9 +44,9 @@ class ROVStates(Enum):
 
     def __str__(self):
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return self.to_string()

@@ -4,10 +4,7 @@ from ipaddress import IPv4Address
 from pathlib import Path as PPath
 from typing import List, Dict, Iterable
 from entities.DomainName import DomainName
-from entities.paths.builders.APathBuilder import APathBuilder
-from entities.paths.builders.CNAMEPathBuilder import CNAMEPathBuilder
-from entities.paths.builders.MXPathBuilder import MXPathBuilder
-from entities.paths.builders.NSPathBuilder import NSPathBuilder
+from entities.paths.PathBuilder import PathBuilder
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
@@ -145,16 +142,7 @@ class LocalDnsResolverCache:
         if path_builder is not None:
             pass
         else:
-            if rr_type_resolution == TypesRR.A:
-                path_builder = APathBuilder()
-            elif rr_type_resolution == TypesRR.NS:
-                path_builder = NSPathBuilder()
-            elif rr_type_resolution == TypesRR.CNAME:
-                path_builder = CNAMEPathBuilder()
-            elif rr_type_resolution == TypesRR.MX:
-                path_builder = MXPathBuilder()
-            else:
-                raise ValueError
+            path_builder = PathBuilder()
         count_invocations = count_invocations + 1
         if count_invocations >= count_invocations_threshold:
             raise ReachedMaximumRecursivePathThresholdError(domain_name.string)
@@ -165,7 +153,7 @@ class LocalDnsResolverCache:
         except NoRecordInCacheError:
             try:
                 rr_cname = self.lookup(domain_name, TypesRR.CNAME)
-                path_builder.add_alias(rr_cname)
+                path_builder.add_cname(rr_cname)
                 return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, path_builder=path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name.string)

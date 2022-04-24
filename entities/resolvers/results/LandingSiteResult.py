@@ -1,41 +1,6 @@
-from ipaddress import IPv4Address
-from typing import List, Set
-
-from entities.SchemeUrl import SchemeUrl
-from entities.Url import Url
+from typing import List
 from entities.error_log.ErrorLog import ErrorLog
-from entities.paths.APath import APath
-from utils import domain_name_utils
-
-
-class InnerLandingSiteSingleSchemeResult:
-    """
-    This class represents the result of a single landing resolution using one scheme (generally HTTP or HTTPS).
-    In short words is a wrapper for a collection of information.
-
-    ...
-
-    Attributes
-    ----------
-    url : str
-        The landing URL (with scheme).
-    redirection_path : List[str]
-        The list of pages URL redirection.
-    hsts : bool
-        The presence of Strict-Transport-Security policy in the landing page.
-    ips : Set[ipaddress.IPv4Address]
-        The IP addresses associated with the server name.
-    server : str
-        Domain name of the url.
-    access_path : List[str]
-        The chain of domain names to resolve the server name to an IP address.
-    """
-    def __init__(self, url: SchemeUrl, redirection_path: List[str], hsts: bool, a_path: APath):
-        self.url = url
-        self.redirection_path = redirection_path
-        self.hsts = hsts
-        self.a_path = a_path
-        self.server = url.domain_name()
+from entities.resolvers.results.LandingSiteSingleSchemeResult import LandingSiteSingleSchemeResult
 
 
 class LandingSiteResult:
@@ -48,21 +13,21 @@ class LandingSiteResult:
 
     Attributes
     ----------
-    https : InnerLandingSiteSingleSchemeResult
+    https : Optional[LandingSiteSingleSchemeResult]
         The result of the HTTPS landing.
-    http : InnerLandingSiteSingleSchemeResult
+    http : Optional[LandingSiteSingleSchemeResult]
         The result of the HTTP landing.
     error_logs : List[ErrorLog]
         A list of error logs occurred during landing.
     """
-    def __init__(self, https_result: InnerLandingSiteSingleSchemeResult or None, http_result: InnerLandingSiteSingleSchemeResult or None, error_logs: List[ErrorLog]):
+    def __init__(self, https_result: LandingSiteSingleSchemeResult or None, http_result: LandingSiteSingleSchemeResult or None, error_logs: List[ErrorLog]):
         """
         Initialize object.
 
         :param https_result: The landing result using HTTPS scheme.
-        :type https_result: InnerLandingSiteSingleSchemeResult or None
+        :type https_result: Optional[LandingSiteSingleSchemeResult]
         :param http_result: The landing result using HTTP scheme.
-        :type http_result: InnerLandingSiteSingleSchemeResult or None
+        :type http_result: Optional[LandingSiteSingleSchemeResult]
         :param error_logs: The error logs list.
         :type error_logs: List[ErrorLog]
         """

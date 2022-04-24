@@ -173,16 +173,16 @@ class ZoneDependenciesResolvingIntegrityTestCase(unittest.TestCase):
         aliases_rr = set()
         zone_name_cnames_rr = set()
         for zone in self.dns_results.zone_dependencies_per_zone.keys():
-            if len(zone.name_path.get_aliases_chain()) == 0:
+            if len(zone.name_path.get_cname_chain()) == 0:
                 pass
-            elif len(zone.name_path.get_aliases_chain()) == 1:
-                zone_name_cnames_rr.add(zone.name_path.get_aliases_chain()[0])
+            elif len(zone.name_path.get_cname_chain()) == 1:
+                zone_name_cnames_rr.add(zone.name_path.get_cname_chain()[0])
             else:
-                for rr in zone.name_path.get_aliases_chain()[0:-1]:
+                for rr in zone.name_path.get_cname_chain()[0:-1]:
                     aliases_rr.add(rr)
-                zone_name_cnames_rr.add(zone.name_path.get_aliases_chain()[-1])
+                zone_name_cnames_rr.add(zone.name_path.get_cname_chain()[-1])
             for name_server_path in zone.name_servers:
-                for rr in name_server_path.get_aliases_chain():
+                for rr in name_server_path.get_cname_chain():
                     aliases_rr.add(rr)
         # actual cname testing
         print(f"{len(aliases_rr)+len(zone_name_cnames_rr)} CNAMEs in total")

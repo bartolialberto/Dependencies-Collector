@@ -100,7 +100,6 @@ def get_direct_zone_of(dne: DomainNameEntity) -> ZoneEntity:
     return dza.zone
 
 
-# TODO: brutto
 def get_entire_zones_from_nameservers_pool(nses_contained_in_a_network: Set[NameServerEntity]) -> Set[ZoneEntity]:
     query = ZoneComposedAssociation.select(ZoneComposedAssociation)\
         .where(ZoneComposedAssociation.name_server.in_(nses_contained_in_a_network))

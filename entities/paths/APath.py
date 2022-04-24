@@ -1,14 +1,30 @@
 from typing import List
-from entities.DomainName import DomainName
 from entities.paths.Path import Path
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
-from exceptions.DomainNameNotInPathError import DomainNameNotInPathError
 from exceptions.PathIntegrityError import PathIntegrityError
 
 
 class APath(Path):
+    """
+    This class implements the Path class with a type A resource record as resolution.
+
+    ...
+
+    Attributes
+    ----------
+    __path : List[RRecord]
+        List of resource records, accessible through the path property as defined in the Path abstract class.
+    """
     def __init__(self, rr_list: List[RRecord]):
+        """
+        Initialize the object.
+
+        :param rr_list: List of resource records.
+        :type rr_list: List[RRecord]
+        :raise PathIntegrityError: If the list of resource records is not compliant as path.
+        :raise ValueError: If resource records are not of the expected type.
+        """
         if not Path.check_path_integrity(rr_list):
             raise PathIntegrityError
         if rr_list[-1].type != TypesRR.A:
@@ -21,11 +37,3 @@ class APath(Path):
     @property
     def path(self) -> List[RRecord]:
         return self.__path
-
-    def resolve(self, domain_name: DomainName) -> RRecord:
-        for rr in self.path:
-            if rr.name == domain_name:
-                return self.get_resolution()
-        if self.get_resolution().name == domain_name:
-            return self.get_resolution()
-        raise DomainNameNotInPathError(domain_name)

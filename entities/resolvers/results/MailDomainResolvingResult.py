@@ -1,31 +1,33 @@
 from ipaddress import IPv4Address
-from typing import List, Tuple
+from typing import Iterator
 from entities.DomainName import DomainName
-from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.paths.APath import APath
 from entities.paths.MXPath import MXPath
-from exceptions.DomainNameNotInPathError import DomainNameNotInPathError
-from exceptions.NoAvailablePathError import NoAvailablePathError
-from utils import domain_name_utils
 
 
 class MailDomainResolvingResult:
     """
     This class represents the result of mail server dependencies resolving.
-    It consists in a simple list of strings (mail servers).
+    It consists in the path retrieved from a MX query of the mail domain and a dictionary for each mail server (as key)
+    that takes an APath object as value.
 
     ...
 
     Attributes
     ----------
-    mail_servers : List[str]
+    mail_domain_path : MXPath
+        A list of mail servers.
+    mail_servers_paths : Dict[DomainName, Optional[APath]
         A list of mail servers.
     """
     def __init__(self, mx_path: MXPath):
         """
-        Initialize the object.
+        Initialize the object. In particular sets every value of the mail_servers_paths to None, only later with the
+        add_mail_server_access method it can be set the APath for a mail server.
 
+        :raise ValueError: If an unexpected value type is encountered in the MXPath parameter or if the MXPath parameter
+        is not a MXPath object.
         """
         self.mail_domain_path = mx_path
         self.mail_servers_paths = dict()
@@ -34,7 +36,7 @@ class MailDomainResolvingResult:
                 if isinstance(value, DomainName):
                     self.mail_servers_paths[value] = None
                 elif isinstance(value, IPv4Address):
-                    # self.mail_servers_paths[value] = None
+                    # TODO: NOT HANDLED:
                     pass
                 else:
                     raise ValueError
@@ -43,28 +45,55 @@ class MailDomainResolvingResult:
 
     def add_mail_server_access(self, a_path: APath):
         """
-        this method adds a mail server to the dependencies.
+        This method adds a mail server APath to the dependencies.
 
 
-        :param mail_server: A mail server.
-        :type mail_server: str
+        :param a_path: An APath object.
+        :type a_path: APath
+        :raise KeyError: If the APath doesn't reference a mail server related to the mail domain.
         """
         try:
             self.mail_servers_paths[a_path.get_qname()] = a_path
         except KeyError:
             raise
 
-    def add_unresolved_mail_server_access(self, mail_server: DomainName) -> None:
-        self.mail_servers_paths[mail_server] = None
-
     def __eq__(self, other) -> bool:
-        return self.mail_domain_path == other.mail_domain_path and self.mail_servers_paths == other.mail_servers_paths
+        """
+        This method returns a boolean for comparing 2 objects equality.
 
-    def __iter__(self):
+        :param other:
+        :return: The result of the comparison.
+        :rtype: bool
+        """
+        if isinstance(other, MailDomainResolvingResult):
+            return self.mail_domain_path == other.mail_domain_path and self.mail_servers_paths == other.mail_servers_paths
+        else:
+            return False
+
+    def __iter__(self) -> Iterator[DomainName]:
+        """
+        Class is iterable through the mail servers dictionary (the keys).
+
+        :return: The iterator.
+        :rtype: Iterator[DomainName]
+        """
         return self.mail_servers_paths.__iter__()
 
-    def __next__(self):
+    def __next__(self) -> DomainName:
+        """
+        Class is iterable through the mail servers dictionary (the keys).
+
+        :return: The next domain name.
+        :rtype: DomainName
+        """
         return self.mail_servers_paths.__iter__().__next__()
 
     def __hash__(self):
+        """
+        This method returns the hash of this object. Should be defined alongside the __eq__ method with the same
+        returning value from 2 objects.
+
+        :return: Hash of this object.
+        :rtype: int
+        """
         return hash(repr(self))

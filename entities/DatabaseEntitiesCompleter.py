@@ -97,7 +97,7 @@ class DatabaseEntitiesCompleter:
                 domain_name = DomainName(aa.domain_name.string)
                 print(f"association[{i+1}/{len(aas)}]: ", end='')
                 try:
-                    a_path = self.resolvers_wrapper.dns_resolver.resolve_access_path(domain_name)
+                    a_path = self.resolvers_wrapper.dns_resolver.resolve_a_path(domain_name)
                 except (NoAnswerError, DomainNonExistentError, UnknownReasonError):
                     print(f"{domain_name} not resolved...")
                     continue

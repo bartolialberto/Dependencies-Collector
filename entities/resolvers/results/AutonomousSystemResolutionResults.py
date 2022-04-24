@@ -1,5 +1,4 @@
 import ipaddress
-
 from entities.DomainName import DomainName
 from entities.EntryIpAsDatabase import EntryIpAsDatabase
 
@@ -35,6 +34,7 @@ class AutonomousSystemResolutionResults:
     unresolved_servers : Set[str]
         The dictionary that contains all the servers that doesn't have an IP address.
     """
+
     def __init__(self):
         """
         Instantiate the object.
@@ -45,7 +45,8 @@ class AutonomousSystemResolutionResults:
         self.no_as_results = dict()
         self.unresolved_servers = set()
 
-    def add_complete_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase, ip_range_tsv: ipaddress.IPv4Network) -> None:
+    def add_complete_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase,
+                            ip_range_tsv: ipaddress.IPv4Network) -> None:
         """
         This method adds a complete result.
 
@@ -63,7 +64,8 @@ class AutonomousSystemResolutionResults:
         except KeyError:
             self.complete_results[ip_address] = (server, entry, ip_range_tsv)
 
-    def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: DomainName, entry: EntryIpAsDatabase) -> None:
+    def add_no_ip_range_tsv_result(self, ip_address: ipaddress.IPv4Address, server: DomainName,
+                                   entry: EntryIpAsDatabase) -> None:
         """
         This method adds an almost complete result that lacks the IP .tsv range resolution.
 
@@ -102,7 +104,7 @@ class AutonomousSystemResolutionResults:
         """
         self.unresolved_servers.add(server)
 
-    def merge(self, other: 'AutonomousSystemResolutionResults'):        # FORWARD DECLARATIONS (REFERENCES)
+    def merge(self, other: 'AutonomousSystemResolutionResults'):  # FORWARD DECLARATIONS (REFERENCES)
         """
         This method merges another AutonomousSystemResolutionResults object into the self object, precisely merges all
         the inner dictionaries of the two.
@@ -112,16 +114,14 @@ class AutonomousSystemResolutionResults:
         """
         for ip_address in other.complete_results.keys():
             self.add_complete_result(ip_address,
-                 other.complete_results[ip_address][0],
-                 other.complete_results[ip_address][1],
-                 other.complete_results[ip_address][2])
+                                     other.complete_results[ip_address][0],
+                                     other.complete_results[ip_address][1],
+                                     other.complete_results[ip_address][2])
         for ip_address in other.no_ip_range_tsv_results.keys():
             self.add_no_ip_range_tsv_result(ip_address,
-                other.no_ip_range_tsv_results[ip_address][0],
-                other.no_ip_range_tsv_results[ip_address][1])
+                                            other.no_ip_range_tsv_results[ip_address][0],
+                                            other.no_ip_range_tsv_results[ip_address][1])
         for ip_address in other.no_as_results.keys():
-            # self.add_no_as_result(ip_address, other.no_as_results[ip_address][0])
             self.add_no_as_result(ip_address, other.no_as_results[ip_address])
         for server in other.unresolved_servers:
             self.unresolved_servers.add(server)
-

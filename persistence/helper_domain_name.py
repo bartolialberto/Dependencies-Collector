@@ -4,7 +4,7 @@ from entities.DomainName import DomainName
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.paths.APath import APath
-from entities.paths.builders.APathBuilder import APathBuilder
+from entities.paths.PathBuilder import PathBuilder
 from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
@@ -39,9 +39,9 @@ def resolve_a_path(dne: DomainNameEntity, as_persistence_entities=False) -> Unio
         return a_path_builder.build()
 
 
-def __inner_resolve_a_path__(dne: DomainNameEntity, builder=None) -> APathBuilder:
+def __inner_resolve_a_path__(dne: DomainNameEntity, builder=None) -> PathBuilder:
     if builder is None:
-        builder = APathBuilder()
+        builder = PathBuilder()
     else:
         pass
     try:

@@ -19,9 +19,9 @@ class ErrorLogger:
     _separator : str
         A string separator to use when exporting to .csv file.
     """
-    def __init__(self, separator='\t'):
+    def __init__(self, separator='\t'):     # \t = TAB
         """
-        Initialize self object.
+        Initialize object.
 
         :param separator: The separator for the csv file format. Default is TAB.
         :type separator: str
@@ -62,10 +62,13 @@ class ErrorLogger:
 
     def write_to_csv(self, filepath: str) -> None:
         """
-        This method export all the error logs to a csv using the separator of the self object.
+        This method export all the error logs to a .csv file using the separator set in the object.
 
         :param filepath: The filepath of the file to write.
         :type filepath: str
+        :raise PermissionError: If there's no permission to execute operation on the file.
+        :raise FileNotFoundError: If file is not found.
+        :raise OSError: If another OS-related problem occurred.
         """
         file = Path(filepath)
         try:
@@ -83,8 +86,8 @@ class ErrorLogger:
 
     def write_to_csv_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
         """
-        This method export all the error logs to a csv using the separator of the self object in the output folder of
-        the project. It needs the Path object of the project root directory (PRD).
+        This method export all the error logs to a .csv file using the separator of the self object in the output folder
+        of the project. It needs the Path object of the project root directory (PRD).
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
@@ -96,6 +99,9 @@ class ErrorLogger:
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
+        :raise PermissionError: If there's no permission to execute operation on the file.
+        :raise FileNotFoundError: If file is not found.
+        :raise OSError: If another OS-related problem occurred.
         """
         file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
         file_abs_path = str(file)

@@ -62,4 +62,11 @@ class Url:
         return self._second_component_
 
     def __hash__(self) -> int:
+        """
+        This method returns the hash of this object. Should be defined alongside the __eq__ method with the same
+        returning value from 2 objects.
+
+        :return: Hash of this object.
+        :rtype: int
+        """
         return hash(self._second_component_)

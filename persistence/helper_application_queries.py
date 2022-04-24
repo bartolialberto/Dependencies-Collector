@@ -20,7 +20,7 @@ def do_query_1() -> List[Tuple[ZoneEntity, Optional[Set[IpAddressEntity]], Optio
     count_complete_zones = 0
     count_incomplete_zones = 0
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for ze in zes:
             try:
                 nses = helper_name_server.get_zone_nameservers(ze)
@@ -33,7 +33,6 @@ def do_query_1() -> List[Tuple[ZoneEntity, Optional[Set[IpAddressEntity]], Optio
             for nse in nses:
                 try:
                     cname_dnes, dne_iaes = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=True)
-                    # a_path = helper_domain_name.resolve_a_path(nse.name, as_persistence_entities=False)
                 except (DoesNotExist, NoAvailablePathError):
                     is_unresolved = True
                     break
@@ -69,7 +68,7 @@ def do_query_2() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
     # QUERY
     print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for web_site_entity in web_site_entities:
             #
             https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
@@ -116,7 +115,7 @@ def do_query_3() -> List[Tuple[MailDomainEntity, ZoneEntity]]:
     mail_domain_entities = helper_mail_domain.get_everyone()
     print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for mail_domain_entity in mail_domain_entities:
             #
             try:
@@ -151,7 +150,7 @@ def do_query_4() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
     web_site_entities = helper_web_site.get_everyone()
     print(f"Parameters: {len(web_site_entities)} web sites retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for web_site_entity in web_site_entities:
             #
             https_web_server_entity, http_web_server_entity = helper_web_server.get_from(web_site_entity)
@@ -195,7 +194,7 @@ def do_query_5() -> List[Tuple[MailDomainEntity, ZoneEntity]]:
     mail_domain_entities = helper_mail_domain.get_everyone()
     print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for mail_domain_entity in mail_domain_entities:
             #
             try:
@@ -227,7 +226,7 @@ def do_query_6() -> List[Tuple[MailDomainEntity, Set[IpAddressEntity], Set[IpNet
     only_complete_mail_domain = False
     print(f"Parameters: {len(mail_domain_entities)} mail domains retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for mail_domain_entity in mail_domain_entities:
             #
             try:
@@ -263,7 +262,7 @@ def do_query_7() -> List[Tuple[WebServerEntity, Set[IpAddressEntity], Set[IpNetw
     web_server_entities = helper_web_server.get_everyone()
     print(f"Parameters: {len(web_server_entities)} web servers retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for web_server_entity in web_server_entities:
             ip_addresses_of_web_server = set()
             ip_networks_of_web_server = set()
@@ -293,7 +292,7 @@ def do_query_8() -> List[Tuple[IpNetworkEntity, AutonomousSystemEntity, Set[WebS
     network_entities = helper_ip_network.get_everyone()
     print(f"Parameters: {len(network_entities)} IP networks retrieved from database.")
     result = list()
-    with db.atomic():
+    with db.atomic():       # peewee transaction
         for network_entity in network_entities:
             try:
                 autonomous_system = helper_autonomous_system.get_of_entity_ip_network(network_entity)

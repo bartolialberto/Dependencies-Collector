@@ -11,9 +11,6 @@ db = SqliteDatabase(str(db_file))
 db.connect()
 
 
-# TODO: start_database method...?
-
-
 def handle_tables_creation():       # executed at the end of the file
     # 33 entities/associations
     all_application_tables = {

@@ -520,10 +520,10 @@ class ApplicationResolversWrapper:
             https_result = self.landing_web_sites_results[website].https
             http_result = self.landing_web_sites_results[website].http
             if https_result is not None:
-                for dn in https_result.a_path.get_aliases_chain(as_resource_records=False):
+                for dn in https_result.a_path.get_cname_chain(as_resource_records=False):
                     domain_names.add(dn)
             if http_result is not None:
-                for dn in https_result.a_path.get_aliases_chain(as_resource_records=False):
+                for dn in https_result.a_path.get_cname_chain(as_resource_records=False):
                     domain_names.add(dn)
         # adding mail domain, mail servers and aliases associated
         for mail_domain in self.mail_domains_results.dependencies.keys():
@@ -531,7 +531,7 @@ class ApplicationResolversWrapper:
                 domain_names.add(mail_domain)
             else:
                 mail_domain_path = self.mail_domains_results.dependencies[mail_domain].mail_domain_path
-                for dn in mail_domain_path.get_aliases_chain(as_resource_records=False):
+                for dn in mail_domain_path.get_cname_chain(as_resource_records=False):
                     domain_names.add(dn)
             if self.mail_domains_results.dependencies[mail_domain] is not None:
                 for mail_server in self.mail_domains_results.dependencies[mail_domain].mail_servers_paths.keys():
@@ -539,7 +539,7 @@ class ApplicationResolversWrapper:
                     if mail_server_path is None:
                         domain_names.add(mail_server)
                     else:
-                        for dn in mail_server_path.get_aliases_chain(as_resource_records=False):
+                        for dn in mail_server_path.get_cname_chain(as_resource_records=False):
                             domain_names.add(dn)
         return list(domain_names)
 
