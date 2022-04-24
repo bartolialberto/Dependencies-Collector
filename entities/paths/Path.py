@@ -7,29 +7,38 @@ from entities.RRecord import RRecord
 
 
 class Path(ABC):
+    @property
     @abc.abstractmethod
+    def path(self) -> List[RRecord]:
+        raise NotImplementedError
+
+    @path.setter
+    @abc.abstractmethod
+    def path(self, new_val: List[RRecord]) -> List[RRecord]:
+        raise NotImplementedError
+
     def get_resolution(self) -> RRecord:
-        pass
+        return self.path[-1]
 
-    @abc.abstractmethod
     def get_aliases_chain(self, as_resource_records=True) -> Union[List[RRecord], List[DomainName]]:
-        pass
+        if as_resource_records:
+            return self.path[0:-1]
+        else:
+            result = list()
+            result.append(self.path[0].name)
+            for rr in self.path[0:-1]:
+                result.append(rr.get_first_value())
+            return result
 
-    @abc.abstractmethod
     def get_canonical_name(self) -> DomainName:
-        pass
+        return self.get_resolution().name
 
-    @abc.abstractmethod
     def get_qname(self) -> DomainName:
-        pass
-
-    @abc.abstractmethod
-    def get_list(self) -> List[RRecord]:
-        pass
+        return self.path[0].name
 
     @abc.abstractmethod
     def resolve(self, domain_name: DomainName) -> RRecord:
-        pass
+        raise NotImplementedError
 
     def stamp(self) -> str:
         result = ''
@@ -41,7 +50,6 @@ class Path(ABC):
                     result = str(rr.name) + " --CNAME-> " + rr.get_first_value().string
                 else:
                     result = result + " --CNAME-> " + rr.get_first_value().string
-        # return result + " ==> " + str(self.get_resolution().values)
         if len(self.get_aliases_chain()) == 0:
             return self.get_resolution().name.string + " =="+self.get_resolution().type.to_string()+"=> " + resource_records_utils.stamp_values(self.get_resolution().type, self.get_resolution().values)
         else:
@@ -58,6 +66,12 @@ class Path(ABC):
 
     def __hash__(self) -> int:
         return hash((self.get_resolution(), self.get_qname()))
+
+    def __iter__(self):
+        return self.path.__iter__()
+
+    def __next__(self):
+        return self.path.__iter__().__next__()
 
     @staticmethod
     def check_path_integrity(path: List[RRecord]) -> bool:

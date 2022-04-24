@@ -1,7 +1,4 @@
-import re
-from typing import List
 from urllib.parse import urlparse
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from utils import string_utils, url_utils
 
 

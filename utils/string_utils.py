@@ -1,7 +1,4 @@
-import csv
-from pathlib import Path
 from typing import List
-from utils import file_utils
 
 
 def multiple_contains(string_to_be_verified: str, strings: List[str]) -> bool:

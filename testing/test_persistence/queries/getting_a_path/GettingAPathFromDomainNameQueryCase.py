@@ -10,7 +10,7 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETER
-        cls.domain_name = DomainName('login.microsoftonline.com.')
+        cls.domain_name = DomainName('www.netflix.com.')
         # ELABORATION
         cls.dne = helper_domain_name.get(cls.domain_name)
         cls.a_path = helper_domain_name.resolve_a_path(cls.dne, as_persistence_entities=False)

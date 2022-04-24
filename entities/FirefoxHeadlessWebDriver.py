@@ -4,6 +4,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from seleniumwire import webdriver
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from static_variables import INPUT_FOLDER_NAME
 from utils import file_utils
 
 
@@ -45,7 +46,7 @@ class FirefoxHeadlessWebDriver:
         """
         try:
             # TODO: ma se è linux o mac ... ?
-            result = file_utils.search_for_filename_in_subdirectory('input', 'geckodriver.exe', project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, 'geckodriver.exe', project_root_directory)
         except FilenameNotFoundError:
             raise
         gecko_driver_file = result[0]

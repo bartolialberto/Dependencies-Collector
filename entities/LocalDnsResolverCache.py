@@ -1,7 +1,8 @@
 import csv
+from collections import defaultdict
 from ipaddress import IPv4Address
 from pathlib import Path as PPath
-from typing import List
+from typing import List, Dict, Iterable
 from entities.DomainName import DomainName
 from entities.paths.builders.APathBuilder import APathBuilder
 from entities.paths.builders.CNAMEPathBuilder import CNAMEPathBuilder
@@ -11,6 +12,7 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
 from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
+from static_variables import OUTPUT_FOLDER_NAME, SNAPSHOTS_FOLDER_NAME
 from utils import file_utils, csv_utils, resource_records_utils
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
@@ -32,7 +34,7 @@ class LocalDnsResolverCache:
         The character separator between all the attributes of a Resource Record object, used when logs are exported to
         file.
     """
-    cache: List[RRecord]
+    cache: Dict[DomainName, Dict[TypesRR, RRecord]]
     separator: str
 
     def __init__(self, separator=";"):
@@ -43,10 +45,10 @@ class LocalDnsResolverCache:
         :param separator: The character separator used when exporting the file. Default is a comma (;).
         :type separator: str
         """
-        self.cache = list()
+        self.cache = defaultdict(dict)
         self.separator = separator
 
-    def add_entry(self, entry: RRecord, control_for_no_duplicates=False) -> None:
+    def add_entry(self, entry: RRecord) -> None:
         """
         Adds a resource record.
 
@@ -55,13 +57,9 @@ class LocalDnsResolverCache:
         :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
         :type control_for_no_duplicates: bool
         """
-        if control_for_no_duplicates:
-            if entry not in self.cache:
-                self.cache.append(entry)
-        else:
-            self.cache.append(entry)
+        self.cache[entry.name][entry.type] = entry
 
-    def add_entries(self, entries: List[RRecord], control_for_no_duplicates=False) -> None:
+    def add_entries(self, entries: Iterable[RRecord]) -> None:
         """
         Adds multiple resource records.
 
@@ -70,22 +68,12 @@ class LocalDnsResolverCache:
         :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
         :type control_for_no_duplicates: bool
         """
-        if control_for_no_duplicates:
-            for entry in entries:
-                if entry not in self.cache:
-                    self.cache.append(entry)
-        else:
-            for entry in entries:
-                self.cache.append(entry)
+        for entry in entries:
+            self.cache[entry.name][entry.type] = entry
 
-    def add_path(self, path: Path, control_for_no_duplicates=False) -> None:
-        if control_for_no_duplicates:
-            for rr in path:
-                if rr not in self.cache:
-                    self.cache.append(rr)
-        else:
-            for rr in path:
-                self.cache.append(rr)
+    def add_path(self, path: Path) -> None:
+        for rr in path:
+            self.add_entry(rr)
 
     def set_separator(self, separator: str) -> None:
         """
@@ -103,7 +91,7 @@ class LocalDnsResolverCache:
         """
         self.cache.clear()
 
-    def lookup_first(self, domain_name: DomainName, type_rr: TypesRR) -> RRecord:
+    def lookup(self, domain_name: DomainName, type_rr: TypesRR) -> RRecord:
         """
         Search for the first occurrence of a resource record of name and type as parameters told.
 
@@ -115,31 +103,10 @@ class LocalDnsResolverCache:
         :returns: The first occurrence of name and resource record type as parameters told.
         :rtype: RRecord
         """
-        for rr in self.cache:
-            if rr.name == domain_name and rr.type == type_rr:
-                return rr
-        raise NoRecordInCacheError(domain_name.string, type_rr)
-
-    def lookup(self, domain_name: DomainName, type_rr: TypesRR) -> List[RRecord]:
-        """
-        Search for all occurrences of resource records of name and type as parameters say.
-
-        :param domain_name: The domain name.
-        :type domain_name: DomainName
-        :param type_rr: The resource record type.
-        :type type_rr: TypesRR
-        :raises NoRecordInCacheError: If there is no resource record satisfying the parameters in cache list.
-        :returns: A list containing all occurrences of name and resource record type as parameters told.
-        :rtype: List[RRecord]
-        """
-        result = []
-        for rr in self.cache:
-            if rr.name == domain_name and rr.type == type_rr:
-                result.append(rr)
-        if len(result) == 0:
+        try:
+            return self.cache[domain_name][type_rr]
+        except KeyError:
             raise NoRecordInCacheError(domain_name.string, type_rr)
-        else:
-            return result
 
     def resolve_path(self, domain_name: DomainName, rr_type_wanted: TypesRR) -> Path:
         """
@@ -192,12 +159,12 @@ class LocalDnsResolverCache:
         if count_invocations >= count_invocations_threshold:
             raise ReachedMaximumRecursivePathThresholdError(domain_name.string)
         try:
-            rr_a = self.lookup_first(domain_name, rr_type_resolution)
+            rr_a = self.lookup(domain_name, rr_type_resolution)
             path_builder.complete_resolution(rr_a)
             return path_builder.build()
         except NoRecordInCacheError:
             try:
-                rr_cname = self.lookup_first(domain_name, TypesRR.CNAME)
+                rr_cname = self.lookup(domain_name, TypesRR.CNAME)
                 path_builder.add_alias(rr_cname)
                 return self.__inner_resolve_path(rr_cname.get_first_value(), rr_type_resolution, path_builder=path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
             except NoRecordInCacheError:
@@ -223,7 +190,7 @@ class LocalDnsResolverCache:
             for line in f:
                 try:
                     rr = RRecord.parse_from_csv_entry_as_str(line)
-                    self.cache.append(rr)
+                    self.add_entry(rr)
                 except ValueError:
                     pass
                 except NotResourceRecordTypeError:
@@ -231,13 +198,7 @@ class LocalDnsResolverCache:
             f.close()
             if take_snapshot:
                 self.take_temp_snapshot()
-        except ValueError:
-            raise
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (ValueError, PermissionError, FileNotFoundError, OSError):
             raise
 
     def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=PPath.cwd()) -> None:
@@ -264,21 +225,14 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = None
         try:
-            result = file_utils.search_for_filename_in_subdirectory("output", filename+".csv", project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
             file = result[0]
         except FilenameNotFoundError:
             raise
         try:
             self.load_csv(str(file), take_snapshot=take_snapshot)
-        except ValueError:
-            raise
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (ValueError, PermissionError, FileNotFoundError, OSError):
             raise
 
     def write_to_csv(self, filepath: str) -> None:
@@ -295,18 +249,15 @@ class LocalDnsResolverCache:
         try:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
-                for rr in self.cache:
-                    temp_list = list()
-                    temp_list.append(rr.name)
-                    temp_list.append(rr.type.to_string())
-                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
-                    writer.writerow(temp_list)
+                for dn in self.cache.keys():
+                    for rr in self.cache[dn].values():
+                        temp_list = list()
+                        temp_list.append(rr.name)
+                        temp_list.append(rr.type.to_string())
+                        temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
+                        writer.writerow(temp_list)
                 f.close()
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
 
     def write_to_txt(self, filepath: str) -> None:
@@ -323,14 +274,15 @@ class LocalDnsResolverCache:
         file_abs_path = str(file)
         try:
             with open(file_abs_path, 'w') as f:  # 'w' or 'x'
-                for rr in self.cache:
-                    temp = f"{rr.name}{self.separator}{rr.type.to_string()}{self.separator}["
-                    for index, val in enumerate(rr.values):
-                        temp += val
-                        if not index == len(rr.values) - 1:
-                            temp += " "
-                    temp += "]\n"
-                    f.write(temp)
+                for dn in self.cache.keys():
+                    for rr in self.cache[dn].values():
+                        temp = f"{rr.name}{self.separator}{rr.type.to_string()}{self.separator}["
+                        for index, val in enumerate(rr.values):
+                            temp += val
+                            if not index == len(rr.values) - 1:
+                                temp += " "
+                        temp += "]\n"
+                        f.write(temp)
                 f.close()
         except PermissionError:
             raise
@@ -358,15 +310,11 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = file_utils.set_file_in_folder("output", filename+".csv", project_root_directory)
+        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
         file_abs_path = str(file)
         try:
             self.write_to_csv(file_abs_path)
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
 
     def write_to_txt_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
@@ -388,28 +336,12 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = file_utils.set_file_in_folder("output", filename+".txt", project_root_directory)
+        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".txt", project_root_directory)
         file_abs_path = str(file)
         try:
             self.write_to_txt(file_abs_path)
-        except PermissionError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
-        except FileNotFoundError:
-            raise
-        except OSError:
-            raise
-
-    def merge_from(self, other: 'LocalDnsResolverCache') -> None:       # FORWARD DECLARATIONS (REFERENCES)
-        """
-        Method that takes another LocalResolverCache object and adds (without duplicates) all the resource records from
-        the other object cache to this (self object).
-
-        :param other: Another LocalResolverCache object.
-        :type other: LocalDnsResolverCache
-        """
-        for record in other.cache:
-            if record not in self.cache:
-                self.cache.append(record)
 
     def take_temp_snapshot(self, project_root_directory=PPath.cwd()) -> None:
         """
@@ -424,26 +356,27 @@ class LocalDnsResolverCache:
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder("SNAPSHOTS", "dns_cache.csv", project_root_directory=project_root_directory)
+        file = file_utils.set_file_in_folder(SNAPSHOTS_FOLDER_NAME, "dns_cache.csv", project_root_directory=project_root_directory)
         if not file.exists():
             pass
         with file.open('w', encoding='utf-8', newline='') as f:
             write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{self.separator}"))
-            for rr in self.cache:
-                temp_list = list()
-                temp_list.append(rr.name.string)
-                temp_list.append(rr.type.to_string())
-                tmp = "["
-                for index, val in enumerate(rr.values):
-                    if isinstance(val, DomainName):
-                        tmp += val.string
-                    elif isinstance(val, IPv4Address):
-                        tmp += val.exploded
-                    else:
-                        raise ValueError
-                    if not index == len(rr.values) - 1:
-                        tmp += ","
-                tmp += "]"
-                temp_list.append(tmp)
-                write.writerow(temp_list)
+            for dn in self.cache.keys():
+                for rr in self.cache[dn].values():
+                    temp_list = list()
+                    temp_list.append(rr.name.string)
+                    temp_list.append(rr.type.to_string())
+                    tmp = "["
+                    for index, val in enumerate(rr.values):
+                        if isinstance(val, DomainName):
+                            tmp += val.string
+                        elif isinstance(val, IPv4Address):
+                            tmp += val.exploded
+                        else:
+                            raise ValueError
+                        if not index == len(rr.values) - 1:
+                            tmp += ","
+                    tmp += "]"
+                    temp_list.append(tmp)
+                    write.writerow(temp_list)
             f.close()

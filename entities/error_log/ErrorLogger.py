@@ -1,7 +1,8 @@
 import csv
 from pathlib import Path
-from typing import List
+from typing import List, Iterable
 from entities.error_log.ErrorLog import ErrorLog
+from static_variables import OUTPUT_FOLDER_NAME
 from utils import csv_utils, file_utils
 
 
@@ -49,7 +50,7 @@ class ErrorLogger:
         """
         self._logs.append(entry)
 
-    def add_entries(self, entries: List[ErrorLog]) -> None:
+    def add_entries(self, entries: Iterable[ErrorLog]) -> None:
         """
         This method adds multiple logs.
 
@@ -77,11 +78,7 @@ class ErrorLogger:
                     temp_list.append(log.reason_phrase)
                     writer.writerow(temp_list)
                 f.close()
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
 
     def write_to_csv_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
@@ -100,15 +97,9 @@ class ErrorLogger:
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder("output", filename+".csv", project_root_directory)
+        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
         file_abs_path = str(file)
         try:
             self.write_to_csv(file_abs_path)
-        except PermissionError:
+        except (PermissionError, FileNotFoundError, OSError):
             raise
-        except FileNotFoundError:
-            raise
-        except OSError:
-            raise
-
-

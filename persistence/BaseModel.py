@@ -1,10 +1,11 @@
 from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField, TextField
 from peewee import SqliteDatabase
+from static_variables import SQLite_DATABASE_FILE_NAME, OUTPUT_FOLDER_NAME
 from utils import file_utils
 
 
 cwd = file_utils.get_project_root_directory()
-db_file = file_utils.set_file_in_folder('output', 'results.sqlite', cwd)
+db_file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, SQLite_DATABASE_FILE_NAME, cwd)
 db_file.open(mode='a').close()
 db = SqliteDatabase(str(db_file))
 db.connect()
@@ -14,7 +15,7 @@ db.connect()
 
 
 def handle_tables_creation():       # executed at the end of the file
-    # 33 entities and associations
+    # 33 entities/associations
     all_application_tables = {
             BaseModel,
             DomainNameEntity,
@@ -59,10 +60,11 @@ def handle_tables_creation():       # executed at the end of the file
         db.create_tables(all_application_tables, safe=True)
 
 
-def close_database():
+def close_database_connection():
     db.close()
 
 
+# Database cannot be changed. If you want to set database at runtime see .bind(): https://www.bookstack.cn/read/peewee-orm-3.13.1-en/197675
 class BaseModel(Model):
     class Meta:
         database = db

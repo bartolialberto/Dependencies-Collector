@@ -1,4 +1,5 @@
 from asyncio import InvalidStateError
+from typing import List
 from entities.paths.MXPath import MXPath
 from entities.paths.Path import Path
 from entities.RRecord import RRecord
@@ -9,36 +10,36 @@ from exceptions.PathIntegrityError import PathIntegrityError
 
 class MXPathBuilder(PathBuilder):
     def __init__(self):
-        self.path = list()
-        self.resolved = False
+        self.__path = list()
+        self.__resolved = False
+
+    @property
+    def constructing_path(self) -> List[RRecord]:
+        return self.__path
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.__resolved
+
+    @is_resolved.setter
+    def is_resolved(self, new_val: bool) -> None:
+        self.__resolved = new_val
 
     def complete_resolution(self, rr: RRecord) -> 'MXPathBuilder':      # FORWARD DECLARATIONS (REFERENCES)
-        if self.resolved:
+        if self.is_resolved:
             raise InvalidStateError
         if rr.type != TypesRR.MX:
             raise ValueError
         else:
-            self.path.append(rr)
-        if Path.check_path_integrity(self.path):
-            self.resolved = True
-            return self
-        else:
-            raise PathIntegrityError
-
-    def add_alias(self, rr: RRecord) -> 'MXPathBuilder':        # FORWARD DECLARATIONS (REFERENCES)
-        if self.resolved:
-            raise InvalidStateError
-        if rr.type != TypesRR.CNAME:
-            raise ValueError
-        else:
-            self.path.append(rr)
-        if Path.check_path_integrity(self.path):
+            self.constructing_path.append(rr)
+        if Path.check_path_integrity(self.constructing_path):
+            self.is_resolved = True
             return self
         else:
             raise PathIntegrityError
 
     def build(self) -> Path:
-        if self.resolved:
-            return MXPath(self.path)
+        if self.is_resolved:
+            return MXPath(self.constructing_path)
         else:
             raise InvalidStateError

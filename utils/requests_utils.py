@@ -7,6 +7,7 @@ from pathlib import Path
 import requests
 import gzip
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from static_variables import INPUT_FOLDER_NAME, IP_ASN_ARCHIVE_NAME
 from utils import file_utils
 
 
@@ -96,7 +97,7 @@ def download_latest_tsv_database(project_root_directory=Path.cwd()) -> None:
     """
     url = 'https://iptoasn.com/data/ip2asn-v4.tsv.gz'
     r = requests.get(url, allow_redirects=True)
-    with open(f"{str(project_root_directory)}{os.sep}input{os.sep}ip2asn-v4.tsv.gz", 'wb') as d:
+    with open(f"{str(project_root_directory)}{os.sep}{INPUT_FOLDER_NAME}{os.sep}{IP_ASN_ARCHIVE_NAME}", 'wb') as d:
         d.write(r.content)
         d.close()
         extract_gz_archive(project_root_directory=project_root_directory)
@@ -116,12 +117,13 @@ def extract_gz_archive(project_root_directory=Path.cwd()) -> None:
     :param project_root_directory: The Path object pointing at the project root directory.
     :type project_root_directory: Path
     """
+    file_archive_extracted_name = IP_ASN_ARCHIVE_NAME.replace('.gz', '')
     try:
-        result = file_utils.search_for_file_type_in_subdirectory("input", ".gz", project_root_directory=project_root_directory)
+        result = file_utils.search_for_file_type_in_subdirectory(INPUT_FOLDER_NAME, ".gz", project_root_directory=project_root_directory)
     except FileWithExtensionNotFoundError:
         raise
     archive = result[0]
-    file = file_utils.set_file_in_folder("input", "ip2asn-v4.tsv", project_root_directory=project_root_directory)
+    file = file_utils.set_file_in_folder(INPUT_FOLDER_NAME, file_archive_extracted_name, project_root_directory=project_root_directory)
     file_content = None
     with gzip.open(f"{str(archive)}", 'rb') as ar:
         file_content = ar.read()        # if content is very large, lots of RAM is occupied

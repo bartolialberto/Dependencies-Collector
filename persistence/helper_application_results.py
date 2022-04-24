@@ -21,7 +21,8 @@ from persistence import helper_web_site, helper_web_site_lands, helper_web_serve
     helper_ip_range_rov, helper_network_numbers, helper_direct_zone, helper_web_site_domain_name, \
     helper_script_site_domain_name, helper_paths
 from persistence.BaseModel import db, MailDomainComposedAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation, \
-    ScriptSiteLandsAssociation, AccessAssociation, IpAddressDependsAssociation, DirectZoneAssociation
+    ScriptSiteLandsAssociation, AccessAssociation, IpAddressDependsAssociation
+from static_variables import OUTPUT_FOLDER_NAME
 from utils import datetime_utils, file_utils, csv_utils, string_utils
 
 
@@ -368,7 +369,7 @@ def dump_all_unresolved_entities(project_root_folder=Path.cwd(), separator=';', 
             pass
         else:
             raise ValueError
-    file = file_utils.set_file_in_folder('output', 'unresolved_entities.csv', project_root_folder)
+    file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, 'unresolved_entities.csv', project_root_folder)
     with file.open('w', encoding='utf-8', newline='') as f:
         write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{separator}"))
         write.writerow(['table_name', 'class_type', 'reason_phrase'])

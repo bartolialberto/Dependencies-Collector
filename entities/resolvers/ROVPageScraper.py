@@ -86,7 +86,6 @@ class ROVPageScraper:
                 self.load_page(ROVPageScraper.base_url(as_number))
             except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.TimeoutException):
                 raise
-            # self.prefixes_table.clear()
             self.current_as_number = as_number
             try:
                 self.scrape_prefixes_table_from_page()

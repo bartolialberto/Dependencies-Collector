@@ -71,10 +71,10 @@ class EntryIpAsDatabase:
         """
         try:
             return list(ipaddress.summarize_address_range(self.start_ip_range, self.end_ip_range))
-        except TypeError:
-            raise       # if first or last are not IP addresses or are not of the same version
-        except ValueError:
-            raise       # if last is not greater than first or if first address version is not 4 or 6
+        except (TypeError, ValueError):
+            # if last is not greater than first or if first address version is not 4 or 6
+            # if first or last are not IP addresses or are not of the same version
+            raise
 
     def get_network_of_ip(self, ip: ipaddress.IPv4Address) -> Tuple[ipaddress.IPv4Network, List[ipaddress.IPv4Network]]:
         """

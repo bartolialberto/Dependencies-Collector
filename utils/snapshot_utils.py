@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List
 from entities.DomainName import DomainName
 from entities.Url import Url
+from static_variables import SNAPSHOTS_FOLDER_NAME
 from utils import file_utils
 
 
@@ -33,7 +34,7 @@ def take_temp_snapshot_of_string_list(string_list: List[str], filename: str, pro
     :param project_root_directory: The Path object pointing at the project root directory.
     :type project_root_directory: Path
     """
-    file = file_utils.set_file_in_folder("SNAPSHOTS", filename + ".txt",
+    file = file_utils.set_file_in_folder(SNAPSHOTS_FOLDER_NAME, filename + ".txt",
                                          project_root_directory=project_root_directory)
     with file.open('w', encoding='utf-8') as f:  # 'w' or 'x'
         for string in string_list:
@@ -62,7 +63,7 @@ def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld
     :param project_root_directory: The Path object pointing at the project root directory.
     :type project_root_directory: Path
     """
-    file = file_utils.set_file_in_folder("SNAPSHOTS", filename + ".txt",
+    file = file_utils.set_file_in_folder(SNAPSHOTS_FOLDER_NAME, filename + ".txt",
                                          project_root_directory=project_root_directory)
     with file.open('w', encoding='utf-8') as f:  # 'w' or 'x'
         f.write('complete_unresolved_database:'+str(complete_unresolved_database)+'\n')

@@ -243,12 +243,11 @@ class DnsResolver:
         error_logs = list()
         start_cache_length = len(self.cache.cache)
         elaboration_domains = domain.parse_subdomains(self.consider_tld, self.consider_tld, True)
-        zone_dependencies = set()  # si va a popolare con ogni iterazione
+        zone_dependencies = set()
         cname_exception = False
         for_direct_zones = {domain}
         print(f"Cache has {start_cache_length} entries.")
         for current_domain in elaboration_domains:
-            # is domain a nameserver with aliases?
             try:
                 cname_path = self.resolve_cname(current_domain)
                 for subdomain in cname_path.get_resolution().get_first_value().parse_subdomains(self.consider_tld, self.consider_tld, False):
@@ -284,12 +283,6 @@ class DnsResolver:
         direct_zones = self.extract_direct_zones(for_direct_zones, zone_dependencies)
         print(f"Dependencies recap: {len(zone_dependencies)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_dependencies, direct_zones, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
-
-    def __parse_zone_with_same_name_of__(self, domain_name: DomainName, zone_dataset: Set[Zone]) -> Zone:
-        for zone in zone_dataset:
-            if zone.name == domain_name:
-                return zone
-        raise ValueError
 
     def resolve_cname(self, name: DomainName) -> CNAMEPath:
         """
@@ -346,7 +339,6 @@ class DnsResolver:
         count_invocations = count_invocations + 1
         if count_invocations >= count_invocations_threshold:
             raise ReachedMaximumRecursivePathThresholdError(name.string)
-        # path.append(name)
         try:
             rr_answer = self.cache.lookup(name, TypesRR.CNAME)
         except NoRecordInCacheError:
@@ -459,7 +451,6 @@ class DnsResolver:
                 zone_dependencies_per_zone[zone]
             except KeyError:
                 zone_dependencies_per_zone[zone] = set()
-            # zones = self.parse_zone_dependencies_of_zone(zone, zone_set, alias_encountered)
             zones = self.parse_zone_dependencies_of_zone(zone, zone_set)
             for zone_name in zones:
                 zone_dependencies_per_zone[zone].add(zone_name)
@@ -483,22 +474,12 @@ class DnsResolver:
                 for zone_name in zones:
                     zone_dependencies_per_name_server[name_server].add(zone_name)
         if not with_self_zone:
-            # eliminate the self zone from its dependencies
             for zone in zone_set:
                 try:
                     zone_dependencies_per_zone[zone].remove(zone)
                 except KeyError:
                     pass
         return zone_dependencies_per_name_server, zone_dependencies_per_zone
-
-    def parse_belonging_zones_of_name_server(self, name_server: DomainName, zones_set: Set[Zone]) -> Set[Zone]:
-        # DA CANCELLARE
-        result = set()
-        for zone in zones_set:
-            for name_server_of_zone in zone.nameservers():
-                if name_server_of_zone == name_server:
-                    result.add(zone)
-        return result
 
     def parse_zone_dependencies_of_name_server(self, name_server: DomainName, zone_set: Set[Zone]) -> Set[Zone]:
         """
@@ -515,7 +496,6 @@ class DnsResolver:
         try:
             zone = self.extract_direct_zone(name_server, zone_set)
         except ValueError:
-            # n.ns.at. case
             return set()
         return self.__inner_parse_zone_dependencies_of_zone(zone, zone_set)
 
@@ -549,52 +529,6 @@ class DnsResolver:
             for zone in zones_set:
                 if domain_name == zone.name:
                     result.add(zone)
-        return result
-
-
-    def parse_zone_dependencies_of_zone_OLD(self, current_zone: Zone, zone_set: Set[Zone], alias_encountered: Dict[DomainName, CNAMEPath]) -> Set[Zone]:
-        """
-        This methods takes as data pool the Zone (the application-defined object) list resolved and extract the zone
-        dependencies from the current_zone parameter.
-
-        :param current_zone: A Zone (the application-defined object) object.
-        :type current_zone: Zone
-        :param zone_set: All the Zone (the application-defined object) list resolved.
-        :type zone_set: List[Zone]
-        :return: A list of zone names.
-        :rtype: List[str]
-        """
-        zone_dependencies = set()
-        # ancestor zones
-        zones = self.__parse_zones_of_domain_name_from_zone_list(current_zone.name, zone_set)
-        for zone in zones:
-            zone_dependencies.add(zone)
-        # zones from name servers
-        for name_server in current_zone.nameservers(False):
-            name_server_zones = self.__parse_zones_of_domain_name_from_zone_list(name_server, zone_set)
-            for z in name_server_zones:
-                zone_dependencies.add(z)
-        return zone_dependencies
-
-    def __parse_zones_of_domain_name_from_zone_list(self, name: DomainName, zone_set: Set[Zone]) -> List[Zone]:
-        """
-        This methods takes as data pool the Zone (the application-defined object) list resolved.
-        Then it creates a list of domain names from the name parameter considering all the ancestor domain names and
-        extract the zone dependencies from the data pool mentioned above.
-
-        :param name: name
-        :type name: str
-        :param zone_set: The Zone (the application-defined object) list used as data pool.
-        :type zone_set: List[Zone]
-        :return: A list of Zone (the application-defined object).
-        :rtype: List[Zone]
-        """
-        subdomains = name.parse_subdomains(self.consider_tld, self.consider_tld, False)
-        result = list()
-        for subdomain in subdomains:
-            for zone in zone_set:
-                if subdomain == zone.name:
-                    result.append(zone)
         return result
 
     def try_to_resolve_partially_cached_a_path(self, name_server: DomainName) -> Tuple[APath, List[DomainName]]:

@@ -3,6 +3,27 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="C:\Users\fabbi\Desktop\NUOVE ELABORAZIONI\all in one\output\dns_cache.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\fabbi\Desktop\NUOVE ELABORAZIONI\all in one\output\error_logs.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\fabbi\Desktop\NUOVE ELABORAZIONI\all in one\output\unresolved_entities.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\SNAPSHOTS\dns_cache.csv">
           <value>
             <Attribute>

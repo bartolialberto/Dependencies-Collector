@@ -4,6 +4,7 @@ import time
 import traceback
 from pathlib import Path
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from static_variables import SNAPSHOTS_FOLDER_NAME
 from utils import file_utils
 
 
@@ -12,7 +13,7 @@ def take_snapshot(exception: Exception):
     current_time = time.localtime(seconds_passed_from_epoch)
     # example: executed at 22:10 12/11/2021 ---> folder name: 12112021_2210
     folder_name = f"{current_time.tm_mday:02}{current_time.tm_mon:02}{current_time.tm_year:02}_{current_time.tm_hour:02}{current_time.tm_min:02}{current_time.tm_sec:02}"
-    folder = Path(f"{str(Path.cwd())}{os.sep}SNAPSHOTS{os.sep}{folder_name}")
+    folder = Path(f"{str(Path.cwd())}{os.sep}{SNAPSHOTS_FOLDER_NAME}{os.sep}{folder_name}")
     folder.mkdir(parents=True, exist_ok=False)
     starting_cache_file = Path(f"{str(folder)}{os.sep}starting_cache.csv")
     web_sites_file = Path(f"{str(folder)}{os.sep}web_sites.txt")
@@ -22,7 +23,7 @@ def take_snapshot(exception: Exception):
 
     # load starting cache
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_dns_cache.csv")
+        result = file_utils.search_for_filename_in_subdirectory(SNAPSHOTS_FOLDER_NAME, "temp_dns_cache.csv")
         file = result[0]
         shutil.copy(file, starting_cache_file)
     except FilenameNotFoundError:
@@ -31,7 +32,7 @@ def take_snapshot(exception: Exception):
 
     # load web sites
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_web_sites.txt")
+        result = file_utils.search_for_filename_in_subdirectory(SNAPSHOTS_FOLDER_NAME, "temp_web_sites.txt")
         file = result[0]
         shutil.copy(file, web_sites_file)
     except FilenameNotFoundError:
@@ -40,7 +41,7 @@ def take_snapshot(exception: Exception):
 
     # load mail domains
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_mail_domains.txt")
+        result = file_utils.search_for_filename_in_subdirectory(SNAPSHOTS_FOLDER_NAME, "temp_mail_domains.txt")
         file = result[0]
         shutil.copy(file, mail_domains_file)
     except FilenameNotFoundError:
@@ -49,7 +50,7 @@ def take_snapshot(exception: Exception):
 
     # load flags
     try:
-        result = file_utils.search_for_filename_in_subdirectory("SNAPSHOTS", "temp_flags.txt")
+        result = file_utils.search_for_filename_in_subdirectory(SNAPSHOTS_FOLDER_NAME, "temp_flags.txt")
         file = result[0]
         shutil.copy(file, flags_file)
     except FilenameNotFoundError:

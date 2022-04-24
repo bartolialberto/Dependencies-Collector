@@ -44,7 +44,6 @@ class ScriptDependenciesResolver:
             self.headless_browser.driver.get(url.string)
         except selenium.common.exceptions.WebDriverException:
             raise
-
         main_page_scripts = set()
         awaiter_scripts = WebDriverWait(self.headless_browser.driver, 10).until(
             expected_conditions.presence_of_all_elements_located((By.XPATH, '//script[not(ancestor::iframe)]'))
@@ -59,6 +58,3 @@ class ScriptDependenciesResolver:
             else:
                 main_page_scripts.add(MainFrameScript(src, integrity))
         return main_page_scripts
-
-    def close(self):
-        self.headless_browser.driver.quit()

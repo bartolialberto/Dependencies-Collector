@@ -133,7 +133,7 @@ class ApplicationResolversWrapper:
             self.ip_as_database = IpAsDatabase(project_root_directory=project_root_directory)
         except (FileWithExtensionNotFoundError, OSError) as e:
             print(f"!!! {str(e)} !!!")
-            raise Exception
+            raise
         self.error_logger = ErrorLogger()
         # results
         self.landing_web_sites_results = dict()

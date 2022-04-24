@@ -5,6 +5,7 @@ from typing import List, Set
 from entities.EntryIpAsDatabase import EntryIpAsDatabase
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
+from static_variables import INPUT_FOLDER_NAME
 from utils import file_utils
 
 
@@ -23,7 +24,7 @@ class IpAsDatabase:
         If the database is valid, these are all the entries of the database.
     """
 
-    def __init__(self, project_root_directory=Path.cwd(), column_separator='\t'):      # FileNotFoundError, '\t' = TAB
+    def __init__(self, project_root_directory=Path.cwd(), column_separator='\t'):      # '\t' = TAB
         """
         Instantiate an IpAsDatabase object setting the filepath of the .tsv database file and then the file is read
         in order to populate a list with all the database entries. You can set manually the separator used to separate
@@ -43,7 +44,7 @@ class IpAsDatabase:
         :raise OSError: If is there a problem opening the .tsv file.
         """
         try:
-            result = file_utils.search_for_file_type_in_subdirectory("input", ".tsv", project_root_directory)
+            result = file_utils.search_for_file_type_in_subdirectory(INPUT_FOLDER_NAME, ".tsv", project_root_directory)
         except FileWithExtensionNotFoundError:
             raise
         file = result[0]

@@ -10,7 +10,8 @@ from entities.Url import Url
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
-from persistence.BaseModel import db, close_database
+from persistence.BaseModel import db, close_database_connection
+from static_variables import INPUT_FOLDER_NAME, INPUT_MAIL_DOMAINS_FILE_NAME, INPUT_WEB_SITES_FILE_NAME
 from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils
 
 
@@ -27,7 +28,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
-    lines = get_input_generic_file('web_pages.txt', default_websites, project_root_directory=project_root_directory)
+    lines = get_input_generic_file(INPUT_WEB_SITES_FILE_NAME, default_websites, project_root_directory=project_root_directory)
     values = set()
     for line in lines:
         try:
@@ -53,7 +54,7 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), pr
     :rtype: List[str]
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
-    lines = get_input_generic_file('mail_domains.txt', default_mail_domains, project_root_directory=project_root_directory)
+    lines = get_input_generic_file(INPUT_MAIL_DOMAINS_FILE_NAME, default_mail_domains, project_root_directory=project_root_directory)
     values = set()
     for line in lines:
         values.add(DomainName(line))
@@ -76,28 +77,28 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     """
     result_list = list()
     try:
-        search_result = file_utils.search_for_filename_in_subdirectory('input', input_filename, project_root_directory)
+        search_result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, input_filename, project_root_directory)
     except FilenameNotFoundError:
-        print(f"> No '{input_filename}' file found in 'input' folder found.")
+        print(f"> No '{input_filename}' file found in '{INPUT_FOLDER_NAME}' folder found.")
         print(f"> Starting application with default values as sample:")
         result_list = list(default_values)
         return result_list
     file = search_result[0]
     abs_filepath = str(file)
     with open(abs_filepath, 'r') as f:  # 'w' or 'x'
-        print(f"> Found '{input_filename}' file in 'input' folder.")
+        print(f"> Found '{input_filename}' file in '{INPUT_FOLDER_NAME}' folder.")
         lines = f.readlines()
         for i, line in enumerate(lines):
             value = line.strip()
             result_list.append(value)
         f.close()
         if len(result_list) == 0:
-            print(f"> File {input_filename} in 'input' folder doesn't contain any valid input.")
+            print(f"> File {input_filename} in '{INPUT_FOLDER_NAME}' folder doesn't contain any valid input.")
     result_list = list_utils.remove_duplicates(result_list)
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=False, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -140,7 +141,7 @@ if __name__ == "__main__":
     try:
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
-        print(f"Server: {str(db)}")
+        print(f"Database: {str(db)}")
         # application input
         input_websites = get_input_websites()
         input_mail_domains = get_input_mail_domains()
@@ -148,7 +149,6 @@ if __name__ == "__main__":
         # entities
         print("********** START APPLICATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_scraping)
-        # complete unresolved database is flag is set to
         if complete_unresolved_database:
             completer = DatabaseEntitiesCompleter(resolvers)
             unresolved_entities = helper_application_results.get_unresolved_entities()
@@ -181,5 +181,5 @@ if __name__ == "__main__":
         if resolvers is not None:
             if resolvers.headless_browser_is_instantiated:
                 resolvers.headless_browser.close()
-        close_database()
+        close_database_connection()
     print("********** APPLICATION END **********")

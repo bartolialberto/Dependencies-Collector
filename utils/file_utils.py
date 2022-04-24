@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Tuple
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
+from static_variables import INPUT_FOLDER_NAME
 
 
 def get_project_root_directory() -> Path:
@@ -154,7 +155,7 @@ def is_tsv_database_updated(project_root_directory=Path.cwd()) -> bool:
     :rtype: bool
     """
     try:
-        paths = search_for_file_type_in_subdirectory('input', '.tsv', project_root_directory)
+        paths = search_for_file_type_in_subdirectory(INPUT_FOLDER_NAME, '.tsv', project_root_directory)
     except FileWithExtensionNotFoundError:
         return False
     file = paths[0]
