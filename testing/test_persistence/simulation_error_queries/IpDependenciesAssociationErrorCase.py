@@ -4,7 +4,7 @@ from persistence import helper_ip_address, helper_ip_address_depends, helper_ip_
 from utils import network_utils
 
 
-class IpDependenciesErrorSimulationTestCase(unittest.TestCase):
+class IpDependenciesAssociationErrorCase(unittest.TestCase):
     def test_01_set_ip_range_tsv_to_null(self):
         print(f"\n------- [1] START SETTING IP RANGE TSV TO NULL QUERY -------")
         # PARAMETERS

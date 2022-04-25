@@ -12,7 +12,7 @@ from utils import file_utils
 # ['google.it']
 # ['ocsp.digicert.com']
 # ['modor.verisign.net']
-class ZoneDependenciesResolvingIntegrityTestCase(unittest.TestCase):
+class ZoneDependenciesResolvingIntegrityCase(unittest.TestCase):
     """
     DEFINITIVE TEST
     Test class that takes a list of domain names and then executes the DNS resolving.

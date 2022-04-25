@@ -3,7 +3,7 @@ from persistence import helper_application_results
 from utils import file_utils
 
 
-class DumpUnresolvedEntitiesTestCase(unittest.TestCase):
+class DumpUnresolvedEntitiesIntegrityCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

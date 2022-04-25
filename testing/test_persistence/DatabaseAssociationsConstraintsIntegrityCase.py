@@ -4,7 +4,7 @@ from persistence.BaseModel import db, DirectZoneAssociation, DomainNameEntity, W
     ScriptHostedOnAssociation, WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation
 
 
-class DatabaseAssociationsConstraintsCase(unittest.TestCase):
+class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
     def test_01_domain_name_and_direct_zones(self):
         print(f"\n------- [1] START domain_name VS direct_zone TEST CASE -------")
         domain_names = list()

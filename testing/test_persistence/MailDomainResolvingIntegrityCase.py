@@ -6,7 +6,7 @@ from persistence import helper_application_results, helper_mail_domain, helper_m
 from utils import file_utils
 
 
-class MailDomainResolvingIntegrityTestCase(unittest.TestCase):
+class MailDomainResolvingIntegrityCase(unittest.TestCase):
     results = None
     domain_names = None
     resolvers = None
@@ -14,7 +14,9 @@ class MailDomainResolvingIntegrityTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETERS
-        cls.domain_names = [DomainName('acus.gov.')]
+        cls.domain_names = [
+            DomainName('acus.gov.')
+        ]
         consider_tld = False
         # ELABORATION
         execute_script_resolving = False

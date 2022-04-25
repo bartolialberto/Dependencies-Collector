@@ -8,7 +8,7 @@ from persistence import helper_application_results, helper_ip_range_tsv, helper_
 from utils import file_utils
 
 
-class IpAsAndROVIntegrityTestCase(unittest.TestCase):
+class IpAsAndROVIntegrityCase(unittest.TestCase):
     """
     Test class that takes a list of domain names in input and executes: DNS resolving, IP-AS resolving and in the end
     ROVPage scraping. Then tests are done to check data integrity of ROVPage scraping (which are linked to the IP-AS

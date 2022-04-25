@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Optional, Union
 import dns.resolver
 from dns.name import Name
 from entities.DomainName import DomainName
@@ -270,23 +270,21 @@ class DnsResolver:
     def resolve_cname(self, name: DomainName) -> CNAMEPath:
         """
         This methods resolves the CNAME RR of the name parameter, then if there are more CNAME RR from the alias of the
-        previous CNAME RR then recursively it will continue the resolving. It will stops when there are no other CNAME
-        RR available for the last alias computed.
-        In the end it will be created a sort of 'alias path'.
+        previous CNAME RR then recursively it will continue resolving. It will stops when there are no other CNAME RR
+        available for the last cname computed.
+        In the end it will be created a CNAMEPath object.
 
         :param name: A domain name.
         :type name: DomainName
-        :param parameter_included: Decide if in the result list the parameter should be considered.
-        :type parameter_included: bool
         :raise ReachedMaximumRecursivePathThresholdError: If the CNAME query consists in an endless cycle.
         :raise DomainNonExistentError: If during the CNAME query happens such error.
         :raise UnknownReasonError: If during the CNAME query happens such error.
         :raise NoAvailablePathError: If there's no path for name parameter.
-        :return: The path of alias.
-        :rtype: List[str]
+        :return: The path of CNAMEs.
+        :rtype: CNAMEPath
         """
         try:
-            cname_path_builder = self.__inner_resolve_cname(name, None, count_invocations_threshold=100)
+            cname_path_builder = self.__inner_resolve_cname(name, None, count_invocations_threshold=50)
         except ReachedMaximumRecursivePathThresholdError:
             raise ReachedMaximumRecursivePathThresholdError(name.string)
         except (DomainNonExistentError, UnknownReasonError, ReachedMaximumRecursivePathThresholdError):
@@ -296,24 +294,24 @@ class DnsResolver:
         except IndexError:
             raise NoAvailablePathError(name.string)
 
-    def __inner_resolve_cname(self, name: DomainName, path_builder: PathBuilder or None, count_invocations_threshold=1000, count_invocations=0) -> PathBuilder:
+    def __inner_resolve_cname(self, name: DomainName, path_builder: Optional[PathBuilder], count_invocations_threshold=100, count_invocations=0) -> PathBuilder:
         """
         Recursive auxiliary method used in the 'resolve_cname' method.
 
         :param name: A domain name.
         :type name: DomainName
-        :param path: Result carried through all recursive invocations. None value corresponds to the initial seed.
-        :type path: List[str] or None
-        :param count_invocations: Number of recursive invocations of the method. 0 is the initial value obviously.
-        :type count_invocations: int
+        :param path_builder: Result carried through all recursive invocations. None value corresponds to the initial seed.
+        :type path_builder: Optional[PathBuilder]
         :param count_invocations_threshold: Threshold that sets the number beyond which it is considered that the
         resolution consists in a endless cycle.
         :type count_invocations_threshold: int
+        :param count_invocations: Number of recursive invocations of the method. 0 is the initial value obviously.
+        :type count_invocations: int
         :raise ReachedMaximumRecursivePathThresholdError: If the CNAME query consists in an endless cycle.
         :raise DomainNonExistentError: If during the CNAME query happens such error.
         :raise UnknownReasonError: If during the CNAME query happens a error that goes beyond the technical ones.
-        :return: The path of alias.
-        :rtype: List[str]
+        :return: The path of CNAMEs.
+        :rtype: PathBuilder
         """
         if path_builder is None:
             path_builder = PathBuilder()
@@ -336,32 +334,35 @@ class DnsResolver:
         path_builder.add_cname(rr_answer)
         return self.__inner_resolve_cname(rr_answer.get_first_value(), path_builder, count_invocations_threshold=count_invocations_threshold, count_invocations=count_invocations)
 
-    def resolve_zone(self, cname_param: CNAMEPath or DomainName) -> Tuple[Zone, List[DomainName], List[ErrorLog]]:
+    def resolve_zone(self, cname_param: Union[CNAMEPath, DomainName]) -> Tuple[Zone, List[DomainName], List[ErrorLog]]:
         """
-        This method resolves the NS RR of the domain name in the domain_name_path parameter. It will return the zone
-        (as Zone, the application-defined object) resolved, a list of name to append in the current domain name
-        elaboration list to be done and a list of error logs happened during the method execution.
+        This method resolves the NS RR of the domain name in the cname_param parameter (the canonical name if the
+        parameter is a CNAMEPath object). It will return the Zone object resolved, a list of name to append in the
+        current domain name elaboration list to be done and a list of error logs happened during the method execution.
 
-        :param domain_name_path: The path resolved from the CNAME previous resolving.
-        :type domain_name_path: List[str]
-        :raise DomainNonExistentError: If during the NS query happens such error.
+        :param cname_param: The path resolved from the CNAME previous resolving or the current domain name in the
+        elaboration list if there is no CNAME path for it.
+        :type cname_param: Union[CNAMEPath, DomainName]
+        :raise NotWantedTLDError: If the elaboration encounters a domain name that is TLD and the consider_tld option is
+        set to False.
         :raise UnknownReasonError: If during the NS query happens such error.
+        :raise DomainNonExistentError: If during the NS query happens such error.
         :raise NoAnswerError: If during the NS query happens such error.
-        :return: A tuple containing the zone resolved, the names to be added to continue the zone dependencies resolving
+        :return: A tuple containing the Zone resolved, the names to be added to continue the zone dependencies resolving
         and a list of error logs.
-        :rtype: Tuple[Zone, List[str], List[ErrorLog]]
+        :rtype: Tuple[Zone, List[DomainName], List[ErrorLog]]
         """
         error_logs_to_be_added = list()
         names_to_be_elaborated = set()
         if isinstance(cname_param, DomainName):
             last_domain_name = cname_param
-            total_path_builder = PathBuilder()
+            entire_path_builder = PathBuilder()
         else:
             last_domain_name = cname_param.get_resolution().get_first_value()
-            total_path_builder = PathBuilder.from_cname_path(cname_param)
+            entire_path_builder = PathBuilder.from_cname_path(cname_param)
         try:
             rr_answer = self.cache.lookup(last_domain_name, TypesRR.NS)
-            total_path = total_path_builder.complete_resolution(rr_answer).build()
+            entire_path = entire_path_builder.complete_resolution(rr_answer).build()
             if self.consider_tld == False and last_domain_name.is_tld():
                 raise NotWantedTLDError
             print(f"Depends on zone: {rr_answer.name}\t\t\t[NON-AUTHORITATIVE]")
@@ -374,9 +375,9 @@ class DnsResolver:
                 self.cache.add_path(current_path)
                 for rr in current_path.get_cname_chain():
                     names_to_be_elaborated.add(rr.get_first_value())
-                    total_path_builder.add_cname(rr)
-                total_path = total_path_builder.complete_resolution(current_path.get_resolution()).build()
-                rr_answer = total_path.get_resolution()
+                    entire_path_builder.add_cname(rr)
+                entire_path = entire_path_builder.complete_resolution(current_path.get_resolution()).build()
+                rr_answer = entire_path.get_resolution()
                 for value in rr_answer.values:
                     for domain in value.parse_subdomains(root_included=self.consider_tld, tld_included=self.consider_tld, self_included=True):
                         names_to_be_elaborated.add(domain)
@@ -388,7 +389,7 @@ class DnsResolver:
 
         unresolved_name_servers_a_path = dict()
         name_servers_a_path = list()
-        for name_server in total_path.get_resolution().values:
+        for name_server in entire_path.get_resolution().values:
             try:
                 a_path = self.cache.resolve_path(name_server, TypesRR.A)
             except NoAvailablePathError:
@@ -399,9 +400,7 @@ class DnsResolver:
                         names_to_be_elaborated.add(subdomain)
                     name_servers_a_path.append(a_path)
                     continue
-                except (DomainNonExistentError, UnknownReasonError) as e:
-                    pass
-                except (NoAnswerError, NoAvailablePathError):
+                except (DomainNonExistentError, UnknownReasonError, NoAnswerError, NoAvailablePathError):
                     pass
                 # normal elaboration
                 try:
@@ -412,19 +411,21 @@ class DnsResolver:
                     unresolved_name_servers_a_path[name_server] = e
                     continue
             name_servers_a_path.append(a_path)
-        zone = Zone(total_path, name_servers_a_path, unresolved_name_servers_a_path)
+        zone = Zone(entire_path, name_servers_a_path, unresolved_name_servers_a_path)
         return zone, names_to_be_elaborated, error_logs_to_be_added
 
     def extract_zone_dependencies(self, zone_set: Set[Zone], with_self_zone=False) -> Tuple[Dict[DomainName, Set[Zone]], Dict[Zone, Set[Zone]]]:
         """
-        This method extracts the zone dependencies for each name server and the zone dependencies for each zone name
-        from the Zone (the application-defined object) list resolved.
+        This method extracts the zone dependencies for each name server and the zone dependencies for each zone from the
+        a set of Zones used as dataset.
 
-        :param zone_set:
-        :type zone_set: List[Zone]
-        :return: A dictionary that associates all the name server to a list of zone names and then a dictionary that
-        associates all zone names to a list of zone names, as a tuple.
-        :rtype: Tuple[Dict[str, List[str]], Dict[str, List[str]]]
+        :param zone_set: The Zone dataset.
+        :type zone_set: Set[Zone]
+        :param with_self_zone: Flag that sets the self Zone as dependencies, yes or no.
+        :type with_self_zone: bool
+        :return: A tuple formed by the dictionary that associates each nameserver to a set of Zones, and then a
+        dictionary that associates a Zone to a set of Zones.
+        :rtype: Tuple[Dict[DomainName, Set[Zone]], Dict[Zone, Set[Zone]]]
         """
         zone_dependencies_per_zone = dict()
         zone_dependencies_per_name_server = dict()
@@ -466,15 +467,15 @@ class DnsResolver:
 
     def parse_zone_dependencies_of_name_server(self, name_server: DomainName, zone_set: Set[Zone]) -> Set[Zone]:
         """
-        This methods takes as data pool the Zone (the application-defined object) list resolved and extract the zone
-        dependencies from the name_server parameter.
+        This methods takes as dataset of Zones the zone_set parameter and extract the zone dependencies of the
+        name_server parameter from such dataset.
 
         :param name_server: A name server.
-        :type name_server: str
-        :param zone_set: All the Zone (the application-defined object) list resolved.
-        :type zone_set: List[Zone]
-        :return: A list of zone names.
-        :rtype: List[str]
+        :type name_server: DomainName
+        :param zone_set: Zones dataset
+        :type zone_set: Set[Zone]
+        :return: The zone dependencies of the nameserver.
+        :rtype: Set[Zone]
         """
         try:
             zone = self.extract_direct_zone(name_server, zone_set)
@@ -484,19 +485,29 @@ class DnsResolver:
 
     def parse_zone_dependencies_of_zone(self, current_zone: Zone, zone_set: Set[Zone]) -> Set[Zone]:
         """
-        This methods takes as data pool the Zone (the application-defined object) list resolved and extract the zone
-        dependencies from the current_zone parameter.
+        This methods takes as dataset of Zones the zone_set parameter and extract the zone dependencies of the
+        current_zone parameter from such dataset.
 
-        :param current_zone: A Zone (the application-defined object) object.
+        :param current_zone: A DNS zone.
         :type current_zone: Zone
-        :param zone_set: All the Zone (the application-defined object) list resolved.
-        :type zone_set: List[Zone]
-        :return: A list of zone names.
-        :rtype: List[str]
+        :param zone_set: Zones dataset
+        :type zone_set: Set[Zone]
+        :return: The zone dependencies of the zone.
+        :rtype: Set[Zone]
         """
         return self.__inner_parse_zone_dependencies_of_zone(current_zone, zone_set)
 
     def __inner_parse_zone_dependencies_of_zone(self, zones_param: Zone, zone_set: Set[Zone]) -> Set[Zone]:
+        """
+        Hidden method that parses zone dependencies given a particular Zone and a dataset of Zones.
+
+        :param zones_param: A DNS zone.
+        :type zones_param: Zone
+        :param zone_set: Zones dataset
+        :type zone_set: Set[Zone]
+        :return: The zone dependencies of the zone.
+        :rtype: Set[Zone]
+        """
         zones_to_be_elaborated = [zones_param]
         result = set()
         for zone in zones_to_be_elaborated:
@@ -507,6 +518,17 @@ class DnsResolver:
         return result
 
     def __parse_zones_of_domain_names(self, domain_names: Set[DomainName], zones_set: Set[Zone]) -> Set[Zone]:
+        """
+        Given a set of domain names, this method returns all zones, contained in the dataset zones_set, that present
+        names contained in the set of domain names.
+
+        :param domain_names: A set of domain names.
+        :type domain_names: Set[DomainName]
+        :param zones_set: A set of zones.
+        :type zones_set: Set[Zone]
+        :return: The set of zone that presents names contained in the domain names set.
+        :rtype: Set[Zone]
+        """
         result = set()
         for domain_name in domain_names:
             for zone in zones_set:
@@ -516,21 +538,26 @@ class DnsResolver:
 
     def try_to_resolve_partially_cached_a_path(self, name_server: DomainName) -> Tuple[APath, List[DomainName]]:
         """
-        This method is used in the scenario where a certain domain name access path is already resolved in the cache,
-        and the name_server parameter (domain name yet to compute) has a CNAME RR associated to the previous mentioned
-        domain name.
-        It returns the entire CNAME RRs followed to resolve the access path, the A RR that resolves the access path and
-        the domain names to be added in the current domain names elaboration, all as a tuple.
+        This method is used in the scenario where a certain domain name A path is already resolved in the cache, and the
+        name_server parameter (domain name yet to compute) has a CNAME RR associated to the previous mentioned domain
+        name.
+        Example:
+            In cache: BBB CNAME CCC
+            In cache: CCC A 127.0.0.1
+            Problem: AAA A ???
+            This method: checks scenario where AAA CNAME BBB
+        It returns the entire APath of the name_server parameter and the domain names to be added in the current domain
+        names elaboration, all as a tuple.
 
         :param name_server: A domain name.
-        :type name_server: str
+        :type name_server: DomainName
         :raise NoAnswerError: If the CNAME query raises such error.
         :raise DomainNonExistentError: If the CNAME query raises such error.
         :raise UnknownReasonError: If the CNAME query raises such error.
         :raise NoAvailablePathError: If the A RR is not contained in cache.
-        :return: The entire CNAME RRs followed to resolve the access path, the A RR that resolves the access path and
-        the domain names to be added in the current domain names elaboration, all as a tuple.
-        :rtype: Tuple[List[RRecord], RRecord, List[str]]
+        :return: Tuple with entire APath of the name_server parameter and a list of domain names to be added in the
+        current domain names elaboration.
+        :rtype: Tuple[APath, List[DomainName]]
         """
         #
         try:
@@ -548,23 +575,24 @@ class DnsResolver:
             raise
         #
         total_path_builder = PathBuilder.from_cname_path(cname_path)
-        for rr in a_path.get_aliases_chain():
+        for rr in a_path.get_cname_chain():
             total_path_builder.add_cname(rr)
         total_path = total_path_builder.complete_resolution(a_path.get_resolution()).build()
         return total_path, name_to_be_elaborated
 
-    def extract_direct_zones(self, domain_names: Set[DomainName], zone_set: Set[Zone]) -> Dict[DomainName, Zone or None]:
+    def extract_direct_zones(self, domain_names: Set[DomainName], zone_set: Set[Zone]) -> Dict[DomainName, Optional[Zone]]:
         """
-        This method extracts the direct zone of the domain name parameter from the zone_list parameter used as data
-        pool.
+        This method extracts the direct zones of a set of domain names given a dataset of Zone. If the direct zone of a
+        certain domain is not found then the direct zone is set to null. If the direct zone is a TLD and TLDs are not
+        considered in this elaboration then again null is set.
 
-        :param domain_name: A domain name.
-        :type domain_name: str
-        :param zone_set: All the Zone (the application-defined object) list resolved.
-        :type zone_set: List[Zone]
-        :raise ValueError: If there's no match from all the ancestor domain name as zone. Should never happen..
-        :return: The direct zone name.
-        :rtype: str
+        :param domain_names: A set of domain names.
+        :type domain_names: Set[DomainName]
+        :param zone_set: Zone dataset.
+        :type zone_set: Set[Zone]
+        :return: A dictionary that associate each domain name to its direct zone, or null if it is not found/it is a TLD
+        and in this elaboration TLDs are not considered.
+        :rtype: Dict[DomainName, Optional[Zone]]
         """
         result = dict()
         for domain_name in domain_names:
@@ -577,16 +605,18 @@ class DnsResolver:
 
     def extract_direct_zone(self, domain_name: DomainName, zone_set: Set[Zone]) -> Zone:
         """
-        This method extracts the direct zone of the domain name parameter from the zone_list parameter used as data
-        pool.
+        This method extracts the direct zone of the domain names given a dataset of Zone. If the direct zone of a is not
+        found then ValueError is raised. If the direct zone is a TLD and TLDs are not considered in this elaboration
+        then ValueError is raised.
 
         :param domain_name: A domain name.
-        :type domain_name: str
-        :param zone_set: All the Zone (the application-defined object) list resolved.
-        :type zone_set: List[Zone]
-        :raise ValueError: If there's no match from all the ancestor domain name as zone. Should never happen..
-        :return: The direct zone name.
-        :rtype: str
+        :type domain_name: DomainName
+        :param zone_set: Zone dataset.
+        :type zone_set: Set[Zone]
+        :raise ValueError: If such direct zone is not found in the Zone dataset. If such direct zone is TLD and TLDs
+        are not considered in this elaboration.
+        :return: The direct zone.
+        :rtype: Zone
         """
         for_zone_name_subdomains = list(reversed(domain_name.parse_subdomains(self.consider_tld, self.consider_tld, False)))
         for current_domain in for_zone_name_subdomains:

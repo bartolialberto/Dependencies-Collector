@@ -6,7 +6,7 @@ from persistence import helper_application_results, helper_web_site_lands, helpe
     helper_script_site
 
 
-class LandingIntegrityTestCase(unittest.TestCase):
+class LandingIntegrityCase(unittest.TestCase):
     """
     DEFINITIVE TEST
     Test class that checks data integrity of web sites and script sites landing.

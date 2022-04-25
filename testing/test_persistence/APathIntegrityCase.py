@@ -5,7 +5,7 @@ from entities.resolvers.DnsResolver import DnsResolver
 from persistence import helper_paths, helper_domain_name
 
 
-class APathIntegrityTestCase(unittest.TestCase):
+class APathIntegrityCase(unittest.TestCase):
     """
     DEFINITIVE TEST
 

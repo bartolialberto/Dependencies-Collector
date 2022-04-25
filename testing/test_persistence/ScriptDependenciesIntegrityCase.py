@@ -6,7 +6,7 @@ from persistence import helper_script, helper_application_results, helper_web_si
 from utils import file_utils
 
 
-class ScriptDependenciesIntegrityTestCase(unittest.TestCase):
+class ScriptDependenciesIntegrityCase(unittest.TestCase):
     script_script_site_dependencies = None
     web_site_script_dependencies = None
     resolvers = None
