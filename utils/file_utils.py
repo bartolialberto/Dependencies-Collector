@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 from exceptions.FileWithExtensionNotFoundError import FileWithExtensionNotFoundError
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from static_variables import INPUT_FOLDER_NAME
@@ -9,35 +9,15 @@ from static_variables import INPUT_FOLDER_NAME
 
 def get_project_root_directory() -> Path:
     """
-    This method returns the Path object to the project root directory (PRD) regardless of which script is executed
-    (example: main.py file is executed or some test belonging to the /testing package)
+    This method returns the Path object of the project root directory (PRD) regardless of which script is executed
+    (example: main.py file is executed or some test belonging to the /testing package).
+    The hypothesis of the correct
+    behaviour is that this method belongs to a file put in a sub-folder of the PRD.
 
     :return: The project root directory Path object.
     :rtype: Path
     """
     return Path(__file__).parent.parent
-
-
-def parse_file_path(string: str) -> Tuple[str, str]:
-    """
-    Split the pathname string into a pair (root, ext) such that root + ext == string, and the extension, ext, is empty
-    or begins with a period and contains at most one period.
-    If the path contains no extension, ext will be ''.
-    If the path contains an extension, then ext will be set to this extension, including the leading period. Note that
-    previous periods will be ignored.
-    Leading periods on the basename are ignored.
-    Example:        'c:/dir' --> ('c:', '/dir')
-    Example:        'foo.bar.exe' --> ('foo.bar', '.exe')
-    Example:        'C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\utils' --> ('C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\utils', '')
-    Example:        'C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\utils\\test.py' --> ('C:\\Users\\fabbi\\PycharmProjects\\LavoroTesi\\utils\\test.py', '.py')
-
-    :param string: The path.
-    :type string: str
-    :return: A tuple containing the root first and then the extension (with the starting dot).
-    :rtype: tuple[str, str]
-    """
-    filename, file_extension = os.path.splitext(string)     # extension with the starting point
-    return filename, file_extension
 
 
 def search_for_file_type_in_subdirectory(subdirectory_name: str, extension: str, project_root_directory=Path.cwd()) -> List[Path]:   # extension with point
@@ -93,7 +73,7 @@ def search_for_filename_in_subdirectory(subdirectory_name: str, filename: str, p
     if len(result) == 0:
         raise FilenameNotFoundError(filename, subdirectory_name)
     else:
-        return result       # MEMO: use str(result[index]) to get absolute path of file
+        return result
 
 
 def set_file_in_folder(subdirectory_name: str, filename: str, project_root_directory=Path.cwd()) -> Path:

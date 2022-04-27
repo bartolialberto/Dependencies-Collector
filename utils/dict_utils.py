@@ -1,9 +1,8 @@
 def merge_current_dict_to_total(total_results_dict: dict, current_results_dict: dict) -> None:
     """
     This static method merges a dictionary into another dictionary.
-    It is an auxiliary method.
 
-    :param total_results_dict: The dictionary that takes the infos of the other.
+    :param total_results_dict: The dictionary that takes the infos of the other one.
     :type total_results_dict: dict
     :param current_results_dict: The dictionary which all the infos are taken.
     :type current_results_dict: dict
@@ -15,8 +14,7 @@ def merge_current_dict_to_total(total_results_dict: dict, current_results_dict: 
 def merge_current_dict_with_set_values_to_total(total_results_dict: dict, current_results_dict: dict) -> None:
     """
     This static method merges a dictionary into another dictionary following the structure of the
-    MultipleDnsZoneDependenciesResult dictionaries attributes.
-    It is an auxiliary method.
+    MultipleDnsZoneDependenciesResult dictionaries attributes, which means that values are set.
 
     :param total_results_dict: The dictionary that takes the infos of the other.
     :type total_results_dict: dict

@@ -11,21 +11,30 @@ from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
 from persistence import helper_application_results
 from persistence.BaseModel import db, close_database_connection
-from static_variables import INPUT_FOLDER_NAME, INPUT_MAIL_DOMAINS_FILE_NAME, INPUT_WEB_SITES_FILE_NAME
+from static_variables import INPUT_FOLDER_NAME, INPUT_MAIL_DOMAINS_FILE_NAME, INPUT_WEB_SITES_FILE_NAME, \
+    ARGUMENT_COMPLETE_DATABASE, ARGUMENT_CONSIDER_TLD, ARGUMENT_SCRAPE_ROV, ARGUMENT_RESOLVE_SCRIPT
 from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[Url]:
     """
-    Start of the application: getting the websites, and returning them as a list of string.
+    Start of the application: getting the websites, and returning them as a list of Url.
     They can be set from a file name web_pages.txt put in the input folder in which each website is
     written per line. If no website is set the application will start with 2 default websites to show its behaviour.
     Such websites are: google.it/doodles, www.youtube.it/feed/explore.
+    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+    to default as if the entry point is main.py file (which is the only entry point considered).
 
     :param default_websites: The default websites to use when no one is set by the user.
     :type default_websites: Tuple[str]
+    :param project_root_directory: The Path object pointing at the project root directory.
+    :type project_root_directory: Path
     :return: The list of computed websites.
-    :rtype: List[str]
+    :rtype: List[Url]
     """
     print(f"******* COMPUTING INPUT WEB SITES *******")
     lines = get_input_generic_file(INPUT_WEB_SITES_FILE_NAME, default_websites, project_root_directory=project_root_directory)
@@ -42,16 +51,23 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
 
 def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), project_root_directory=Path.cwd()) -> List[DomainName]:
     """
-    Start of the application: getting the mail domains, and returning them as a list of string.
-    They can be set from command line and from a file name mail_domains.txt put in the input folder in which each mail
-    domain is written per line. The application will control first the command line and then the file. If no mail domain
-    is set neither in the 2 ways, the application will start with 2 default mail domains show its behaviour.
+    Start of the application: getting the mail domains, and returning them as a list of DomainName.
+    They can be set from a file name mail_domains.txt put in the input folder in which each mail domain is written per
+    line. If no mail domain is set the application will start with 2 default mail domains to show its behaviour.
     Such mail domains are: gmail.com, outlook.com.
+    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+    to default as if the entry point is main.py file (which is the only entry point considered).
 
     :param default_mail_domains: The default mail domains to use when no one is set by the user.
     :type default_mail_domains: Tuple[str]
+    :param project_root_directory: The Path object pointing at the project root directory.
+    :type project_root_directory: Path
     :return: The list of computed mail domains.
-    :rtype: List[str]
+    :rtype: List[DomainName]
     """
     print(f"******* COMPUTING INPUT MAIL DOMAINS *******")
     lines = get_input_generic_file(INPUT_MAIL_DOMAINS_FILE_NAME, default_mail_domains, project_root_directory=project_root_directory)
@@ -67,12 +83,20 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     """
     Auxiliary method that parses input from the filename parameter in the 'input' folder of the application.
     Also it can be set a default collection of values if the file is not not present.
+    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
+    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
+    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
+    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
+    to default as if the entry point is main.py file (which is the only entry point considered).
 
     :param input_filename: The input filename with the extension.
     :type input_filename: str
     :param default_values: The default values.
     :type default_values: tuple
-    :return: The list of computed mail values.
+    :param project_root_directory: The Path object pointing at the project root directory.
+    :type project_root_directory: Path
+    :return: The list of strings read.
     :rtype: List[str]
     """
     result_list = list()
@@ -98,35 +122,42 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=True, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
 
-    1- complete_unresolved_database: a flag that set the will to detect unresolved entities in the database from the
-    'output' and try to resolve them.
+    1- default_complete_unresolved_database: a flag that sets if the application should try to complete unresolved
+    entities (first step of the execution).
 
-    2- consider_tld: a flag that will consider or remove the Top-Level Domains when computing zone dependencies
+    2- default_consider_tld: a flag that sets if Top-Level Domains should be considered when computing zone
+    dependencies.
+
+    3- default_execute_script_resolving: a flag that sets if script dependencies resolving should be executed.
+
+    4- default_execute_rov_scraping: a flag that sets if ROVPage scraping should be executed.
 
     :param default_complete_unresolved_database: The default value of the flag.
     :type default_complete_unresolved_database: bool
     :param default_consider_tld: The default value of the flag.
     :type default_consider_tld: bool
+    :param default_execute_script_resolving: The default value of the flag.
+    :type default_execute_script_resolving: bool
     :param default_execute_rov_scraping: The default value of the flag.
     :type default_execute_rov_scraping: bool
     :return: A tuple of booleans for each flag.
-    :rtype: Tuple[bool]
+    :rtype: Tuple[bool, bool, bool ,bool]
     """
     print(f"******* COMPUTING INPUT FLAGS *******")
     print('> Argument List:', str(sys.argv))
     for arg in sys.argv[1:]:
-        if arg == '-continue':
+        if arg == ARGUMENT_COMPLETE_DATABASE:
             default_complete_unresolved_database = True
-        elif arg == '-tlds':
+        elif arg == ARGUMENT_CONSIDER_TLD:
             default_consider_tld = True
-        elif arg == '-rov':
+        elif arg == ARGUMENT_SCRAPE_ROV:
             default_consider_tld = True
-        elif arg == '-script':
+        elif arg == ARGUMENT_RESOLVE_SCRIPT:
             default_execute_script_resolving = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
     print(f"> CONSIDER_TLDs flag: {str(default_consider_tld)}")

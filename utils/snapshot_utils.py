@@ -7,6 +7,22 @@ from utils import file_utils
 
 
 def take_temporary_snapshot(web_sites: List[Url], mail_domains: List[DomainName], complete_unresolved_database: bool, consider_tld: bool, execute_script_resolving: bool, execute_rov_scraping: bool) -> None:
+    """
+    Method that executes taking snapshots of the application.
+
+    :param web_sites: List of web sites.
+    :type web_sites: List[Url]
+    :param mail_domains: List of mail domains.
+    :type mail_domains: List[DomainName]
+    :param complete_unresolved_database: The complete_unresolved_databaseflag.
+    :type complete_unresolved_database: bool
+    :param consider_tld: the consider_tld flag.
+    :type consider_tld: bool
+    :param execute_script_resolving: The execute_script_resolving flag.
+    :type execute_script_resolving: bool
+    :param execute_rov_scraping: The execute_rov_scraping flag.
+    :type execute_rov_scraping: bool
+    """
     def auxiliary(url: Url):
         try:
             return url.original()
@@ -56,6 +72,8 @@ def take_temp_snapshot_of_flags(complete_unresolved_database: bool, consider_tld
     :type complete_unresolved_database: bool
     :param consider_tld: The consider_tld flag.
     :type consider_tld: bool
+    :param execute_script_resolving: The execute_script_resolving flag.
+    :type execute_script_resolving: bool
     :param execute_rov_scraping: The execute_rov_scraping flag.
     :type execute_rov_scraping: bool
     :param filename: Name of file without extension.

@@ -4,7 +4,7 @@ import socket
 
 def get_local_ip() -> str:
     """
-    Return the local ip address.
+    Return the local ip address as string.
 
     :return: The ip address.
     :rtype: str
@@ -32,7 +32,7 @@ def is_in_network(ip: ipaddress.IPv4Address, network: ipaddress.IPv4Network) -> 
 def get_predefined_network(ip_parameter: ipaddress.IPv4Address or str) -> ipaddress.IPv4Network:
     """
     Given an IP address returns the associated network that changes the last number to zero and then (using compressed
-    notation) taking 24 bits as mask length.
+    notation) takes 24 bits as mask length.
 
     :param ip_parameter: An IP address.
     :type ip_parameter: ipaddress.IPv4Address or str

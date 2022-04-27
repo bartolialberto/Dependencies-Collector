@@ -240,6 +240,7 @@ class LocalDnsResolverCache:
         try:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
+                # writer.writerow(['', '', ''])       # .csv headers
                 for dn in self.cache.keys():
                     for rr in self.cache[dn].values():
                         temp_list = list()

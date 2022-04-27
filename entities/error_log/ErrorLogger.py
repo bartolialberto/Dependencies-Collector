@@ -74,6 +74,7 @@ class ErrorLogger:
         try:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
+                writer.writerow(['exception', 'entity', 'reason_phrase'])       # .csv headers
                 for log in self.logs:
                     temp_list = list()
                     temp_list.append(log.error_type)

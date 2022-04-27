@@ -14,10 +14,10 @@ from utils import file_utils
 def resolve_landing_page(url: Url, as_https=True) -> Tuple[SchemeUrl, List[str], bool, ipaddress.IPv4Address]:
     """
     This method returns the landing page, the redirection path, the Strict Transport Security validity from an HTTP URL.
-    In particular it creates an url from the string parameter and then tries a GET HTTP method with it.
+    In particular tries a GET HTTP method from the url parameter.
 
-    :param string: A string.
-    :type string: str
+    :param url: An URL.
+    :type url: Url
     :param as_https: A boolean setting if the url constructed from the domain name parameter uses HTTPS or HTTP.
     :type as_https: bool
     :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.
@@ -31,7 +31,7 @@ def resolve_landing_page(url: Url, as_https=True) -> Tuple[SchemeUrl, List[str],
     ReadTimeout errors.
     :raise requests.exceptions.RequestException: There was an ambiguous exception that occurred while handling your
     :return: A tuple containing the landing url, all the url redirection and the HSTS validity.
-    :rtype: Tuple[str, List[str], bool, ipaddress.IPv4Address]
+    :rtype: Tuple[SchemeUrl, List[str], bool, ipaddress.IPv4Address]
     """
     redirection_path = list()
     if as_https:

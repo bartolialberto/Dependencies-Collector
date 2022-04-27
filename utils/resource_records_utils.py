@@ -4,6 +4,17 @@ from entities.enums.TypesRR import TypesRR
 
 
 def stamp_values(type_rr: TypesRR, values: list) -> str:
+    """
+    Static method that returns a string representation of a list of the RR object values supported in this application;
+    such objects are: DomainName and IPv4Address.
+
+    :param type_rr: RR type.
+    :type type_rr: TypesRR
+    :param values: List of values.
+    :type values: list
+    :return: String representation.
+    :rtype: str
+    """
     if type_rr == TypesRR.A:
         str_values = list(map(lambda ia: ia.exploded, values))
         return str(str_values).replace('\'', '')
