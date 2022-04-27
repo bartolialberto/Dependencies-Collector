@@ -1,6 +1,4 @@
 class NotResourceRecordTypeError(Exception):
-    for_string: str
-
     def __init__(self, string: str):
         temp = f"'{string}' is not a valid resource record type."
         self.message = temp

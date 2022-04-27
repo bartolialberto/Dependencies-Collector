@@ -12,7 +12,6 @@ from entities.resolvers.results.MultipleMailDomainResolvingResult import Multipl
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from entities.MainFrameScript import MainFrameScript
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from persistence import helper_web_site, helper_web_site_lands, helper_web_server, helper_zone, helper_name_server, \
     helper_zone_links, helper_domain_name_dependencies, helper_domain_name, helper_mail_domain, helper_mail_server, \
     helper_mail_domain_composed, helper_ip_address, helper_script, helper_script_withdraw, helper_script_site, \

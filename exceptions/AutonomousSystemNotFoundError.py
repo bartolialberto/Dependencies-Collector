@@ -1,8 +1,11 @@
+from typing import Union
+
+
 class AutonomousSystemNotFoundError(Exception):
     message: str
     for_param: str or int
 
-    def __init__(self, param: str or int):      # str --> a ip address. int --> an as number.
+    def __init__(self, param: Union[str, int]):      # str --> a ip address. int --> an as number.
         if isinstance(param, str):
             temp = f"No Autonomous System found for IP address: {param}."
         else:

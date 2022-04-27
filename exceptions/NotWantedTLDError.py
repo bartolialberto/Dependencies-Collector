@@ -1,6 +1,4 @@
 class NotWantedTLDError(Exception):
-    message: str
-
     def __init__(self):
         temp = "Resolved a domain name that is a TLD."
         self.message = temp

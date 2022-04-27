@@ -16,7 +16,6 @@ from entities.resolvers.results.DnsZoneDependenciesResult import DnsZoneDependen
 from entities.resolvers.results.MultipleMailDomainResolvingResult import MultipleMailDomainResolvingResult
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from exceptions.DomainNonExistentError import DomainNonExistentError
-from exceptions.InvalidDomainNameError import InvalidDomainNameError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoRecordInCacheError import NoRecordInCacheError
@@ -145,7 +144,7 @@ class DnsResolver:
                     else:
                         print(
                             f"--> mailserver[{j + 1}/{len(resolver_result.mail_servers_paths.keys())}]: Unresolved A path")
-            except (InvalidDomainNameError, NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
+            except (NoAnswerError, DomainNonExistentError, UnknownReasonError) as e:
                 print(f"!!! {str(e)} !!!")
                 final_results.add_dependency(mail_domain, None)
                 final_results.append_error_log(ErrorLog(e, mail_domain.string, str(e)))
@@ -158,7 +157,6 @@ class DnsResolver:
 
         :param mail_domain: A mail domain.
         :type mail_domain: DomainName
-        :raise InvalidDomainNameError: If mail domain is not a well-formatted domain name or email address.
         :raise DomainNonExistentError: If query response says that name is a non-existent domain.
         :raise NoAnswerError: If query has no response.
         :raise UnknownReasonError: If query execution went wrong.
@@ -204,19 +202,18 @@ class DnsResolver:
         """
         final_results = MultipleDnsZoneDependenciesResult()
         for i, domain in enumerate(domain_list):
-            try:
-                if reset_cache_per_elaboration:
-                    self.cache.clear()
-                print(f"Looking at zone dependencies for domain[{i+1}/{len(domain_list)}]: {domain} ..")
-                resolver_result = self.resolve_domain_dependencies(domain)
-                final_results.join_single_resolver_result(domain, resolver_result)
-            except InvalidDomainNameError as e:
-                final_results.error_logs.append(ErrorLog(e, domain.string, str(e)))
+            if reset_cache_per_elaboration:
+                self.cache.clear()
+            print(f"Looking at zone dependencies for domain[{i+1}/{len(domain_list)}]: {domain} ..")
+            resolver_result = self.resolve_domain_dependencies(domain)
+            final_results.join_single_resolver_result(domain, resolver_result)
         return final_results
 
     def resolve_domain_dependencies(self, domain: DomainName) -> DnsZoneDependenciesResult:
         """
         This method resolves the zone dependencies of a domain name.
+        If something goes wrong, exceptions are not raised but the error_logs of the result will be populated with what
+        went wrong.
 
         :param domain: A domain name.
         :type domain: DomainName

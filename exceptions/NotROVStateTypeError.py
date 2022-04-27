@@ -1,6 +1,4 @@
 class NotROVStateTypeError(Exception):
-    for_string: str
-
     def __init__(self, string: str):
         temp = f"'{string}' is not a valid ROV state."
         self.message = temp

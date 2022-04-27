@@ -2,7 +2,7 @@ import csv
 from collections import defaultdict
 from ipaddress import IPv4Address
 from pathlib import Path as PPath
-from typing import List, Dict, Iterable
+from typing import Iterable
 from entities.DomainName import DomainName
 from entities.paths.PathBuilder import PathBuilder
 from exceptions.FilenameNotFoundError import FilenameNotFoundError

@@ -1,8 +1,5 @@
 class ReachedMaximumRecursivePathThresholdError(Exception):
-    message: str
-    for_param: str or int
-
-    def __init__(self, domain_name: str):      # str --> a ip address. int --> an as number.
+    def __init__(self, domain_name: str):
         temp = f"Reached maximum number of recursive invocation for path resolution of domain name: {domain_name}"
         self.for_param = domain_name
         self.message = temp

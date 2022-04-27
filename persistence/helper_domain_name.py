@@ -5,7 +5,6 @@ from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 from entities.paths.APath import APath
 from entities.paths.PathBuilder import PathBuilder
-from exceptions.NoAliasFoundError import NoAliasFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NoDisposableRowsError import NoDisposableRowsError
 from persistence import helper_ip_address, helper_alias
@@ -55,7 +54,7 @@ def __inner_resolve_a_path__(dne: DomainNameEntity, builder=None) -> PathBuilder
         adne = helper_alias.get_alias_from_entity(dne)
         rr = RRecord(DomainName(dne.string), TypesRR.CNAME, [adne.string])
         builder.add_alias(rr)
-    except NoAliasFoundError:
+    except DoesNotExist:
         raise NoAvailablePathError(dne.string)
     try:
         return __inner_resolve_a_path__(adne, builder)
@@ -76,7 +75,7 @@ def __inner_resolve_a_path_as_persistence_entities__(dne: DomainNameEntity, chai
         pass
     try:
         adne = helper_alias.get_alias_from_entity(dne)
-    except NoAliasFoundError:
+    except DoesNotExist:
         raise NoAvailablePathError(dne.string)
     try:
         return __inner_resolve_a_path_as_persistence_entities__(adne, chain)
