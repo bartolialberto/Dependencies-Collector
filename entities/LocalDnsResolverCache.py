@@ -19,25 +19,23 @@ from entities.paths import Path
 
 class LocalDnsResolverCache:
     """
-    This class represents a simple sort of personalized Cache that keep tracks of all resource records in a list.
+    This class represents a simple sort of personalized cache that keep tracks of all resource records. Resource records
+    are saved in a dictionary nested in another dictionary; considered this data structure, duplicates of same resource
+    records (same name and type) are not allowed.
 
     ...
 
     Instance Attributes
     -------------------
-    cache : `list[RRecord]`
-        The list of resource records.
-    separator : `str`
+    cache : Dict[DomainName, Dict[TypesRR, RRecord]]
+        Data structure containing resource records.
+    separator : str
         The character separator between all the attributes of a Resource Record object, used when logs are exported to
         file.
     """
-    cache: Dict[DomainName, Dict[TypesRR, RRecord]]
-    separator: str
-
     def __init__(self, separator=";"):
         """
-        Instantiate a LocalResolverCache initializing all the attributes defined above. You can set a personalized
-        separator.
+        Instantiate the object initializing all the attributes defined above. You can set a personalized separator.
 
         :param separator: The character separator used when exporting the file. Default is a comma (;).
         :type separator: str
@@ -51,8 +49,6 @@ class LocalDnsResolverCache:
 
         :param entry: The resource record.
         :type entry: RRecord
-        :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
-        :type control_for_no_duplicates: bool
         """
         self.cache[entry.name][entry.type] = entry
 
@@ -60,15 +56,19 @@ class LocalDnsResolverCache:
         """
         Adds multiple resource records.
 
-        :param entries: The resource record list.
-        :type entries: List[RRecord]
-        :param control_for_no_duplicates: Optional flag to set if the duplicates control should execute for all cache
-        :type control_for_no_duplicates: bool
+        :param entries: The resource records collection.
+        :type entries: Iterable[RRecord]
         """
         for entry in entries:
             self.cache[entry.name][entry.type] = entry
 
     def add_path(self, path: Path) -> None:
+        """
+        Adds all resource records associated to the Path object parameter.
+
+        :param path: Path object.
+        :return: Path
+        """
         for rr in path:
             self.add_entry(rr)
 
@@ -90,14 +90,14 @@ class LocalDnsResolverCache:
 
     def lookup(self, domain_name: DomainName, type_rr: TypesRR) -> RRecord:
         """
-        Search for the first occurrence of a resource record of name and type as parameters told.
+        Search for the occurrence of a resource record with name and type values as parameters ones.
 
         :param domain_name: The domain name.
         :type domain_name: DomainName
         :param type_rr: The resource record type.
         :type type_rr: TypesRR
-        :raises NoRecordInCacheError: If there is no resource record satisfying the parameters in cache list.
-        :returns: The first occurrence of name and resource record type as parameters told.
+        :raises NoRecordInCacheError: If there is no resource record satisfying the parameters in cache.
+        :returns: Occurrence of name and resource record type values as parameters ones.
         :rtype: RRecord
         """
         try:
@@ -108,16 +108,13 @@ class LocalDnsResolverCache:
     def resolve_path(self, domain_name: DomainName, rr_type_wanted: TypesRR) -> Path:
         """
         This method resolves the path from the domain name parameter to a RR of the TypesRR parameter.
-        It returns the final RR and all the alias along the access path.
-        There is also a boolean flag that decides to return all the aliases as RRs or simple strings. When returning as
-        strings the name parameter is removed, so the list start with an alias.
 
         :param domain_name: The domain name.
         :type domain_name: DomainName
         :param rr_type_wanted: The RR type to be searched.
         :type rr_type_wanted: TypesRR
-        :raise NoAvailablePathError: If there is not an access path.
-        :return: The resolution RR and the list of aliases as a tuple.
+        :raise NoAvailablePathError: If there is no such path.
+        :return: The resulting path.
         :rtype: Path
         """
         try:
@@ -134,9 +131,15 @@ class LocalDnsResolverCache:
         :type domain_name: DomainName
         :param rr_type_resolution: The RR type to be searched that resolves the path.
         :type rr_type_resolution: TypesRR
-        :param result: Is a parameter that populates with each recursive invocation.
-        :type result: None or List[RRecord]
-        :return: The access path.
+        :param path_builder: PathBuilder object carried through all invocations and used for the final result. None
+        value is used for the initial invocation ('recursive initial seed').
+        :type path_builder: Optional[PathBuilder]
+        :param count_invocations_threshold: Number of invocation threshold to set the maximum number of recursive
+        invocations allowed before raising an exception.
+        :type count_invocations_threshold: int
+        :param count_invocations: Current number of method's invocation.
+        :type count_invocations: int
+        :return: The resulting path.
         :rtype: Path
         """
         if path_builder is not None:
@@ -160,7 +163,7 @@ class LocalDnsResolverCache:
 
     def load_csv(self, path: str, take_snapshot=True) -> None:
         """
-        Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
+        Method that loads from a .csv all the entries in this object cache. More specifically, this method loads the
         .csv file from a filepath (absolute or relative). It provides an optional flag to copy the state of cache in a
         file for later consumption.
 
@@ -191,9 +194,9 @@ class LocalDnsResolverCache:
 
     def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=PPath.cwd()) -> None:
         """
-        Method that load from a .csv all the entries in this object cache list. More specifically, this method load the
-        'dns_cache.csv' file from the output folder of the project root directory (if set correctly). So just invoking
-        this method will load the cache (if) exported from the previous execution.
+        Method that loads from a .csv all the entries in this object cache. More specifically, this method loads the
+        'dns_cache.csv' file from the output folder of the project root directory (PRD). So just invoking this method
+        will load the cache (if) exported from the previous execution.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
@@ -225,7 +228,7 @@ class LocalDnsResolverCache:
 
     def write_to_csv(self, filepath: str) -> None:
         """
-        Export the cache in the list to a .csv file described by a filepath.
+        Export cache to a .csv file described by a filepath.
 
         :param filepath: Path of file to write, as absolute or relative path.
         :type filepath: str
@@ -246,37 +249,6 @@ class LocalDnsResolverCache:
                         writer.writerow(temp_list)
                 f.close()
         except (PermissionError, FileNotFoundError, OSError):
-            raise
-
-    def write_to_txt(self, filepath: str) -> None:
-        """
-        Export the cache in the list to a .txt file described by a filepath.
-
-        :param filepath: Path of file to write, as absolute or relative path.
-        :type filepath: str
-        :raise PermissionError: If filepath points to a directory.
-        :raises FileNotFoundError: If it is impossible to open the file.
-        :raises OSError: If a general I/O error occurs.
-        """
-        file = PPath(filepath)
-        file_abs_path = str(file)
-        try:
-            with open(file_abs_path, 'w') as f:  # 'w' or 'x'
-                for dn in self.cache.keys():
-                    for rr in self.cache[dn].values():
-                        temp = f"{rr.name}{self.separator}{rr.type.to_string()}{self.separator}["
-                        for index, val in enumerate(rr.values):
-                            temp += val
-                            if not index == len(rr.values) - 1:
-                                temp += " "
-                        temp += "]\n"
-                        f.write(temp)
-                f.close()
-        except PermissionError:
-            raise
-        except FileNotFoundError:
-            raise
-        except OSError:
             raise
 
     def write_to_csv_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
@@ -305,35 +277,9 @@ class LocalDnsResolverCache:
         except (PermissionError, FileNotFoundError, OSError):
             raise
 
-    def write_to_txt_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
-        """
-        Export the cache in the list to a .txt file in the output folder of the project directory. It uses the separator
-        set to separate every attribute of the resource record.
-        Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
-        (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
-        returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
-        return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
-        to default as if the entry point is main.py file (which is the only entry point considered).
-
-        :param filename: The personalized filename without extension, default is 'dns_cache'.
-        :type filename: str
-        :param project_root_directory: The Path object pointing at the project root directory.
-        :type project_root_directory: Path
-        :raises PermissionError: If filepath points to a directory.
-        :raises FileNotFoundError: If it is impossible to open the file.
-        :raises OSError: If a general I/O error occurs.
-        """
-        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".txt", project_root_directory)
-        file_abs_path = str(file)
-        try:
-            self.write_to_txt(file_abs_path)
-        except (PermissionError, FileNotFoundError, OSError):
-            raise
-
     def take_temp_snapshot(self, project_root_directory=PPath.cwd()) -> None:
         """
-        Method that copies the current state of the cache list in the input folder.
+        Method that copies the current state of the cache in the SNAPSHOTS folder.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is

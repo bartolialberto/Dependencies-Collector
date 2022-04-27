@@ -23,7 +23,7 @@ class ROVPageScraper:
     ----------
     headless_browser : FirefoxHeadlessWebDriver
         An instance of a headless browser, in particular Firefox.
-    prefixes_table : List[entities.RowPrefixesTable.RowPrefixesTable]
+    prefixes_table : List[RowPrefixesTable]
         A list that represents the pfx_table_div (id of html element) table in the page (ROV page) saved state of this
         object to save computational time when asked to see if an ip address is contained in one of the prefixes in
         such table. We wanna avoid traversing the DOM for each address query.
@@ -33,7 +33,7 @@ class ROVPageScraper:
 
     def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
         """
-        Self-explanatory.
+        Initialize the object.
 
         :param headless_browser: The instance of a Firefox headless browser.
         :type headless_browser: FirefoxHeadlessWebDriver
@@ -48,6 +48,8 @@ class ROVPageScraper:
 
         :param url_page: The url.
         :type url_page: str
+        :raise selenium.common.exceptions.TimeoutException: If something goes wrong with the request and the timer is
+        triggered.
         :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
         """
         try:

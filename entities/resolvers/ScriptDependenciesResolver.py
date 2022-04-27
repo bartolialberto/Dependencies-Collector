@@ -31,11 +31,11 @@ class ScriptDependenciesResolver:
 
     def search_script_application_dependencies(self, url: SchemeUrl) -> Set[MainFrameScript]:
         """
-        The method is the actual research of script dependencies from a HTTP URL.
+        The method is the actual research of main frame script dependencies from a HTTP URL.
 
 
         :param url: An HTTP URL.
-        :type url: str
+        :type url: SchemeUrl
         :raise selenium.common.exceptions.WebDriverException: There was a problem getting the response form the request.
         :returns: A set of scripts.
         :rtype: Set[MainFrameScript]

@@ -12,23 +12,24 @@ from utils import file_utils
 class IpAsDatabase:
     """
     This class represent an object that read the .tsv database inserted in the 'input' folder of the project root
-    directory and provides the necessary methods to query such database to return a match with an Autonomous System.
+    directory (PRD) and provides the necessary methods to query such database to return a match with an Autonomous
+    System. The instantiation of an object of this class is bind to the existence of the .tsv database.
 
     Attributes
     ----------
-    filepath : `str`
-        If found, it is the absolute filepath of the .tsv database.
-    column_separator : `str`
+    filepath : str
+        The absolute filepath of the .tsv database.
+    column_separator : str
         The character separator between every column-value of each entry
-    entries : `list[StringEntryIpAsDatabase]`
-        If the database is valid, these are all the entries of the database.
+    entries : List[EntryIpAsDatabase]
+        All the entries of the database.
     """
 
     def __init__(self, project_root_directory=Path.cwd(), column_separator='\t'):      # '\t' = TAB
         """
         Instantiate an IpAsDatabase object setting the filepath of the .tsv database file and then the file is read
-        in order to populate a list with all the database entries. You can set manually the separator used to separate
-        the columns in the entry of the database, and the project root directory (PRD).
+        in order to populate a list with all the database entries. The column_separator string is used when parsing the
+        .tsv file, which means in this method and the load() one.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
@@ -61,8 +62,8 @@ class IpAsDatabase:
 
     def resolve_range(self, ip: ipaddress.IPv4Address) -> EntryIpAsDatabase:
         """
-        Method that is concerned to resolve the ip parameter using the database. It use a binary search approach
-        considering that the .tsv database is ordered (watch attribute start_ip_range) to gain performance.
+        Method which concern is to resolve the ip parameter using the database. It uses a binary search approach
+        considering that the .tsv database is ordered (following attribute start_ip_range) to gain performance.
 
         :param ip: The ip address parameter.
         :type ip: ipaddress.IPv4Address
@@ -96,7 +97,7 @@ class IpAsDatabase:
         Auxiliary method that is concerned to implement binary search approach in the resolve method above.
 
         :param array_entries: All the entries.
-        :type array_entries: List[StringEntryIpAsDatabase]
+        :type array_entries: List[EntryIpAsDatabase]
         :param ip_param: The ip parameter.
         :type ip_param: ipaddress.IPv4Address
         :raises ValueError: An entry of the database is not well-formatted as described in https://iptoasn.com/.
@@ -144,12 +145,16 @@ class IpAsDatabase:
         else:
             return entries
 
-    def load(self):
+    def load(self) -> None:
         """
-        Auxiliary method that is concerned to populate the entries attribute from the .tsv file database.
+        Auxiliary method that is concerned to populate the entries attribute from the .tsv file database. When called it
+        clears all the entries currently saved in the object. If an entry is not well-formatted, the error is ignored.
 
-        :raises ValueError: An entry of the database is not well-formatted as described in https://iptoasn.com/.
         """
+        if len(self.entries) == 0:
+            pass
+        else:
+            self.entries.clear()
         with open(self.filepath, "r", encoding='utf-8') as f:        # FileNotFoundError
             rd = csv.reader(f, delimiter=self.column_separator, quotechar='"')
             for row in rd:

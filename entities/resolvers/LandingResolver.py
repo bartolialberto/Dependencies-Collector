@@ -35,10 +35,10 @@ class LandingResolver:
         """
         This methods resolves landing of all sites (web sites or script sites) parameters.
 
-        :param sites: A set of sites.
-        :type sites: Set[str]
-        :return: A dictionary with sites as keys and for each of them the corresponding result.
-        :rtype: Dict[str, LandingSiteResult]
+        :param sites: A set of sites, that are URLs.
+        :type sites: Set[Url]
+        :return: A dictionary with sites as keys and for each of them the corresponding landing result.
+        :rtype: Dict[Url, LandingSiteResult]
         """
         final_results = dict()
         for i, site in enumerate(sites):
@@ -76,11 +76,12 @@ class LandingResolver:
 
     def resolve_site(self, url: Url) -> LandingSiteResult:
         """
-        This methods resolves landing of a site.
-        If an error occurs, it will be added in the error_logs attribute of the result, so exceptions are silent.
+        This methods resolves landing of a site, using HTTPS and HTTP as schemes.
+        If an error occurs, it will be added in the error_logs attribute of the result and the result is set to None,
+        so exceptions are silent.
 
-        :param site: A site.
-        :type site: str
+        :param url: A site, that is an URL.
+        :type url: Url
         :return: A LandingSiteResult object.
         :rtype: LandingSiteResult
         """
@@ -114,8 +115,8 @@ class LandingResolver:
         This methods actually executes a HTTP GET request; it constructs a HTTP URL from the site parameter using HTTPS
         or HTTP scheme according to the https parameter.
 
-        :param site: A site string.
-        :type site: str
+        :param site: An URL.
+        :type site: Url
         :param https: A flag to set the scheme used: HTTPS or HTTP.
         :type https: bool
         :raise requests.exceptions.ConnectTimeout: The request timed out while trying to connect to the remote server.

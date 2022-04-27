@@ -32,19 +32,19 @@ class RowPrefixesTable:
         """
         Initialize an object from a string representation of every attribute.
 
-        :param as_number:
+        :param as_number: The autonomous system number as string.
         :type as_number: str
-        :param prefix:
+        :param prefix: The row prefix announced from the current autonomous system as string.
         :type as_number: str
-        :param span:
+        :param span: The span as string.
         :type span: str
-        :param cc:
+        :param cc: The cc as string.
         :type cc: str
-        :param visibility:
+        :param visibility: The visibility  as string.
         :type visibility: str
-        :param rov_state:
+        :param rov_state: The ROV state as string.
         :type rov_state: str
-        :param roas:
+        :param roas: The ROAS as string.
         :type roas: str
         :raise ValueError: If as_number is not a parsable integer number or it's an integer number < 0.
         :raise ValueError: If prefix is not a valid string representation of a IPv4Network.
@@ -96,9 +96,9 @@ class RowPrefixesTable:
 
     def __str__(self) -> str:
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return f"[AS{self.as_number}\t{self.prefix.compressed}\t{str(self.span)}\t{self.cc}\t{str(self.visibility)}\t{self.rov_state.to_string()}\t{self.roas}]"

@@ -1,4 +1,5 @@
 from typing import Set, List, Union, Dict
+from peewee import chunked
 from persistence.BaseModel import MailDomainEntity, MailDomainComposedAssociation, MailServerEntity
 
 
@@ -8,7 +9,8 @@ def insert(mde: MailDomainEntity, mse: MailServerEntity or None) -> MailDomainCo
 
 
 def bulk_upserts(data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]) -> None:
-    MailDomainComposedAssociation.insert_many(data_source).on_conflict_replace().execute()
+    for batch in chunked(data_source, 600):
+        MailDomainComposedAssociation.insert_many(batch).on_conflict_replace().execute()
 
 
 def get_of_entity_mail_domain(mde: MailDomainEntity) -> Set[MailDomainComposedAssociation]:

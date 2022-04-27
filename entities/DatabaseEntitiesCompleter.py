@@ -1,6 +1,6 @@
 import ipaddress
 from datetime import datetime
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Union
 import selenium
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from entities.DomainName import DomainName
@@ -27,8 +27,8 @@ from utils import datetime_utils, string_utils
 class DatabaseEntitiesCompleter:
     """
     This class represents the tool which concern is to recover all unresolved entities from database used as input.
-    It needs all the resolvers of the application, so the only attribute is an instance of the application resolvers
-    wrapper.
+    It needs all the resolvers of the application, so the only attribute is an instance of the
+    ApplicationResolversWrapper class.
 
     ...
 
@@ -36,8 +36,6 @@ class DatabaseEntitiesCompleter:
     ----------
     resolvers_wrapper : ApplicationResolversWrapper
         An in stance of the wrapper of all application resolvers.
-    separator : str
-        The string to use when dump the '.csv' file in the 'output' folder.
     """
     def __init__(self, resolvers_wrapper: ApplicationResolversWrapper):
         """
@@ -48,13 +46,13 @@ class DatabaseEntitiesCompleter:
         """
         self.resolvers_wrapper = resolvers_wrapper
 
-    def do_complete_unresolved_entities(self, unresolved_entities: set) -> None:
+    def do_complete_unresolved_entities(self, unresolved_entities: Set[Union[WebSiteLandsAssociation, ScriptWithdrawAssociation, ScriptSiteLandsAssociation, AccessAssociation, MailDomainComposedAssociation, IpAddressDependsAssociation]]) -> None:
         """
         This method is actually the one that executes (tries to execute) the completion of all unresolved entities.
         It also deals with the insertion in the database if there's new data resolved.
 
         :param unresolved_entities: All the unresolved entities.
-        :type unresolved_entities: Set[UnresolvedEntityWrapper]
+        :type unresolved_entities: Set[Union[WebSiteLandsAssociation, ScriptWithdrawAssociation, ScriptSiteLandsAssociation, AccessAssociation, MailDomainComposedAssociation, IpAddressDependsAssociation]]
         """
         start_time = datetime.now()
         wslas = list()
@@ -89,6 +87,12 @@ class DatabaseEntitiesCompleter:
         print("********** END DATABASE COMPLETION ELABORATION **********\n")
 
     def do_complete_domain_names_with_no_access(self, aas: List[AccessAssociation]) -> None:
+        """
+        Method that tries to complete unresolved AccessAssociation entities.
+
+        :param aas: List of AccessAssociation entities.
+        :type aas: List[AccessAssociation]
+        """
         if len(aas) == 0:
             return
         print(f"\nSTART DOMAIN NAME WITH NO ACCESS RESOLVING")
@@ -107,6 +111,12 @@ class DatabaseEntitiesCompleter:
         print(f"END DOMAIN NAME WITH NO ACCESS RESOLVING")
 
     def do_complete_unresolved_web_sites_landing(self, wslas: List[WebSiteLandsAssociation]) -> None:
+        """
+        Method that tries to complete unresolved WebSiteLandsAssociation entities.
+
+        :param wslas: List of WebSiteLandsAssociation entities.
+        :type wslas: List[WebSiteLandsAssociation]
+        """
         if len(wslas) == 0:
             return
         print(f"\n\nSTART UNRESOLVED WEB SITES LANDING RESOLUTION")
@@ -127,6 +137,12 @@ class DatabaseEntitiesCompleter:
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
 
     def do_complete_unresolved_web_sites_scripts_withdraw(self, swas: List[ScriptWithdrawAssociation]) -> None:
+        """
+        Method that tries to complete unresolved ScriptWithdrawAssociation entities.
+
+        :param swas: List of ScriptWithdrawAssociation entities.
+        :type swas: List[ScriptWithdrawAssociation]
+        """
         if len(swas) == 0:
             return
         if not self.resolvers_wrapper.execute_script_resolving:
@@ -163,6 +179,12 @@ class DatabaseEntitiesCompleter:
         print(f"END UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
 
     def do_complete_unresolved_script_sites_landing(self, sslas: List[ScriptSiteLandsAssociation]) -> None:
+        """
+        Method that tries to complete unresolved ScriptSiteLandsAssociation entities.
+
+        :param sslas: List of ScriptSiteLandsAssociation entities.
+        :type sslas: List[ScriptSiteLandsAssociation]
+        """
         if len(sslas) == 0:
             return
         print(f"\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
@@ -182,6 +204,12 @@ class DatabaseEntitiesCompleter:
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
 
     def do_complete_unresolved_mail_domain(self, mdcas: List[MailDomainComposedAssociation]) -> None:
+        """
+        Method that tries to complete unresolved MailDomainComposedAssociation entities.
+
+        :param mdcas: List of MailDomainComposedAssociation entities.
+        :type mdcas: List[MailDomainComposedAssociation]
+        """
         if len(mdcas) == 0:
             return
         print(f"\n\nSTART UNRESOLVED MAIL DOMAIN RESOLUTION")
@@ -210,6 +238,12 @@ class DatabaseEntitiesCompleter:
         print(f"END UNRESOLVED MAIL DOMAIN RESOLUTION")
 
     def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]):
+        """
+        Method that tries to complete unresolved IpAddressDependsAssociation entities.
+
+        :param iadas: List of IpAddressDependsAssociation entities.
+        :type iadas: List[IpAddressDependsAssociation]
+        """
         if len(iadas) == 0:
             return
         if not self.resolvers_wrapper.execute_rov_scraping:
@@ -285,10 +319,28 @@ class DatabaseEntitiesCompleter:
             print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
 
     def __do_tsv_database_resolving__(self, ip_address: ipaddress.IPv4Address) -> Tuple[EntryIpAsDatabase, ipaddress.IPv4Network]:
+        """
+        Method that performs the .tsv database resolving in a 'compact' way, without any prints and handling all
+        possible exceptions in the same way.
+
+        :param ip_address: An IP address.
+        :type ip_address: ipaddress.IPv4Address
+        :raise ValueError: If the binary search auxiliary method raises a ValueError exception. In particular it is
+        impossible to instantiate a valid Ipv4Address from an entry of the .tsv database.
+        If the matched entry is formatted wrongly, not as described in https://iptoasn.com/.
+        In particular one of 3 errors occurred:
+            - the start_ip_range is not a valid ip address
+            - the end_ip_range is not a valid ip address
+            - the as_number is not a valid integer number
+        If last is not greater than first or if first address version is not 4 or 6.
+        If there's not a network in which is contained the ip address parameter.
+        :raise AutonomousSystemNotFoundError: If there is no Autonomous System that match the ip parameter.
+        :return: Tuple of the .tsb database entry and the network that the IP address belongs to.
+        :rtype: Tuple[EntryIpAsDatabase, ipaddress.IPv4Network]
+        """
         try:
             entry = self.resolvers_wrapper.ip_as_database.resolve_range(ip_address)
             net, all_net = entry.get_network_of_ip(ip_address)
         except (ValueError, AutonomousSystemNotFoundError):
             raise
         return entry, net
-

@@ -10,7 +10,7 @@ from utils import file_utils
 
 class FirefoxHeadlessWebDriver:
     """
-    This class create an instance of a headless firefox web driver using geckodriver and a valid installation of
+    This class creates an instance of a headless firefox web driver using geckodriver and a valid installation of
     Firefox.
 
     ...
@@ -56,26 +56,26 @@ class FirefoxHeadlessWebDriver:
         self.options = options
         try:
             self.service = Service(self.gecko_driver_path)
-            # self.binary = FirefoxBinary(firefox_path)     # deprecated
         except selenium.common.exceptions.WebDriverException:
             raise
         try:
-            # self.driver = webdriver.Firefox(executable_path=self.gecko_driver_path, options=self.options, firefox_binary=self.binary)
             self.driver = webdriver.Firefox(service=self.service, options=self.options)
         except selenium.common.exceptions.WebDriverException:
             raise
         self.driver.set_page_load_timeout(self.time_out_in_seconds)       # [s]
-        # self.driver.implicitly_wait(10)  # SAFETY
 
     def close(self) -> None:
         """
         Shutdown seleniumwire and then quit the webdriver.
 
         """
-        # self.driver.close()     # close the current window
         self.driver.quit()      # shutdown selenium-wire and then quit the webdriver
 
     def close_and_reopen(self) -> None:
+        """
+        Shutdown seleniumwire, quits the webdriver and then re-instantiate the option object and the Firefox webdriver.
+
+        """
         self.close()
         try:
             self.service = Service(self.gecko_driver_path)
@@ -86,4 +86,3 @@ class FirefoxHeadlessWebDriver:
         except selenium.common.exceptions.WebDriverException:
             raise
         self.driver.set_page_load_timeout(self.time_out_in_seconds)  # [s]
-        # self.driver.implicitly_wait(10)  # SAFETY

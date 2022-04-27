@@ -3,7 +3,6 @@ from typing import List, Set, Union, Dict
 from entities.paths.APath import APath
 from entities.DomainName import DomainName
 from entities.paths.NSPath import NSPath
-from entities.RRecord import RRecord
 from exceptions.DomainNonExistentError import DomainNonExistentError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.UnknownReasonError import UnknownReasonError
@@ -11,39 +10,35 @@ from exceptions.UnknownReasonError import UnknownReasonError
 
 class Zone:
     """
-    This class represent a simple zone. Semantically it represents only the data structures, not the fact
+    This class represent a simplified DNS zone. Semantically it represents only the data structures, not the fact
     that is a real existent zone.
 
     ...
 
     Instance Attributes
     -------------------
-    name : str
-        The name of the zone.
-    nameservers : List[DomainName]
-        A list of all nameservers name of the zone. Some zones contain nameserver that are not directly resolvable,
-        so the better solution is to keep nameservers are pure strings.
-    aliases : List[RRecord]
-        The aliases associated with all the nameservers of the zone.
-    zone_aliases : List[RRecord]
-        The CNAME RRs that leads to the zone name if encountered.
-    addresses : List[RRecord]
-        The resolving RRecord associated with all the nameservers.
+    name_path : NSPath
+        NSPath executed for the zone name.
+    name : DomainName
+        Zone name.
+    name_servers : List[APath]
+        List of APath associated to each mail server (so each DNS query of type A had a valid result).
+    unresolved_name_servers : Dict[DomainName, Union[DomainNonExistentError, NoAnswerError, UnknownReasonError]]
+        Dictionary of mail servers that associates each mail server domain name and the corresponding exception raised.
     """
 
     def __init__(self, name_path: NSPath, nameservers_path: List[APath], unresolved_nameservers_path: Dict[DomainName, Union[DomainNonExistentError, NoAnswerError, UnknownReasonError]]):
         """
-        Instantiate a Zone object initializing all the attributes defined above.
+        Instantiate the object.
 
-        :param zone_name: The zone name.
-        :type zone_name: DomainName
-        :param nameservers_of_zone: The list of all nameservers name of the zone.
-        :type nameservers_of_zone: List[DomainName]
-        :param name_servers_cnames: The list of all aliases associated with the nameservers of the zone, as RRecord of type
-        CNAME (so there's the mapping between nameserver and alias).
-        :type name_servers_cnames: List[RRecord]
-        :param addresses: The list of all RR of type A that resolves all nameservers.
-        :type addresses: List[RRecord]
+        :param name_path: NSPath executed for the zone name.
+        :type name_path: NSPath
+        :param nameservers_path: List of APath associated to each mail server (so each DNS query of type A had a valid
+        result).
+        :type nameservers_path: List[APath]
+        :param unresolved_nameservers_path: Dictionary of mail servers that associates each mail server domain name and
+        the corresponding exception raised.
+        :type unresolved_nameservers_path: Dict[DomainName, Union[DomainNonExistentError, NoAnswerError, UnknownReasonError]]
         """
         if len(name_path.get_resolution().values) != (len(nameservers_path) + len(unresolved_nameservers_path.keys())):
             raise ValueError
@@ -52,7 +47,15 @@ class Zone:
         self.name_servers = nameservers_path
         self.unresolved_name_servers = unresolved_nameservers_path
 
-    def nameservers(self, as_strings=False) -> List[str] or List[DomainName]:
+    def nameservers(self, as_strings=False) -> Union[List[str], List[DomainName]]:
+        """
+        Returns nameservers of the zone.
+
+        :param as_strings: Flag that sets if the returning list contains strings or DomainName objects.
+        :type as_strings: bool
+        :return: List of nameservers.
+        :rtype: Union[List[str], List[DomainName]]
+        """
         name_servers = list(map(lambda a_path: a_path.get_qname(), self.name_servers))
         for ns in self.unresolved_name_servers.keys():
             name_servers.append(ns)
@@ -62,6 +65,19 @@ class Zone:
             return name_servers
 
     def parse_every_domain_name(self, with_zone_name=False, root_included=False, tld_included=False) -> Set[DomainName]:
+        """
+        This methods returns every domain and sub-domain regarding the zone. It considers names from zone name, every
+        nameserver, every CNAME and computes all subdomains of such names.
+
+        :param with_zone_name: Flag that sets if zone name should be considered.
+        :type with_zone_name: bool
+        :param root_included: Flag that sets if root zone should be considered.
+        :type root_included: bool
+        :param tld_included: Flag that sets if TLDs should be considered.
+        :type tld_included: bool
+        :return: All domains related to the zone.
+        :rtype: Set[DomainName]
+        """
         result = set()
         for rr in self.name_path:
             for name in rr.name.parse_subdomains(root_included, tld_included, True):
@@ -92,21 +108,19 @@ class Zone:
 
     def __str__(self) -> str:
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return f"{self.name}\t{len(self.name_servers)+len(self.unresolved_name_servers.keys())}#nameservers"
 
     def __eq__(self, other) -> bool:
         """
-        This method returns True only if self and other are semantically equal.
-        This equality depends upon the developer.
+        This method returns a boolean for comparing 2 objects equality.
 
-        :param other: Another Zone object.
-        :type other: Zone
-        :return: True or False if the 2 objects are equal.
+        :param other:
+        :return: The result of the comparison.
         :rtype: bool
         """
         if isinstance(other, Zone):

@@ -1,5 +1,5 @@
 from typing import Set, List, Dict, Union
-from peewee import DoesNotExist
+from peewee import DoesNotExist, chunked
 from persistence.BaseModel import IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, \
     IpRangeROVEntity
 
@@ -10,7 +10,8 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or
 
 
 def bulk_upserts(data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]) -> None:
-    IpAddressDependsAssociation.insert_many(data_source).on_conflict_replace().execute()
+    for batch in chunked(data_source, 600):
+        IpAddressDependsAssociation.insert_many(batch).on_conflict_replace().execute()
 
 
 def get_from_entity_ip_address(iae: IpAddressEntity) -> IpAddressDependsAssociation:

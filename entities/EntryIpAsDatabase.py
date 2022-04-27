@@ -72,8 +72,6 @@ class EntryIpAsDatabase:
         try:
             return list(ipaddress.summarize_address_range(self.start_ip_range, self.end_ip_range))
         except (TypeError, ValueError):
-            # if last is not greater than first or if first address version is not 4 or 6
-            # if first or last are not IP addresses or are not of the same version
             raise
 
     def get_network_of_ip(self, ip: ipaddress.IPv4Address) -> Tuple[ipaddress.IPv4Network, List[ipaddress.IPv4Network]]:
@@ -99,13 +97,33 @@ class EntryIpAsDatabase:
         raise ValueError()
 
     def __str__(self) -> str:
+        """
+        This method returns a human-readable string representation of this object.
+
+        :return: A human-readable string representation of this object.
+        :rtype: str
+        """
         return f"{str(self.start_ip_range)}\t{str(self.end_ip_range)}\t{str(self.as_number)}\t{self.country_code}\t{self.as_description}"
 
     def __eq__(self, other) -> bool:
+        """
+        This method returns a boolean for comparing 2 objects equality.
+
+        :param other:
+        :return: The result of the comparison.
+        :rtype: bool
+        """
         if isinstance(other, EntryIpAsDatabase):
             return self.as_number == other.as_number
         else:
             return False
 
     def __hash__(self) -> int:
+        """
+        This method returns the hash of this object. Should be defined alongside the __eq__ method with the same
+        returning value from 2 objects.
+
+        :return: Hash of this object.
+        :rtype: int
+        """
         return hash((self.as_number, self.start_ip_range, self.end_ip_range))

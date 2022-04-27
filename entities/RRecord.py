@@ -3,7 +3,7 @@ from typing import List
 from entities.DomainName import DomainName
 from entities.enums.TypesRR import TypesRR
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
-from utils import resource_records_utils, string_utils
+from utils import resource_records_utils
 
 
 class RRecord:
@@ -25,13 +25,14 @@ class RRecord:
 
     def __init__(self, name: DomainName or str, type_rr: TypesRR, values: List[str]):
         """
-        Instantiate a RRecord object initializing all the attributes defined above.
+        Instantiate a RRecord object initializing all the attributes defined above. Tha values field accepts a list of
+        strings, then this method will 'parse' the actual compatible objects.
 
         :param name: The name.
         :type name: DomainName or str
         :param type_rr: The type.
         :type type_rr: TypesRR
-        :param values: The values.
+        :param values: The values as strings.
         :type values: List[str]
         """
         if isinstance(name, str):
@@ -43,12 +44,10 @@ class RRecord:
 
     def __eq__(self, other: any) -> bool:
         """
-        This method returns True only if self and other are semantically equal.
-        This equality depends upon the developer.
+        This method returns a boolean for comparing 2 objects equality.
 
-        :param other: Another RRecord object.
-        :type other: RRecord
-        :return: True or False if the 2 objects are equal.
+        :param other:
+        :return: The result of the comparison.
         :rtype: bool
         """
         if isinstance(other, RRecord):
@@ -72,7 +71,7 @@ class RRecord:
     def parse_from_csv_entry_as_str(entry: str, separator=';') -> 'RRecord':     # FORWARD DECLARATIONS (REFERENCES)
         """
         A static method that takes a string which represents a resource record as described in this
-        class.
+        class and returns the actual object.
 
         :param entry: The string.
         :type entry: str
@@ -103,18 +102,36 @@ class RRecord:
 
     def __str__(self):
         """
-        This method returns a string representation of this object.
+        This method returns a human-readable string representation of this object.
 
-        :return: A string representation of this object.
+        :return: A human-readable string representation of this object.
         :rtype: str
         """
         return f"{self.name}\t{self.type.to_string()}\t{resource_records_utils.stamp_values(self.type, self.values)}"
 
     def __hash__(self) -> int:
+        """
+        This method returns the hash of this object. Should be defined alongside the __eq__ method with the same
+        returning value from 2 objects.
+
+        :return: Hash of this object.
+        :rtype: int
+        """
         return hash((self.name, self.type))
 
     @staticmethod
     def construct_objects(type_rr: TypesRR, values: List[str]) -> List[DomainName or IPv4Address]:
+        """
+        This static method parses object of type DomainName and IPv4Address from a list of strings, based on the RR
+        type.
+
+        :param type_rr: Type of RR.
+        :type type_rr: TypesRR
+        :param values: List of strings.
+        :type values: List[str]
+        :return: Corresponding list of parsed objects.
+        :rtype: List[Union[DomainName, IPv4Address]]
+        """
         if type_rr == TypesRR.A:
             obj_values = list()
             for value in values:

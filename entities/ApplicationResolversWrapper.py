@@ -19,7 +19,6 @@ from entities.resolvers.results.MultipleMailDomainResolvingResult import Multipl
 from entities.resolvers.results.MultipleDnsZoneDependenciesResult import MultipleDnsZoneDependenciesResult
 from entities.resolvers.results.ScriptDependenciesResult import ScriptDependenciesResult
 from entities.resolvers.ROVPageScraper import ROVPageScraper
-from entities.Zone import Zone
 from entities.error_log.ErrorLog import ErrorLog
 from entities.error_log.ErrorLogger import ErrorLogger
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
@@ -42,49 +41,53 @@ class ApplicationResolversWrapper:
 
     Attributes
     ----------
+    execute_rov_scraping: bool
+        Flag that set if ROV scraping should be executed.
     consider_tld : bool
-        A flag that decides if TLDs should be considered in the zone dependencies.
-    execute_rov_scraping : bool
-        A flag that decides if ROVPage scraping will be done.
+        Flag that set if TLDs should be considered during DNS resolving.
+    execute_script_resolving : bool
+        Flag that set if script dependencies should be resolved.
     headless_browser_is_instantiated : bool
-        A boolean that tells if the headless browser is instantiated.
-    landing_resolver : LandingResolver
-        Instance of a LandingResolver object.
+        Boolean that indicates if the headless browser is instantiated in this wrapper object.
     headless_browser : FirefoxHeadlessWebDriver
-        Instance of a FirefoxHeadlessWebDriver object.
-    dns_resolver : DnsResolver
-        Instance of a DnsResolver object.
-    ip_as_database : IpAsDatabase
-        Instance of a IpAsDatabase object.
+        Instance of the FirefoxHeadlessWebDriver class.
     script_resolver : ScriptDependenciesResolver
-        Instance of a ScriptDependenciesResolver object.
+        Instance of the ScriptDependenciesResolver class.
     rov_page_scraper : ROVPageScraper
-        Instance of a ROVPageScraper object.
+        Instance of the ROVPageScraper class.
+    dns_resolver : DnsResolver
+        Instance of the DnsResolver class.
+    landing_resolver : LandingResolver
+        Instance of the LandingResolver class.
+    ip_as_database : IpAsDatabase
+        Instance of the IpAsDatabase class.
     error_logger : ErrorLogger
-        Instance of a ErrorLogger object.
-    landing_web_sites_results : Dict[str, LandingSiteResult]
-        Dictionary of results from web sites landing resolving.
-    landing_script_sites_results : Dict[str, LandingSiteResult]
-        Dictionary of results from script sites landing resolving.
-    web_site_script_dependencies : Dict[str, ScriptDependenciesResult]
-        Dictionary of results from script dependencies of web sites.
-    script_script_site_dependencies : Tuple[Dict[MainFrameScript, Set[str]], Set[str]]
-        Tuple containing a dictionary for script-script site association and a set of all scrip sites.
-    mail_domains_results : Tuple[Dict[str, List[str]], List[ErrorLog]]
-        Tuple containing a dictionary for mail domain-mail servers association and a list or errors occurred.
-    total_dns_results : Dict[str, List[Zone]]
-        Dictionary of entire results from DNS resolving of mail domain zone dependencies.
+        Instance of the ErrorLogger class.
+    landing_web_sites_results : Dict[Url, LandingSiteResult]
+        Dictionary that stores web sites' landing.
+    landing_script_sites_results : Dict[Url, LandingSiteResult]
+        Dictionary that stores script sites' landing.
+    web_site_script_dependencies : Dict[Url, ScriptDependenciesResult]
+        Dictionary that stores web sites' script dependencies.
+    script_script_site_dependencies : Dict[MainFrameScript, Set[Url]]
+        Dictionary that stores scripts' hosting dependencies.
+    mail_domains_results : MultipleMailDomainResolvingResult
+        Instance of MultipleMailDomainResolvingResult class for mail domains resolving result.
+    total_dns_results : MultipleDnsZoneDependenciesResult
+        Instance of MultipleDnsZoneDependenciesResult class for zone dependencies resolving result.
     total_ip_as_db_results : AutonomousSystemResolutionResults
-        Results from IpAsDatabase resolving.
+        Instance of AutonomousSystemResolutionResults class for .tsv database resolving result.
     total_rov_page_scraper_results : ASResolverResultForROVPageScraping
-        Results for and from ROVPage scraping.
+        Instance of ASResolverResultForROVPageScraping class for ROV page resolving result.
     """
     def __init__(self, consider_tld: bool, execute_script_resolving: bool, execute_rov_scraping: bool, project_root_directory=Path.cwd(), take_snapshot=True):
         """
         Initialize all components from scratch.
         Here is checked the presence of the geckodriver executable and the presence of the .tsv database.
         If the latter is absent then automatically it will be downloaded and put in the input folder.
-        If the consider_flag flag is true then a TLDPageScraper is instantiated and the TLDs list is computed.
+        Parameters include 3 flags set prior to the start of the execution: flag that set if TLDs are considered, flag
+        that set if script dependencies resolving should be executed, flag that set if ROV scraping should be executed
+        and a boolean that set if temporary files should be created.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
@@ -94,7 +97,9 @@ class ApplicationResolversWrapper:
 
         :param consider_tld: A flag that will consider or remove the Top-Level Domains when computing zone dependencies.
         :type consider_tld: bool
-        :param execute_rov_scraping: A flag that decides if ROVPage scraping will be done.
+        :param execute_script_resolving: A flag that decides if script dependencies resolving should be executed.
+        :type execute_script_resolving: bool
+        :param execute_rov_scraping: A flag that decides if ROVPage scraping will be executed.
         :type execute_rov_scraping: bool
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
@@ -151,11 +156,11 @@ class ApplicationResolversWrapper:
         The results are saved in the attributes of this object.
 
         :param web_sites: A list of web sites.
-        :type web_sites: List[str]
+        :type web_sites: List[Url]
         :param mail_domains: A list of mail domains.
-        :type mail_domains: List[str]
+        :type mail_domains: List[DomainName]
         :return: A list of domain names extracted from the execution.
-        :rtype: List[str]
+        :rtype: List[DomainName]
         """
         self.landing_web_sites_results = self.do_web_site_landing_resolving(set(web_sites))
         self.mail_domains_results = self.do_mail_servers_resolving(mail_domains)
@@ -166,10 +171,10 @@ class ApplicationResolversWrapper:
         This method executes the second part of the application named: MIDST.
         The results are saved in the attributes of this object.
 
-        :param domain_names: A list of web sites.
-        :type domain_names: List[str]
+        :param domain_names: A list of domain names.
+        :type domain_names: List[DomainName]
         :return: A list of domain names extracted from the execution.
-        :rtype: List[str]
+        :rtype: List[DomainName]
         """
         current_dns_results = self.do_dns_resolving(domain_names)
         current_ip_as_db_results = self.do_ip_as_database_resolving(current_dns_results, self.landing_web_sites_results, True)
@@ -194,8 +199,8 @@ class ApplicationResolversWrapper:
         This method executes the third and last part of the application named: EPILOGUE.
         The results are saved in the attributes of this object.
 
-        :param domain_names: A list of web sites.
-        :type domain_names: List[str]
+        :param domain_names: A list of domain names.
+        :type domain_names: List[DomainName]
         """
         new_domain_names = copy.deepcopy(domain_names)
         for domain_name in domain_names:
@@ -224,9 +229,9 @@ class ApplicationResolversWrapper:
         This method executes landing resolving of a set of web sites.
 
         :param web_sites: A set of web sites.
-        :type web_sites: Set[str]
+        :type web_sites: Set[Url]
         :return: The landing results.
-        :rtype: Dict[str, LandingSiteResult]
+        :rtype: Dict[Url, LandingSiteResult]
         """
         print("\n\nSTART WEB SITE LANDING RESOLVER")
         start_execution_time = datetime.now()
@@ -241,9 +246,9 @@ class ApplicationResolversWrapper:
         This method executes landing resolving of a set of script sites.
 
         :param script_sites: A set of script sites.
-        :type script_sites: Set[str]
+        :type script_sites: Set[Url]
         :return: The landing results.
-        :rtype: Dict[str, LandingSiteResult]
+        :rtype: Dict[Url, LandingSiteResult]
         """
         print("\n\nSTART SCRIPT SITE LANDING RESOLVER")
         start_execution_time = datetime.now()
@@ -258,7 +263,7 @@ class ApplicationResolversWrapper:
         This method executes mail servers resolving of a list of mail domains.
 
         :param mail_domains: A list of mail domains.
-        :type mail_domains: List[str]
+        :type mail_domains: List[DomainName]
         :return: The resolving results.
         :rtype: MultipleMailDomainResolvingResult
         """
@@ -274,7 +279,7 @@ class ApplicationResolversWrapper:
         This method executes DNS resolving of a list of domain names.
 
         :param domain_names: A list of domain names.
-        :type domain_names: List[str]
+        :type domain_names: List[DomainName]
         :return: The resolving results.
         :rtype: MultipleDnsZoneDependenciesResult
         """
@@ -288,10 +293,16 @@ class ApplicationResolversWrapper:
 
     def do_ip_as_database_resolving(self, dns_results: MultipleDnsZoneDependenciesResult, landing_results: Dict[Url, LandingSiteResult], do_mail_domains: bool) -> AutonomousSystemResolutionResults:
         """
-        This method executes IP-AS resolving.
+        This method executes IP-AS resolving. It considers as input the results from DNS resolving (parameter
+        dns_results), the landing resolving results (parameter landing_results) and the mail domain resolving (results
+        saved in the self object) if flag do_mail_domains is set to True.
 
         :param dns_results: The DNS resolving result.
         :type dns_results: MultipleDnsZoneDependenciesResult
+        :param landing_results: The DNS resolving result.
+        :type landing_results: Dict[Url, LandingSiteResult]
+        :param do_mail_domains: The DNS resolving result.
+        :type do_mail_domains: bool
         :return: The resolving results.
         :rtype: AutonomousSystemResolutionResults
         """
@@ -367,14 +378,6 @@ class ApplicationResolversWrapper:
                 mail_domain_results = self.mail_domains_results.dependencies[mail_domain]
                 if mail_domain_results is not None:
                     for mail_server in mail_domain_results.mail_servers_paths.keys():
-                        """
-                        try:
-                            rr_a, rr_cnames = mail_domain_results.resolve_mail_server(mail_server)
-                        except NoAvailablePathError:
-                            results.add_unresolved_server(mail_server)
-                            continue
-                        """
-
                         if mail_domain_results.mail_servers_paths[mail_server] is None:
                             print(f"No access path for mail server: {mail_server}")
                         else:
@@ -403,6 +406,13 @@ class ApplicationResolversWrapper:
         return results
 
     def do_set_None_for_script_dependencies_resolving(self) -> Dict[Url, ScriptDependenciesResult]:
+        """
+        This method set every web site script dependencies values to None. It is used when the
+        execute_script_dependencies flag is set to False.
+
+        :return: Result 'nullified'.
+        :rtype: Dict[Url, ScriptDependenciesResult]
+        """
         script_dependencies_result = dict()
         for website in self.landing_web_sites_results.keys():
             script_dependencies_result[website] = ScriptDependenciesResult(None, None)
@@ -414,7 +424,7 @@ class ApplicationResolversWrapper:
         It takes the landing web site resolution results saved in this object.
 
         :return: The resolving results.
-        :rtype: Dict[str, ScriptDependenciesResult]
+        :rtype: Dict[Url, ScriptDependenciesResult]
         """
         print("\n\nSTART SCRIPT DEPENDENCIES RESOLVER")
         start_execution_time = datetime.now()
@@ -459,16 +469,10 @@ class ApplicationResolversWrapper:
     def do_rov_page_scraping(self, reformat: ASResolverResultForROVPageScraping) -> ASResolverResultForROVPageScraping:
         """
         This method executes the ROVPage scraping from the IpAsDatabase resolution results (reformatted).
-        Empirically it has been noticed that selenium raises a WebDriverException (after a long timer) sometimes and
-        since then every request made through selenium raises such exception again. To avoid wasting time it has been
-        implemented a threshold of sequential WebDriverException that once passed truncates all remaining ROV page
-        scraping elaborations.
 
         :param reformat: A ASResolverResultForROVPageScraping object.
         :type reformat: ASResolverResultForROVPageScraping
-        :param sequential_selenium_exceptions_threshold: xxx
-        :type sequential_selenium_exceptions_threshold: int
-        :return: The ASResolverResultForROVPageScraping parameter object updated with new informations.
+        :return: The ASResolverResultForROVPageScraping parameter object updated with new data.
         :rtype: ASResolverResultForROVPageScraping
         """
         print("\n\nSTART ROV PAGE SCRAPING")
@@ -505,12 +509,11 @@ class ApplicationResolversWrapper:
     def _extract_domain_names_from_preamble(self) -> List[DomainName]:
         """
         This method extract domain names from the PREAMBLE execution: this means it extract them from the landing web
-        sites resolution results (saved in this object), input mail domains and from the mail servers resolved.
+        sites resolution results (saved in this object), input mail domains and from the mail servers&mail domains
+        resolved.
 
-        :param mail_domains: All the input mail domains.
-        :type mail_domains: List[str]
         :return: A list of extracted domain names.
-        :rtype: List[str]
+        :rtype: List[DomainName]
         """
         domain_names = set()
         for website in self.landing_web_sites_results.keys():
@@ -548,7 +551,7 @@ class ApplicationResolversWrapper:
         This method extracts domain names from the landing script site resolution results (saved in this object state).
 
         :return: A list of extracted domain names.
-        :rtype: List[str]
+        :rtype: List[DomainName]
         """
         domain_names = list()
         for script_site in self.landing_script_sites_results.keys():
@@ -568,7 +571,7 @@ class ApplicationResolversWrapper:
 
         :return: A dictionary that associates each script with every script site, and a set of all the script sites.
         Everything wrapped in a tuple.
-        :rtype: Tuple[Dict[MainFrameScript, Set[str]], Set[str]]
+        :rtype: Tuple[Dict[MainFrameScript, Set[Url]], Set[Url]]
         """
         result = dict()
         script_sites = set()
