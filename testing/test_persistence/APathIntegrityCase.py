@@ -26,18 +26,18 @@ class APathIntegrityCase(unittest.TestCase):
         helper_paths.insert_a_path(cls.path)
 
     def test_01_from_cache(self):
-        print("\n------- [1] START RETRIEVING FROM CACHE TEST -------")
+        print("\n------- START TEST 1 -------")
         result_path = self.dns_resolver.cache.resolve_path(self.domain_name, TypesRR.A)
         print(f"{result_path.stamp()}")
         self.assertEqual(self.path, result_path)
-        print("------- [1] END RETRIEVING FROM CACHE TEST -------")
+        print("------- END TEST 1 -------")
 
     def test_02_from_database(self):
-        print("\n------- [2] START RETRIEVING FROM DATABASE TEST -------")
+        print("\n------- START TEST 2 -------")
         result_path = helper_domain_name.resolve_a_path(self.domain_name)
         print(f"{result_path.stamp()}")
         self.assertEqual(self.path, result_path)
-        print("------- [2] END RETRIEVING FROM DATABASE TEST -------")
+        print("------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ from persistence.BaseModel import db, DirectZoneAssociation, DomainNameEntity, W
 # portal.namirialtsp.com.
 class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
     def test_01_domain_name_and_direct_zones(self):
-        print(f"\n------- [1] START domain_name VS direct_zone TEST CASE -------")
+        print(f"\n------- START TEST 1 -------")
         domain_names = list()
         direct_zones = list()
         with db.atomic():
@@ -28,10 +28,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {domain_name}')
-        print(f"------- [1] END domain_name VS direct_zone TEST CASE -------")
+        print(f"------- END TEST 1 -------")
 
     def test_02_https_websites_and_website_lands(self):
-        print(f"\n------- [2] START web_site VS web_site_lands TEST CASE -------")
+        print(f"\n------- START TEST 2 -------")
         web_sites = list()
         web_site_lands = list()
         with db.atomic():
@@ -62,10 +62,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For (HTTP): {web_site}')
-        print(f"------- [2] END web_site VS web_site_lands TEST CASE -------")
+        print(f"------- END TEST 2 -------")
 
     def test_03_https_scriptsites_and_scriptsite_lands(self):
-        print(f"\n------- [3] START wscript_site VS script_site_lands TEST CASE -------")
+        print(f"\n------- START TEST 3 -------")
         script_sites = list()
         script_site_lands = list()
         with db.atomic():
@@ -96,10 +96,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For (HTTP): {script_site}')
-        print(f"\n------- [3] END script_site VS script_site_lands TEST CASE -------")
+        print(f"\n------- END TEST 3 -------")
 
     def test_04_ip_address_and_ip_address_depends(self):
-        print(f"\n------- [4] START ip_address VS ip_address_depends TEST CASE -------")
+        print(f"\n------- START TEST 4 -------")
         ip_addresses = list()
         ip_addresses_depends = list()
         with db.atomic():
@@ -120,10 +120,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {ip_address}')
-        print(f"------- [4] END ip_address VS ip_address_depends TEST CASE -------")
+        print(f"------- END TEST 4 -------")
 
     def test_05_script_and_script_hosted_on(self):
-        print(f"\n------- [5] START script VS script_hosted_on TEST CASE -------")
+        print(f"\n------- START TEST 5 -------")
         scripts = list()
         script_hosted_on = list()
         with db.atomic():
@@ -144,10 +144,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {script}')
-        print(f"------- [5] END script VS script_hosted_on TEST CASE -------")
+        print(f"------- END TEST 5 -------")
 
     def test_06_website_and_website_domain(self):
-        print(f"\n------- [6] START web_site VS web_site_domain_name TEST CASE -------")
+        print(f"\n------- START TEST 6 -------")
         web_sites = list()
         web_sites_domain_names = list()
         with db.atomic():
@@ -168,10 +168,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {web_site}')
-        print(f"------- [6] END web_site VS web_site_domain_name TEST CASE -------")
+        print(f"------- END TEST 6 -------")
 
     def test_07_scriptsite_and_scriptsite_domain(self):
-        print(f"\n------- [7] START script_site VS script_site_domain_name TEST CASE -------")
+        print(f"\n------- START TEST 7 -------")
         script_sites = list()
         script_sites_domain_names = list()
         with db.atomic():
@@ -192,7 +192,7 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 for row in query:
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {script_site}')
-        print(f"------- [7] END script_site VS script_site_domain_name TEST CASE -------")
+        print(f"------- END TEST 7 -------")
 
 
 if __name__ == '__main__':

@@ -13,10 +13,10 @@ class DumpUnresolvedEntitiesIntegrityCase(unittest.TestCase):
         cls.PRD = file_utils.get_project_root_directory()
 
     def test_1_dump_unresolved_entities(self):
-        print(f"\n------- [1] START DUMPING UNRESOLVED ENTITIES TEST -------")
+        print(f"\n------- START TEST 1 -------")
         unresolved_entities = helper_application_results.get_unresolved_entities()
         helper_application_results.dump_all_unresolved_entities(self.PRD, unresolved_entities, ';')
-        print(f"------- [1] END DUMPING UNRESOLVED ENTITIES TEST -------")
+        print(f"------- END TEST 1 -------")
 
 
 if __name__ == '__main__':

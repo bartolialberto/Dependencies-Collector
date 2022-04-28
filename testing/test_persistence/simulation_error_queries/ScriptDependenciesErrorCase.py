@@ -5,7 +5,7 @@ from persistence import helper_script_withdraw, helper_web_site
 
 class ScriptDependenciesErrorCase(unittest.TestCase):
     def test_1_set_web_site_script_withdraw_association_to_null(self):
-        print(f"\n------- [1] START SETTING WEB SITE SCRIPT WITHDRAW ASSOCIATION TO NULL QUERY -------")
+        print(f"\n------- START TEST 1 -------")
         # PARAMETERS
         web_site = 'google.it/doodles'
         web_site = 'mail.dei.unipd.it/horde5/login.php'
@@ -20,7 +20,7 @@ class ScriptDependenciesErrorCase(unittest.TestCase):
         for swa in swas:
             swa.delete_instance()
         helper_script_withdraw.insert(wse, None, https, None)
-        print(f"------- [1] END SETTING WEB SITE SCRIPT WITHDRAW ASSOCIATION TO NULL QUERY -------")
+        print(f"------- END TEST 1 -------")
 
 
 if __name__ == '__main__':

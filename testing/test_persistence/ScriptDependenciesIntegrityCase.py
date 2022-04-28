@@ -36,7 +36,7 @@ class ScriptDependenciesIntegrityCase(unittest.TestCase):
         print("DONE")
 
     def test_1_debug_prints(self):
-        print(f"\n------- [1] START DEBUG PRINTS TEST -------")
+        print(f"\n------- START TEST 1 -------")
         for i, web_site in enumerate(self.web_site_script_dependencies.keys()):
             print(f"web site[{i+1}/{len(self.web_site_script_dependencies.keys())}]: {web_site}")
             print(f"***** HTTPS *****")
@@ -53,10 +53,10 @@ class ScriptDependenciesIntegrityCase(unittest.TestCase):
                     print(f"--> script[{j+1}/{len(self.web_site_script_dependencies[web_site].http)}].src={script.src}")
             if i != len(self.web_site_script_dependencies.keys())-1:
                 print()
-        print(f"------- [1] END DEBUG PRINTS TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_2_integrity_of_script_dependencies_per_web_site(self):
-        print(f"\n------- [2] START DATA INTEGRITY OF SCRIPT DEPENDENCIES PER WEB SITE TEST -------")
+        print(f"\n------- START TEST 2 -------")
         for web_site in self.web_site_script_dependencies.keys():
             try:
                 wse = helper_web_site.get(web_site)
@@ -109,7 +109,7 @@ class ScriptDependenciesIntegrityCase(unittest.TestCase):
             print(f"from HTTPS database {len(https_script_src_database)} scripts, from HTTP database {len(http_script_src_database)} scripts")
             self.assertSetEqual(https_script_src_elaboration, https_script_src_database)
             self.assertSetEqual(http_script_src_elaboration, http_script_src_database)
-        print(f"------- [2] END DATA INTEGRITY OF SCRIPT DEPENDENCIES PER WEB SITE TEST -------")
+        print(f"------- END TEST 2 -------")
 
     @classmethod
     def tearDownClass(cls) -> None:

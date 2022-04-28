@@ -33,7 +33,7 @@ class DnsQueryTestCase(unittest.TestCase):
         print(f"PARAMETER: {cls.domain_name}")
 
     def test_1_do_raw_query_and_prints_raw_infos(self):
-        print(f"\n------- [1] START RAW QUERY TEST -------")
+        print(f"\n------- START TEST 1 -------")
         try:
             answer = self.dns_resolver.resolver.resolve(self.domain_name, self.type.to_string())
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.resolver.YXDOMAIN, Exception) as e:  # name is a domain that does not exist
@@ -57,10 +57,10 @@ class DnsQueryTestCase(unittest.TestCase):
                 print(f"value[{i+1}/{len(answer)}] = {str(val)}")
             else:
                 print(f"value[{i+1}/{len(answer)}] = {val.to_text()}")
-        print(f"------- [1] END RAW QUERY TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_2_do_query_and_debug_prints_from_application_resolver(self):
-        print(f"\n------- [2] START QUERY TEST -------")
+        print(f"\n------- START TEST 2 -------")
         try:
             path = self.dns_resolver.do_query(self.domain_name, self.type)
         except (DomainNonExistentError, NoAnswerError, UnknownReasonError) as e:
@@ -69,7 +69,7 @@ class DnsQueryTestCase(unittest.TestCase):
         print(f"canonical name = {path.get_canonical_name()}")
         print(f"resolution = {path.get_resolution()}")
         print(f"path = {path.stamp()}")
-        print(f"------- [2] END QUERY TEST -------")
+        print(f"------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

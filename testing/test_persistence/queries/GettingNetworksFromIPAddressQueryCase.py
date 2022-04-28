@@ -30,32 +30,32 @@ class GettingNetworksFromIPAddressQueryCase(unittest.TestCase):
             print(f"IP address: {cls.ip_address.exploded} ==> IP range ROV: {cls.irre.compressed_notation}")
 
     def test_01_from_network(self):
-        print(f"\n------- [1] START FROM NETWORK QUERY -------")
+        print(f"\n------- START QUERY 1 -------")
         iaes = helper_ip_network.get_all_addresses_of(self.ine)
         addresses = set(map(lambda iae: iae.exploded_notation, iaes))
         print(f"{self.ine.compressed_notation} ==> {str(addresses)}")
         self.assertIn(self.ip_address.exploded, addresses)
-        print(f"------- [1] END FROM NETWORK QUERY -------")
+        print(f"------- END QUERY 1 -------")
 
     def test_02_from_range_tsv(self):
         if self.irte is None:
             self.skipTest('IP range TSV is None.')
-        print(f"\n------- [2] START FROM RANGE TSV QUERY -------")
+        print(f"\n------- START QUERY 2 -------")
         iaes = helper_ip_range_tsv.get_all_addresses_of(self.irte)
         addresses = set(map(lambda iae: iae.exploded_notation, iaes))
         print(f"{self.irte.compressed_notation} ==> {str(addresses)}")
         self.assertIn(self.ip_address.exploded, addresses)
-        print(f"------- [2] END FROM RANGE TSV QUERY -------")
+        print(f"------- END QUERY 2 -------")
 
     def test_03_from_range_rov(self):
         if self.irre is None:
             self.skipTest('IP range ROV is None.')
-        print(f"\n------- [3] START FROM RANGE ROV QUERY -------")
+        print(f"\n------- START QUERY 3 -------")
         iaes = helper_ip_range_rov.get_all_addresses_of(self.irre)
         addresses = set(map(lambda iae: iae.exploded_notation, iaes))
         print(f"{self.irre.compressed_notation} ==> {str(addresses)}")
         self.assertIn(self.ip_address.exploded, addresses)
-        print(f"------- [3] END FROM RANGE ROV QUERY -------")
+        print(f"------- END QUERY 3 -------")
 
 
 if __name__ == '__main__':

@@ -17,14 +17,14 @@ class GettingAutonomousSystemFromIPAddressQueryCase(unittest.TestCase):
         print(f"IP network: {cls.ip_network.compressed}")
 
     def test_01_printing_result(self):
-        print(f"\n------- [1] START QUERY -------")
+        print(f"\n------- START QUERY 1 -------")
         try:
             iaes = helper_ip_network.get_all_addresses_of(self.ine)
         except NoDisposableRowsError as e:
             self.fail(f"!!! {str(e)} !!!")
         for i, iae in enumerate(iaes):
             print(f"address[{i+1}/{len(iaes)}]: {iae.exploded_notation}")
-        print(f"------- [1] END QUERY -------")
+        print(f"------- END QUERY 1 -------")
 
 
 if __name__ == '__main__':

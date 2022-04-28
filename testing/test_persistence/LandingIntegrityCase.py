@@ -53,7 +53,7 @@ class LandingIntegrityCase(unittest.TestCase):
         print(f"DONE")
 
     def test_1_website_has_only_two_website_lands_association_at_most(self):
-        print("\n------- [1] START AT MOST 2 WEB_SITE_LANDS_ASSOCIATIONS PER WEBSITE CHECK -------")
+        print("\n------- START TEST 1 -------")
         for i, website in enumerate(self.web_sites_results.keys()):
             wse = helper_web_site.get(website)
             wslas = helper_web_site_lands.test_getting_unlimited_association_from(wse)
@@ -69,10 +69,10 @@ class LandingIntegrityCase(unittest.TestCase):
             self.assertEqual(2, len(wslas))
             self.assertEqual(1, len(https_wslas))
             self.assertEqual(1, len(http_wslas))
-        print("------- [1] END AT MOST 2 WEB_SITE_LANDS_ASSOCIATIONS PER WEBSITE CHECK -------")
+        print("------- END TEST 1 -------")
 
     def test_2_integrity_between_results(self):
-        print("\n------- [2] START WEB SITES INTEGRITY CHECK -------")
+        print("\n------- START TEST 2 -------")
         for i, website in enumerate(self.web_sites_results.keys()):
             print(f"Result for: {website} through elaboration:")
             if self.web_sites_results[website].https is None:
@@ -99,10 +99,10 @@ class LandingIntegrityCase(unittest.TestCase):
 
             self.assertEqual(elaboration_https_landing_url, db_https_landing_url)
             self.assertEqual(elaboration_http_landing_url, db_http_landing_url)
-        print("------- [2] END WEB SITES INTEGRITY CHECK -------")
+        print("------- END TEST 2 -------")
 
     def test_3_script_site_has_only_two_script_site_lands_association_at_most(self):
-        print("\n------- [3] START AT MOST 2 SCRIPT_SITE_LANDS_ASSOCIATIONS PER WEBSITE CHECK -------")
+        print("\n------- START TEST 3 -------")
         for i, script_site in enumerate(self.script_sites_results.keys()):
             sse = helper_script_site.get(script_site)
             sslas = helper_script_site_lands.test_getting_unlimited_association_from(sse)
@@ -125,10 +125,10 @@ class LandingIntegrityCase(unittest.TestCase):
             self.assertGreaterEqual(len(sslas), 1)
             self.assertEqual(1, len(https_sslas))
             self.assertEqual(1, len(http_sslas))
-        print("------- [3] END AT MOST 2 SCRIPT_SITE_LANDS_ASSOCIATIONS PER WEBSITE CHECK -------")
+        print("------- END TEST 3 -------")
 
     def test_4_integrity_between_results(self):
-        print("\n------- [4] START SCRIPT SITES INTEGRITY CHECK -------")
+        print("\n------- START TEST 4 -------")
         for i, script_site in enumerate(self.script_sites_results.keys()):
             print(f"Result for: {script_site} through elaboration:")
             if self.script_sites_results[script_site].https is None:
@@ -155,7 +155,7 @@ class LandingIntegrityCase(unittest.TestCase):
 
             self.assertEqual(elaboration_https_landing_url, db_https_landing_url)
             self.assertEqual(elaboration_http_landing_url, db_http_landing_url)
-        print("------- [4] END SCRIPT SITES INTEGRITY CHECK -------")
+        print("------- END TEST 4 -------")
 
 
 if __name__ == '__main__':

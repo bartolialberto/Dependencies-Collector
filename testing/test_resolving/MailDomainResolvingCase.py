@@ -29,7 +29,7 @@ class MailDomainResolvingCase(unittest.TestCase):
         print("END RESOLVING")
 
     def test_01_control_results(self):
-        print(f"\n------- [1] START CONTROL RESULTS TEST -------")
+        print(f"\n------- START TEST 1 -------")
         for i, mail_domain in enumerate(self.results.dependencies.keys()):
             print(f"mail domain[{i+1}/{len(self.results.dependencies.keys())}]: {mail_domain}")
             mail_servers = set()
@@ -43,7 +43,7 @@ class MailDomainResolvingCase(unittest.TestCase):
                 print(f"from result[{j + 1}/{len(self.results.dependencies[mail_domain].mail_servers_paths.keys())}] = {mail_server}")
                 qnames.add(mail_server)
             self.assertSetEqual(mail_servers, qnames)
-        print(f"------- [1] END CONTROL RESULTS TEST -------")
+        print(f"------- END TEST 1 -------")
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         print(f"STARTING CACHE WITH {len(cls.cache.cache)} RECORDS")
 
     def test_1_resolving_path(self):
-        print(f"\n------- [1] START PATH RESOLVING TEST -------")
+        print(f"\n------- START TEST 1 -------")
         # PARAMETER
         domain_name = DomainName('www.units.it.')
         type_rr = TypesRR.A
@@ -40,10 +40,10 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
             print(f"{path.stamp()}")
         except (NoAvailablePathError, ReachedMaximumRecursivePathThresholdError) as e:
             self.fail(f"!!! {str(e)} !!!")
-        print(f"------- [1] END PATH RESOLVING TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_2_close_graph_cycling(self):
-        print(f"\n------- [2] START CLOSE GRAPH CYCLING TEST -------")
+        print(f"\n------- START TEST 2 -------")
         start = DomainName('A')
         rr1 = RRecord(start, TypesRR.CNAME, ['B'])
         rr2 = RRecord(DomainName('B'), TypesRR.CNAME, ['C'])
@@ -52,7 +52,7 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         with self.assertRaises(ReachedMaximumRecursivePathThresholdError):
             path = self.cache.resolve_path(start, TypesRR.A)
             print(f"resolving path didn't raise ReachedMaximumRecursivePathThresholdError...")
-        print(f"------- [2] END CLOSE GRAPH CYCLING TEST -------")
+        print(f"------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

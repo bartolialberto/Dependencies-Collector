@@ -26,7 +26,7 @@ class LandingResolvingCase(unittest.TestCase):
         self.results = resolver.resolve_sites(self.sites)
 
     def test_01_same_server(self):
-        print(f"\n------- [1] START SAME SERVER TEST -------")
+        print(f"\n------- START TEST 1 -------")
         for i, url in enumerate(self.results.keys()):
             # HTTPS
             same = (url.domain_name() == self.results[url].https.server)
@@ -34,10 +34,10 @@ class LandingResolvingCase(unittest.TestCase):
             # HTTP
             same = (url.domain_name() == self.results[url].http.server)
             print(f"\t\t\t{url} has same server on HTTP? {same}")
-        print(f"------- [1] END SAME SERVER TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_02_same_scheme(self):
-        print(f"\n------- [2] START SAME LANDING SCHEME TEST -------")
+        print(f"\n------- START TEST 2 -------")
         for i, url in enumerate(self.results.keys()):
             # HTTPS
             same = (True == self.results[url].https.url.is_https())
@@ -45,7 +45,7 @@ class LandingResolvingCase(unittest.TestCase):
             # HTTP
             same = (True == self.results[url].https.url.is_http())
             print(f"\t\t\t{url} has same landing scheme starting with HTTP? {same}")
-        print(f"------- [2] END SAME LANDING SCHEME TEST -------")
+        print(f"------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

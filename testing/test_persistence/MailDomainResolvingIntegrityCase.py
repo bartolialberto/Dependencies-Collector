@@ -30,17 +30,17 @@ class MailDomainResolvingIntegrityCase(unittest.TestCase):
         print(f"DONE.")
 
     def test_01_mail_domains_presence(self):
-        print("\n------- [1] START MAIL DOMAINS PRESENCE CHECK -------")
+        print("\n------- START TEST 1 -------")
         for mail_domain in self.results.dependencies.keys():
             try:
                 mde = helper_mail_domain.get(mail_domain)
             except DoesNotExist as e:
                 self.fail(f"!!! {str(e)} !!!")
             self.assertEqual(mail_domain.string, mde.name.string)
-        print("------- [1] END MAIL DOMAINS PRESENCE CHECK -------")
+        print("------- END TEST 1 -------")
 
     def test_02_mail_servers_presence(self):
-        print("\n------- [1] START MAIL SERVERS PRESENCE CHECK -------")
+        print("\n------- START TEST 2 -------")
         for mail_domain in self.results.dependencies.keys():
             for mail_server in self.results.dependencies[mail_domain].mail_servers_paths.keys():
                 try:
@@ -48,10 +48,10 @@ class MailDomainResolvingIntegrityCase(unittest.TestCase):
                 except DoesNotExist as e:
                     self.fail(f"!!! {str(e)} !!!")
                 self.assertEqual(mail_server.string, mse.name.string)
-        print("------- [1] END MAIL SERVERS PRESENCE CHECK -------")
+        print("------- END TEST 2 -------")
 
     def test_03_mail_domain_composed(self):
-        print("\n------- [3] START MAIL DOMAIN COMPOSED CHECK -------")
+        print("\n------- START TEST 3 -------")
         for mail_domain in self.results.dependencies.keys():
             try:
                 mde = helper_mail_domain.get(mail_domain)
@@ -64,10 +64,10 @@ class MailDomainResolvingIntegrityCase(unittest.TestCase):
             db_str_set = set(map(lambda mse: mse.name.string, mses))
             elaboration_str_set = set(map(lambda ms: ms.string, self.results.dependencies[mail_domain].mail_servers_paths.keys()))
             self.assertSetEqual(elaboration_str_set, db_str_set)
-        print("------- [3] END MAIL DOMAIN COMPOSED CHECK -------")
+        print("------- END TEST 3 -------")
 
     def test_04_reversed_mail_domain_composed(self):
-        print("\n------- [4] START REVERSED MAIL DOMAIN COMPOSED CHECK -------")
+        print("\n------- START TEST 4 -------")
         for mail_domain in self.results.dependencies.keys():
 
             for mail_server in self.results.dependencies[mail_domain].mail_servers_paths.keys():
@@ -81,7 +81,7 @@ class MailDomainResolvingIntegrityCase(unittest.TestCase):
                     self.fail(f"!!! {str(e)} !!!")
                 db_mde_str_set = set(map(lambda mde: mde.name.string, mdes))
                 self.assertIn(mail_domain.string, db_mde_str_set)
-        print("------- [4] END REVERSED MAIL DOMAIN COMPOSED CHECK -------")
+        print("------- END TEST 4 -------")
 
 
 if __name__ == '__main__':

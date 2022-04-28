@@ -24,20 +24,20 @@ class RRecordTestCase(unittest.TestCase):
         )
 
     def test_01_equality(self):
-        print(f"\n------- [1] START EQUALITY TEST -------")
+        print(f"\n------- START TEST 1 -------")
         print(f"str of parameter: {str(self.rr)}")
         print(f"str of comparison: {str(self.for_comparison)}")
         self.assertEqual(self.rr, self.for_comparison)
-        print(f"------- [1] END EQUALITY TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_02_hash(self):
-        print(f"\n------- [2] START HASH TEST -------")
+        print(f"\n------- START TEST 2 -------")
         print(f"hash of parameter: {self.rr.__hash__()}")
         print(f"hash of comparison: {self.for_comparison.__hash__()}")
         self.assertEqual(self.rr.__hash__(), self.for_comparison.__hash__())
         # test integrity between __eq__ and __hash__
         self.assertEqual(self.rr.__hash__() == self.for_comparison.__hash__(), self.rr == self.for_comparison)
-        print(f"------- [2] END HASH TEST -------")
+        print(f"------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

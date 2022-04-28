@@ -41,14 +41,14 @@ class ZoneTestCase(unittest.TestCase):
         print(f"PARAMETER FOR COMPARISON: {cls.name_for_comparison}\n")
 
     def test_01_equality_of_path(self):
-        print(f"\n------- [1] START PATH EQUALITY TEST -------")
+        print(f"\n------- START TEST 1 -------")
         print(f"path of parameter: {self.path.stamp()}")
         print(f"path of comparison: {self.path_for_comparison.stamp()}")
         self.assertEqual(self.path, self.path_for_comparison)
-        print(f"------- [1] END PATH EQUALITY TEST -------")
+        print(f"------- END TEST 1 -------")
 
     def test_02_hash_equality_of_path(self):
-        print(f"\n------- [2] START PATH HASH TEST -------")
+        print(f"\n------- START TEST 2 -------")
         print(f"path of parameter: {self.path.stamp()}")
         print(f"path of comparison: {self.path_for_comparison.stamp()}")
         print(f"hash of parameter: {self.path.__hash__()}")
@@ -56,10 +56,10 @@ class ZoneTestCase(unittest.TestCase):
         self.assertEqual(self.path.__hash__(), self.path_for_comparison.__hash__())
         # test integrity between __eq__ and __hash__
         self.assertEqual(self.path.__hash__() == self.path_for_comparison.__hash__(), self.path == self.path_for_comparison)
-        print(f"------- [2] END PATH HASH TEST -------")
+        print(f"------- END TEST 2 -------")
 
     def test_03_equality_of_zone(self):
-        print(f"\n------- [3] START ZONE EQUALITY TEST -------")
+        print(f"\n------- START TEST 3 -------")
         print(f"zone parameter: {self.zone.name_path.stamp()}")
         for i, a_path in enumerate(self.zone.name_servers):
             print(f"A path[{i+1}/{len(self.zone.name_servers)}]: {a_path.stamp()}")
@@ -67,19 +67,19 @@ class ZoneTestCase(unittest.TestCase):
         for i, a_path in enumerate(self.zone_for_comparison.name_servers):
             print(f"A path[{i+1}/{len(self.zone_for_comparison.name_servers)}]: {a_path.stamp()}")
         self.assertEqual(self.zone, self.zone_for_comparison)
-        print(f"------- [3] END ZONE EQUALITY TEST -------")
+        print(f"------- END TEST 3 -------")
 
     def test_04_hash_equality_of_zone(self):
-        print(f"\n------- [4] START ZONE HASH TEST -------")
+        print(f"\n------- START TEST 4 -------")
         print(f"zone parameter hash: {self.zone.__hash__()}")
         print(f"zone comparison hash: {self.zone_for_comparison.__hash__()}")
         self.assertEqual(self.zone.__hash__(), self.zone_for_comparison.__hash__())
         # test integrity between __eq__ and __hash__
         self.assertEqual(self.zone.__hash__() == self.zone_for_comparison.__hash__(), self.zone == self.zone_for_comparison)
-        print(f"------- [4] END ZONE HASH TEST -------")
+        print(f"------- END TEST 4 -------")
 
     def test_05_parse_every_domain_name(self):
-        print(f"\n------- [5] START PARSING EVERY DOMAIN NAME TEST -------")
+        print(f"\n------- START TEST 5 -------")
         # PARAMETERS
         root_included = True
         zone_included = True
@@ -88,7 +88,7 @@ class ZoneTestCase(unittest.TestCase):
         domain_names = self.zone.parse_every_domain_name(with_zone_name=zone_included, root_included=root_included, tld_included=tlds)
         for i, domain_name in enumerate(domain_names):
             print(f"domain name[{i+1}/{len(domain_names)}]: {domain_name}")
-        print(f"------- [5] START PARSING EVERY DOMAIN NAME TEST -------")
+        print(f"------- END TEST 5 -------")
 
 
 if __name__ == '__main__':

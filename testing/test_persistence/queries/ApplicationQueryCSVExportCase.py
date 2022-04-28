@@ -33,7 +33,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         # PARAMETER
         filename = 'zone_infos'
         # QUERY
-        print(f"--- QUERY NUMBER OF DEPENDENCIES OF ZONE NAME")
+        print(f"--- START QUERY 1 ---")
         result = helper_application_queries.do_query_1()
         rows = [["zone_name", "#nameservers", "#networks", "#as"]]
         for tupl in result:
@@ -43,14 +43,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 1 ---\n")
 
     def test_execute_query_2(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_sites_direct_zone_dependencies'
         # QUERY
-        print(f"--- QUERY DIRECT ZONES OF ALL WEB SITES AND ASSOCIATED WEB SERVERS")
+        print(f"--- START QUERY 2 ---")
         result = helper_application_queries.do_query_2()
         rows = [['web_site', 'zone_name']]
         for tupl in result:
@@ -60,14 +60,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 2 ---\n")
 
     def test_execute_query_3(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_direct_zone_dependencies'
         # QUERY
-        print(f"--- QUERY DIRECT ZONES OF ALL MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        print(f"--- START QUERY 3 ---")
         result = helper_application_queries.do_query_3()
         rows = [['mail_domain', 'zone_name']]
         for tupl in result:
@@ -77,14 +77,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 3 ---\n")
 
     def test_execute_query_4(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_sites_zone_dependencies'
         # QUERY
-        print(f"--- QUERY ZONE DEPENDENCIES OF WEB SITES AND ASSOCIATED WEB SERVERS")
+        print(f"--- START QUERY 4 ---")
         result = helper_application_queries.do_query_4()
         rows = [['web_site', 'zone_name']]
         for tupl in result:
@@ -94,14 +94,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 4 ---\n")
 
     def test_execute_query_5(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_zone_dependencies'
         # QUERY
-        print(f"--- QUERY ZONE DEPENDENCIES OF MAIL DOMAIN AND ASSOCIATED MAIL SERVERS")
+        print(f"--- START QUERY 5 ---")
         result = helper_application_queries.do_query_5()
         rows = [['mail_domain', 'zone_name']]
         for tupl in result:
@@ -111,14 +111,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 5 ---\n")
 
     def test_execute_query_6(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_dependencies'
         # QUERY
-        print(f"--- QUERY NUMBER OF DEPENDENCIES OF MAIL DOMAIN")
+        print(f"--- START QUERY 6 ---")
         result = helper_application_queries.do_query_6()
         rows = [['mail_domain', '#mailservers', '#networks', '#as']]
         for tupl in result:
@@ -128,14 +128,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 6 ---\n")
 
     def test_execute_query_7(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_servers_dependencies'
         # QUERY
-        print(f"--- QUERY NUMBER OF DEPENDENCIES OF WEB SERVER")
+        print(f"--- START QUERY 7 ---")
         result = helper_application_queries.do_query_7()
         rows = [['web_server', '#addresses', '#networks', '#as']]
         for tupl in result:
@@ -145,14 +145,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 7 ---\n")
 
     def test_execute_query_8(self):
         start_time = datetime.now()
         # PARAMETER
         filename = 'networks_dependencies'
         # QUERY
-        print(f"--- QUERY NETWORKS DEPENDENCIES")
+        print(f"--- START QUERY 8 ---")
         result = helper_application_queries.do_query_8()
         rows = [['network', 'as_number', 'as_description', '#belonging_webservers', '#belonging_mailservers', '#belonging_mailservers', '#zones_entirely_contained', '#website_directzones_entirely_contained', '#maildomain_directzones_entirely_contained', '#maildomain_directzone_entirely_contained']]
         for tupl in result:
@@ -172,7 +172,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print(f"--- END ---\n")
+        print(f"--- END QUERY 8 ---\n")
 
 
 if __name__ == '__main__':

@@ -44,7 +44,7 @@ class IpAsAndROVIntegrityCase(unittest.TestCase):
         print(f"DONE.")
 
     def test_1_integrity(self):
-        print("\n------- [1] START INTEGRITY TEST -------")
+        print("\n------- START TEST 1 -------")
         for as_number in self.final_results.results.keys():
             print(f"AS{as_number}:")
             if self.final_results.results[as_number] is None:
@@ -91,7 +91,7 @@ class IpAsAndROVIntegrityCase(unittest.TestCase):
                     db_ip_range_rov = None
                 self.assertEqual(elaboration_ip_range_tsv, db_ip_range_tsv)
                 self.assertEqual(elaboration_ip_range_rov, db_ip_range_rov)
-        print("------- [1] END INTEGRITY TEST -------")
+        print("------- END TEST 1 -------")
 
     @classmethod
     def tearDownClass(cls) -> None:

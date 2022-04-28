@@ -36,14 +36,14 @@ class ScriptDependenciesResolvingCase(unittest.TestCase):
                 exit(-1)
 
     def test_01_debug_prints(self):
-        print(f"\n------- [1] START DEBUG PRINTS TEST -------")
+        print(f"\n------- START TEST 1 -------")
         for i, url in enumerate(self.results.keys()):
             print(f"url[{i+1}/{len(self.results.keys())}]: {url}")
             for j, script in enumerate(self.results[url]):
                 print(f"--> script[{j+1}/{len(self.results[url])}] integrity={script.integrity}, src={script.src}")
             if i != len(self.results.keys())-1:
                 print()
-        print(f"------- [1] END DEBUG PRINTS TEST -------")
+        print(f"------- END TEST 1 -------")
 
     @classmethod
     def tearDownClass(cls) -> None:

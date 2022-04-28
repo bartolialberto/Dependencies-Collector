@@ -23,7 +23,7 @@ class GettingWebServerFromWebSiteQueryCase(unittest.TestCase):
         print(f"Web site: {cls.web_site_url} + starting_https: {False} ==> {starting_http_server.name.string}")
 
     def test_01_from_web_server(self):
-        print(f"\n------- [1] START QUERY -------")
+        print(f"\n------- START QUERY 1 -------")
         # HTTPS
         wses = helper_web_site.get_of(self.https_server)
         str_wses = set(map(lambda wse: wse.url.string, wses))
@@ -35,7 +35,7 @@ class GettingWebServerFromWebSiteQueryCase(unittest.TestCase):
         str_wses = set(map(lambda wse: wse.url.string, wses))
         print(f"From HTTP: {self.http_server.name.string} ==> {str(str_wses)}")
         self.assertIn(self.web_site_url.second_component(), str_wses)
-        print(f"------- [1] END QUERY -------")
+        print(f"------- END QUERY 1 -------")
 
 
 if __name__ == '__main__':

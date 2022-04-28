@@ -6,7 +6,7 @@ from persistence import helper_domain_name, helper_access
 
 class AccessAssociationErrorCase(unittest.TestCase):
     def test_01_set_access_association_to_null(self):
-        print(f"\n------- [1] START SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+        print(f"\n------- START TEST 1 -------")
         # PARAMETERS
         for_domain_name = DomainName('mx.cert.legalmail.it.')
         # ELABORATION
@@ -26,7 +26,7 @@ class AccessAssociationErrorCase(unittest.TestCase):
         except DoesNotExist:
             dne = helper_domain_name.insert(for_domain_name)
             helper_access.insert(dne, None)
-        print(f"------- [1] END SETTING ACCESS ASSOCIATION TO NULL QUERY -------")
+        print(f"------- END TEST 1 -------")
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ from persistence import helper_mail_domain, helper_mail_domain_composed
 
 class MailDomainComposedAssociationErrorCase(unittest.TestCase):
     def test_01_set_mail_domain_composed_to_null(self):
-        print(f"\n------- [1] START SETTING MAIL DOMAIN COMPOSED ASSOCIATION TO NULL QUERY -------")
+        print(f"\n------- START TEST 1 -------")
         # PARAMETERS
         for_mail_domain = DomainName('pec.comune.gardonevaltrompia.bs.it.')
         # ELABORATION
@@ -19,7 +19,7 @@ class MailDomainComposedAssociationErrorCase(unittest.TestCase):
         except DoesNotExist:
             mde = helper_mail_domain.insert(for_mail_domain)
         helper_mail_domain_composed.insert(mde, None)
-        print(f"------- [1] END SETTING MAIL DOMAIN COMPOSED ASSOCIATION TO NULL QUERY -------")
+        print(f"------- END TEST 1 -------")
 
 
 if __name__ == '__main__':

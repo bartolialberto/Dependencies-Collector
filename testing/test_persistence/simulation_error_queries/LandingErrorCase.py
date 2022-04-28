@@ -6,7 +6,7 @@ from persistence import helper_web_site, helper_web_site_lands, helper_script_si
 
 class LandingErrorCase(unittest.TestCase):
     def test_01_set_web_site_lands_association_to_null(self):
-        print(f"\n------- [1] START SETTING WEB SITE LANDING ASSOCIATION TO NULL QUERY -------")
+        print(f"\n------- START TEST 1 -------")
         # PARAMETERS
         web_site = Url('google.it/doodles')
         https = False
@@ -20,10 +20,10 @@ class LandingErrorCase(unittest.TestCase):
         for wsla in wslas:
             wsla.delete_instance()
         helper_web_site_lands.insert(wse, https, None, None)
-        print(f"------- [1] END SETTING WEB SITE LANDING ASSOCIATION TO NULL QUERY -------")
+        print(f"------- END TEST 1 -------")
 
     def test_02_set_script_site_lands_association_to_null(self):
-        print(f"\n------- [2] START SETTING SCRIPT SITE LANDING ASSOCIATION TO NULL QUERY -------")
+        print(f"\n------- START TEST 2 -------")
         # PARAMETERS
         script_site = Url('www.google.com/doodles/js/slashdoodles__it.js')
         https = True
@@ -37,7 +37,7 @@ class LandingErrorCase(unittest.TestCase):
         for ssla in sslas:
             ssla.delete_instance()
         helper_script_site_lands.insert(sse, https, None, None)
-        print(f"------- [2] END SETTING SCRIPT SITE LANDING ASSOCIATION TO NULL QUERY -------")
+        print(f"------- END TEST 2 -------")
 
 
 if __name__ == '__main__':

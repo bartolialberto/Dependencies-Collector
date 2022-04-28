@@ -17,7 +17,7 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
         cls.cname_dnes, cls.iaes = helper_domain_name.resolve_a_path(cls.dne, as_persistence_entities=True)
 
     def test_01_integrity_between_as_persistence_entities_flag(self):
-        print(f"\n------- [1] START QUERY -------")
+        print(f"\n------- START QUERY 1 -------")
         cnames_from_a_path = list(map(lambda dn: dn.string, self.a_path.get_cname_chain(as_resource_records=False)))
         addresses_from_a_path = set(map(lambda ia: ia.exploded, self.a_path.get_resolution().values))
         print(f"from APath: {self.a_path.stamp()}")
@@ -37,10 +37,10 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
 
         self.assertListEqual(cnames_from_a_path, cnames_from_persistence)
         self.assertSetEqual(addresses_from_a_path, addresses_from_persistence)
-        print(f"------- [1] END QUERY -------")
+        print(f"------- END QUERY 1 -------")
 
     def test_02_integrity_between_as_persistence_entities_flag_of_reversed(self):
-        print(f"\n------- [2] START QUERY -------")
+        print(f"\n------- START QUERY 2 -------")
         for ip_address in self.a_path.get_resolution().values:
             print(f"For {ip_address.exploded}")
             iae = helper_ip_address.get(ip_address)
@@ -50,7 +50,7 @@ class GettingAPathFromDomainNameQueryCase(unittest.TestCase):
             print(f"--> true values: {true_elaboration}")
             print(f"--> elaboration: {from_elaboration}")
             self.assertListEqual(true_elaboration, from_elaboration)
-        print(f"------- [2] END QUERY -------")
+        print(f"------- END QUERY 2 -------")
 
 
 if __name__ == '__main__':

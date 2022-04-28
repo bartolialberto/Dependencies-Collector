@@ -18,12 +18,12 @@ class GettingAutonomousSystemFromIPAddressQueryCase(unittest.TestCase):
         print(f"IP address: {cls.ip_address.exploded} ==> AS{cls.ase.number}")
 
     def test_01_from_autonomous_system(self):
-        print(f"\n------- [1] START QUERY -------")
+        print(f"\n------- START QUERY 1 -------")
         iaes = helper_autonomous_system.get_all_ip_addresses_of(self.ase)
         str_iaes = set(map(lambda iae: iae.exploded_notation, iaes))
         print(f"AS{self.ase.number} ==> {str(str_iaes)}")
         self.assertIn(self.ip_address.exploded, str_iaes)
-        print(f"------- [1] END QUERY -------")
+        print(f"------- END QUERY 1 -------")
 
 
 if __name__ == '__main__':

@@ -32,12 +32,12 @@ class ROVScrapingResolvingCase(unittest.TestCase):
         cls.final_results = cls.resolvers.do_rov_page_scraping(reformat)
 
     def test_01_unresolved_addresses(self):
-        print(f"\n------- [1] START UNRESOLVED ADDRESSES TEST -------")
+        print(f"\n------- START TEST 1 -------")
         for as_number in self.final_results.results.keys():
             for ip_address in self.final_results.results[as_number].keys():
                 if self.final_results.results[as_number][ip_address].entry_rov_page is None:
                     print(f"AS{as_number} --> {ip_address} NO ROV RESULTS")
-        print(f"------- [1] END UNRESOLVED ADDRESSES TEST -------")
+        print(f"------- END TEST 1 -------")
 
     @classmethod
     def tearDownClass(cls) -> None:
