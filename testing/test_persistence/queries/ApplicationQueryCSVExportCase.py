@@ -29,6 +29,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         cls.PRD = file_utils.get_project_root_directory()
 
     def test_execute_query_1(self):
+        """
+        This query computes data regarding the architecture of every single zone in the database.
+
+        Example:
+        zone_name1, number of nameservers (addresses), number of networks, number of as
+        zone_name2, number of nameservers (addresses), number of networks, number of as
+        zone_name3, number of nameservers (addresses), number of networks, number of as
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'zone_infos'
@@ -46,6 +54,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 1 ---\n")
 
     def test_execute_query_2(self):
+        """
+        This query computes direct zones of every website in the database.
+
+        Example:
+        web_site1, zone1
+        web_site1, zone2
+        web_site2, zone3
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_sites_direct_zone_dependencies'
@@ -63,6 +79,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 2 ---\n")
 
     def test_execute_query_3(self):
+        """
+        This query computes direct zones of every mail domain in the database.
+
+        Example:
+        mail_domain1, zone1
+        mail_domain2, zone2
+        mail_domain2, zone3
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_direct_zone_dependencies'
@@ -80,6 +104,16 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 3 ---\n")
 
     def test_execute_query_4(self):
+        """
+        This query computes zone dependencies of every website in the database.
+
+        Example:
+        web_site1, zone1
+        web_site1, zone2
+        web_site1, zone3
+        web_site2, zone3
+        web_site2, zone4
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_sites_zone_dependencies'
@@ -97,6 +131,16 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 4 ---\n")
 
     def test_execute_query_5(self):
+        """
+        This query computes zone dependencies of every mail domain in the database.
+
+        Example:
+        mail_domain1, zone1
+        mail_domain1, zone2
+        mail_domain1, zone3
+        mail_domain2, zone3
+        mail_domain2, zone4
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_zone_dependencies'
@@ -114,6 +158,13 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 5 ---\n")
 
     def test_execute_query_6(self):
+        """
+        This query computes data regarding the architecture of every mail domain in the database.
+
+        Example:
+        mail_domain1, number of mail servers (addresses), number of networks, number of as
+        mail_domain2, number of mail servers (addresses), number of networks, number of as
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'mail_domains_dependencies'
@@ -131,6 +182,14 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 6 ---\n")
 
     def test_execute_query_7(self):
+        """
+        This query computes data regarding the architecture of every webserver in the database.
+
+        Example:
+        web_server1, number of addresses, number of networks, number of as
+        web_server2, number of addresses, number of networks, number of as
+        web_server3, number of addresses, number of networks, number of as
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'web_servers_dependencies'
@@ -148,6 +207,12 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         print(f"--- END QUERY 7 ---\n")
 
     def test_execute_query_8(self):
+        """
+        Network query...
+
+        Example:
+        network, as, number of ..., number of ..
+        """
         start_time = datetime.now()
         # PARAMETER
         filename = 'networks_dependencies'
