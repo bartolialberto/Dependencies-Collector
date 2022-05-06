@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime
 from typing import List, Tuple
+from peewee import SqliteDatabase
 from entities.DatabaseEntitiesCompleter import DatabaseEntitiesCompleter
 from entities.ApplicationResolversWrapper import ApplicationResolversWrapper
 from SNAPSHOTS.take_snapshot import take_snapshot
@@ -13,7 +14,7 @@ from persistence import helper_application_results
 from persistence.BaseModel import db, close_database_connection
 from static_variables import INPUT_FOLDER_NAME, INPUT_MAIL_DOMAINS_FILE_NAME, INPUT_WEB_SITES_FILE_NAME, \
     ARGUMENT_COMPLETE_DATABASE, ARGUMENT_CONSIDER_TLD, ARGUMENT_SCRAPE_ROV, ARGUMENT_RESOLVE_SCRIPT
-from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils
+from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils, database_driver_utils
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[Url]:
@@ -122,7 +123,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=False, default_execute_script_resolving=False, default_execute_rov_scraping=False) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=False, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:
@@ -172,7 +173,12 @@ if __name__ == "__main__":
     try:
         print(f"Local IP: {network_utils.get_local_ip()}")
         print(f"Current working directory ( Path.cwd() ): {Path.cwd()}")
-        print(f"Database: {str(db)}")
+        if isinstance(db, SqliteDatabase):
+            print(f"DBMS: SQLite")
+            print(f"SQLite driver/module version: {database_driver_utils.get_sqlite_jdbc_version_as_string()}. Is it at least version 3.32.0? {database_driver_utils.check_jdbc_driver_version()}")
+            print(f"SQLite runtime library version: {database_driver_utils.get_sqlite_runtime_sqlite_version_as_string()}")
+        else:
+            print(f"Unhandled database connection..")
         # application input
         input_websites = get_input_websites()
         input_mail_domains = get_input_mail_domains()

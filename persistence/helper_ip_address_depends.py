@@ -1,7 +1,7 @@
 from typing import Set, List, Dict, Union
 from peewee import DoesNotExist, chunked
 from persistence.BaseModel import IpAddressDependsAssociation, IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, \
-    IpRangeROVEntity
+    IpRangeROVEntity, BATCH_SIZE_MAX
 
 
 def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or None, irre: IpRangeROVEntity or None) -> IpAddressDependsAssociation:
@@ -10,7 +10,19 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or
 
 
 def bulk_upserts(data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]) -> None:
-    for batch in chunked(data_source, 600):
+    """
+    Must be invoked inside a peewee transaction. Transaction needs the database object (db).
+    Example:
+        with db.atomic() as transaction:
+            bulk_upserts(...)
+
+    :param data_source: Fields name and values of multiple IpAddressDependsAssociation objects in the form of a
+    dictionary.
+    :type data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]
+    """
+    num_of_fields = 4
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    for batch in chunked(data_source, batch_size):
         IpAddressDependsAssociation.insert_many(batch).on_conflict_replace().execute()
 
 

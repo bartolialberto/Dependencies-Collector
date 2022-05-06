@@ -1,14 +1,21 @@
 from peewee import Model, ForeignKeyField, BooleanField, CompositeKey, CharField, IntegerField, TextField
 from peewee import SqliteDatabase
 from static_variables import SQLite_DATABASE_FILE_NAME, OUTPUT_FOLDER_NAME
-from utils import file_utils
-
+from utils import file_utils, database_driver_utils
 
 cwd = file_utils.get_project_root_directory()
 db_file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, SQLite_DATABASE_FILE_NAME, cwd)
 db_file.open(mode='a').close()
 db = SqliteDatabase(str(db_file))
 db.connect()
+# DBMS batch size limit
+if isinstance(db, SqliteDatabase):
+    if database_driver_utils.check_jdbc_driver_version:
+        BATCH_SIZE_MAX = 32766
+    else:
+        BATCH_SIZE_MAX = 999
+else:
+    BATCH_SIZE_MAX = 999
 
 
 def handle_tables_creation():       # executed at the end of the file
@@ -50,7 +57,7 @@ def handle_tables_creation():       # executed at the end of the file
             WebSiteDomainNameAssociation,
             AliasToZoneAssociation}
     all_application_tables_str = set(map(lambda model: model._meta.table_name, all_application_tables))
-    current_database_tables_str = db.get_tables()       # nome delle tabelle
+    current_database_tables_str = db.get_tables()       # table names as strings
     if all_application_tables_str.issubset(current_database_tables_str):
         pass
     else:
@@ -61,12 +68,14 @@ def close_database_connection():
     db.close()
 
 
-# Database cannot be changed. If you want to set database at runtime see .bind(): https://www.bookstack.cn/read/peewee-orm-3.13.1-en/197675
+# Database cannot be changed.If you want to set database at runtime see .bind() and Proxy object:
+# https://www.bookstack.cn/read/peewee-orm-3.13.1-en/197675
 class BaseModel(Model):
     class Meta:
         database = db
 
 
+# ******************** ENTITIES ********************
 class DomainNameEntity(BaseModel):
     string = CharField(primary_key=True)
 
@@ -241,6 +250,7 @@ class ROVEntity(BaseModel):
         primary_hey = CompositeKey('state', 'visibility')
 
 
+# ******************** ASSOCIATIONS ********************
 class AliasAssociation(BaseModel):
     name = ForeignKeyField(DomainNameEntity)
     alias = ForeignKeyField(DomainNameEntity)
@@ -344,14 +354,14 @@ class ScriptWithdrawAssociation(BaseModel):
 
 class ScriptHostedOnAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
-    script = ForeignKeyField(ScriptEntity)
+    script = ForeignKeyField(ScriptEntity, primary_key=True)
 
     def __str__(self):
         return f"<script_site={self.script_site}, script={self.script}>"
 
     class Meta:
         db_table = 'script_hosted_on'
-        primary_key = CompositeKey('script')
+        # primary_key = CompositeKey('script')        # TODO: ???
 
 
 class ScriptSiteLandsAssociation(BaseModel):
@@ -396,7 +406,7 @@ class IpAddressDependsAssociation(BaseModel):
 
 
 class PrefixesTableAssociation(BaseModel):
-    ip_range_rov = ForeignKeyField(IpRangeROVEntity)
+    ip_range_rov = ForeignKeyField(IpRangeROVEntity, primary_key=True)
     rov = ForeignKeyField(ROVEntity)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
@@ -405,11 +415,11 @@ class PrefixesTableAssociation(BaseModel):
 
     class Meta:
         db_table = 'prefixes_table'
-        primary_key = CompositeKey('ip_range_rov', 'autonomous_system')
+        # primary_key = CompositeKey('ip_range_rov', 'autonomous_system')
 
 
 class NetworkNumbersAssociation(BaseModel):
-    ip_range_tsv = ForeignKeyField(IpRangeTSVEntity)
+    ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, primary_key=True)
     autonomous_system = ForeignKeyField(AutonomousSystemEntity)
 
     def __str__(self):
@@ -417,7 +427,7 @@ class NetworkNumbersAssociation(BaseModel):
 
     class Meta:
         db_table = 'network_numbers'
-        primary_key = CompositeKey('ip_range_tsv')
+        # primary_key = CompositeKey('ip_range_tsv')      # TODO: ???
 
 
 class WebSiteDomainNameAssociation(BaseModel):

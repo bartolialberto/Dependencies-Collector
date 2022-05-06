@@ -1,6 +1,6 @@
 from typing import Set, List, Union, Dict
 from peewee import chunked
-from persistence.BaseModel import MailDomainEntity, MailDomainComposedAssociation, MailServerEntity
+from persistence.BaseModel import MailDomainEntity, MailDomainComposedAssociation, MailServerEntity, BATCH_SIZE_MAX
 
 
 def insert(mde: MailDomainEntity, mse: MailServerEntity or None) -> MailDomainComposedAssociation:
@@ -9,7 +9,19 @@ def insert(mde: MailDomainEntity, mse: MailServerEntity or None) -> MailDomainCo
 
 
 def bulk_upserts(data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]) -> None:
-    for batch in chunked(data_source, 600):
+    """
+    Must be invoked inside a peewee transaction. Transaction needs the database object (db).
+    Example:
+        with db.atomic() as transaction:
+            bulk_upserts(...)
+
+    :param data_source: Fields name and values of multiple MailDomainComposedAssociation objects in the form of a
+    dictionary.
+    :type data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]
+    """
+    num_of_fields = 2
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    for batch in chunked(data_source, batch_size):
         MailDomainComposedAssociation.insert_many(batch).on_conflict_replace().execute()
 
 
