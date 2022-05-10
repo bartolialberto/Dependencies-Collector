@@ -198,7 +198,7 @@ class LocalDnsResolverCache:
         'dns_cache.csv' file from the output folder of the project root directory (PRD). So just invoking this method
         will load the cache (if) exported from the previous execution.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
         returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
@@ -257,7 +257,7 @@ class LocalDnsResolverCache:
         Export the cache in the list to a .csv file in the output folder of the project directory (if set correctly).
         It uses the separator set to separate every attribute of the resource record.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
         returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
@@ -282,7 +282,7 @@ class LocalDnsResolverCache:
         """
         Method that copies the current state of the cache in the SNAPSHOTS folder.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
         returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set

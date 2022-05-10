@@ -24,7 +24,7 @@ def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/fe
     written per line. If no website is set the application will start with 2 default websites to show its behaviour.
     Such websites are: google.it/doodles, www.youtube.it/feed/explore.
     Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
     (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
     returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
     return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
@@ -57,7 +57,7 @@ def get_input_mail_domains(default_mail_domains=('gmail.com', 'outlook.com'), pr
     line. If no mail domain is set the application will start with 2 default mail domains to show its behaviour.
     Such mail domains are: gmail.com, outlook.com.
     Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
     (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
     returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
     return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
@@ -85,7 +85,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     Auxiliary method that parses input from the filename parameter in the 'input' folder of the application.
     Also it can be set a default collection of values if the file is not not present.
     Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-    particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+    particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
     (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
     returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
     return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
@@ -123,7 +123,7 @@ def get_input_generic_file(input_filename: str, default_values: tuple, project_r
     return result_list
 
 
-def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=False, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
+def get_input_application_flags(default_complete_unresolved_database=False, default_consider_tld=True, default_execute_script_resolving=True, default_execute_rov_scraping=True) -> Tuple[bool, bool, bool, bool]:
     """
     Start of the application: getting the parameters that can personalized the elaboration of the application.
     Such parameters (properties: they can be set or not set) are:

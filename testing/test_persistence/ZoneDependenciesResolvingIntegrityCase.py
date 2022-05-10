@@ -208,7 +208,7 @@ class ZoneDependenciesResolvingIntegrityCase(unittest.TestCase):
         print("\n------- START TEST 9 -------")
         for domain_name in self.dns_results.direct_zones.keys():
             try:
-                ze = helper_zone.get_direct_zone_of(domain_name)
+                ze = helper_zone.get_not_null_direct_zone_of(domain_name)
                 str_from_database = ze.name
             except DoesNotExist:
                 str_from_database = None

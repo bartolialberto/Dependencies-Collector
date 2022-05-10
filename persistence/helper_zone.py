@@ -92,9 +92,17 @@ def get_zone_dependencies_of_zone_name(zone_name: DomainName) -> Set[ZoneEntity]
     return result
 
 
-def get_direct_zone_of(dne: DomainNameEntity) -> ZoneEntity:
+def get_not_null_direct_zone_of(dne: DomainNameEntity) -> ZoneEntity:
     try:
         dza = DirectZoneAssociation.get((DirectZoneAssociation.domain_name == dne) & (DirectZoneAssociation.zone.is_null(False)))
+    except DoesNotExist:
+        raise
+    return dza.zone
+
+
+def get_direct_zone_of(dne: DomainNameEntity) -> ZoneEntity:
+    try:
+        dza = DirectZoneAssociation.get(DirectZoneAssociation.domain_name == dne)
     except DoesNotExist:
         raise
     return dza.zone

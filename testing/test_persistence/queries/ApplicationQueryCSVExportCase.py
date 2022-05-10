@@ -4,10 +4,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 from persistence import helper_application_queries
+from static_variables import OUTPUT_FOLDER_NAME
 from utils import file_utils, csv_utils, datetime_utils
 
 
 class ApplicationQueryCSVExportCase(unittest.TestCase):
+    """
+    All .csv files are exported to the output folder. From each test a different file is created and the filename is
+    defined in the test itself.
+
+    """
+    start_time = None
+
     @staticmethod
     def write_csv_file(file: Path, separator: str, rows: List[List[str]]) -> None:
         try:
@@ -22,11 +30,11 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # PARAMETER
-        cls.sub_folder = 'output'
+        cls.sub_folder = OUTPUT_FOLDER_NAME
         cls.separator = ','
-        cls.unresolved_value = 'ND'
         #
         cls.PRD = file_utils.get_project_root_directory()
+        cls.start_time = datetime.now()
 
     def test_execute_query_1(self):
         """
@@ -46,7 +54,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [["zone_name", "#nameservers", "#networks", "#as"]]
         for tupl in result:
             rows.append([tupl[0].name, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -71,7 +79,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['web_site', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].url.string, tupl[1].name])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -96,7 +104,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['mail_domain', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].name.string, tupl[1].name])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -123,7 +131,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['web_site', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].url.string, tupl[1].name])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -150,7 +158,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['mail_domain', 'zone_name']]
         for tupl in result:
             rows.append([tupl[0].name.string, tupl[1].name])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -174,7 +182,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['mail_domain', '#mailservers', '#networks', '#as']]
         for tupl in result:
             rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -199,7 +207,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
         rows = [['web_server', '#addresses', '#networks', '#as']]
         for tupl in result:
             rows.append([tupl[0].name.string, str(len(tupl[1])), str(len(tupl[2])), str(len(tupl[3]))])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
@@ -232,12 +240,16 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
                 str(len(tupl[6])),
                 str(len(tupl[7]))
             ])
-        print(f"Written {len(rows)} rows.")
+        print(f"Written {len(rows)} rows. One for headers row.")
         # EXPORTING
         file = file_utils.set_file_in_folder(self.sub_folder, filename + ".csv", self.PRD)
         ApplicationQueryCSVExportCase.write_csv_file(file, self.separator, rows)
         print(f"Execution time: {datetime_utils.compute_delta_and_stamp(start_time)}")
         print(f"--- END QUERY 8 ---\n")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        print(f"\nAll tests run in {datetime_utils.compute_delta_and_stamp(cls.start_time)}")
 
 
 if __name__ == '__main__':

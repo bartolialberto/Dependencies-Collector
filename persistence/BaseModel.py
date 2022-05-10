@@ -323,7 +323,7 @@ class DirectZoneAssociation(BaseModel):
 
     class Meta:
         db_table = 'direct_zone'
-        # primary_key = CompositeKey('domain_name', 'zone')
+        # primary_key = CompositeKey('domain_name', 'zone')         # TODO
 
 
 class MailDomainComposedAssociation(BaseModel):
@@ -354,14 +354,13 @@ class ScriptWithdrawAssociation(BaseModel):
 
 class ScriptHostedOnAssociation(BaseModel):
     script_site = ForeignKeyField(ScriptSiteEntity)
-    script = ForeignKeyField(ScriptEntity, primary_key=True)
+    script = ForeignKeyField(ScriptEntity, primary_key=True)            # TODO
 
     def __str__(self):
         return f"<script_site={self.script_site}, script={self.script}>"
 
     class Meta:
         db_table = 'script_hosted_on'
-        # primary_key = CompositeKey('script')        # TODO: ???
 
 
 class ScriptSiteLandsAssociation(BaseModel):
@@ -392,7 +391,7 @@ class AccessAssociation(BaseModel):
 
 
 class IpAddressDependsAssociation(BaseModel):
-    ip_address = ForeignKeyField(IpAddressEntity, primary_key=True)
+    ip_address = ForeignKeyField(IpAddressEntity, primary_key=True)     # TODO
     ip_network = ForeignKeyField(IpNetworkEntity)
     ip_range_tsv = ForeignKeyField(IpRangeTSVEntity, null=True)
     ip_range_rov = ForeignKeyField(IpRangeROVEntity, null=True)
@@ -402,7 +401,6 @@ class IpAddressDependsAssociation(BaseModel):
 
     class Meta:
         db_table = 'ip_address_depends'
-        # primary_key = CompositeKey('ip_address')
 
 
 class PrefixesTableAssociation(BaseModel):
@@ -415,7 +413,7 @@ class PrefixesTableAssociation(BaseModel):
 
     class Meta:
         db_table = 'prefixes_table'
-        # primary_key = CompositeKey('ip_range_rov', 'autonomous_system')
+        # primary_key = CompositeKey('ip_range_rov', 'autonomous_system')       # TODO
 
 
 class NetworkNumbersAssociation(BaseModel):

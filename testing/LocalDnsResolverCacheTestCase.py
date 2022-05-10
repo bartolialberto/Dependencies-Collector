@@ -33,7 +33,6 @@ class LocalDnsResolverCacheTestCase(unittest.TestCase):
         domain_name = DomainName('www.units.it.')
         type_rr = TypesRR.A
         # TEST
-        print(f"\n------- [1] START PATH RESOLVING -------")
         print(f"Parameter: domain name: {domain_name}")
         try:
             path = self.cache.resolve_path(domain_name, type_rr)

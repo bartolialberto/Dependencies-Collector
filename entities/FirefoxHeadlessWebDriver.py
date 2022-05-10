@@ -32,7 +32,7 @@ class FirefoxHeadlessWebDriver:
         """
         Requires the project root directory (PRD) to find the geckodriver executable in the input sub-folder of the PRD.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-        particular, if we starts the application from the main.py file in the PRD, every time Path.cwd() is encountered
+        particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
         (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
         returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is
