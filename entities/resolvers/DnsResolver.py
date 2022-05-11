@@ -221,7 +221,7 @@ class DnsResolver:
         :rtype: DnsZoneDependenciesResult
         """
         error_logs = list()
-        start_cache_length = len(self.cache.cache)
+        start_cache_length = len(self.cache)
         elaboration_domains = domain.parse_subdomains(self.consider_tld, self.consider_tld, True)
         zone_dependencies = set()
         cname_exception = False
@@ -261,7 +261,7 @@ class DnsResolver:
         for name_server in zone_dependencies_per_nameserver.keys():
             for_direct_zones.add(name_server)
         direct_zones = self.extract_direct_zones(for_direct_zones, zone_dependencies)
-        print(f"Dependencies recap: {len(zone_dependencies)} zones, {len(self.cache.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
+        print(f"Dependencies recap: {len(zone_dependencies)} zones, {len(self.cache) - start_cache_length} cache entries added, {len(error_logs)} errors.\n")
         return DnsZoneDependenciesResult(zone_dependencies, direct_zones, zone_dependencies_per_zone, zone_dependencies_per_nameserver, error_logs)
 
     def resolve_cname(self, name: DomainName) -> CNAMEPath:

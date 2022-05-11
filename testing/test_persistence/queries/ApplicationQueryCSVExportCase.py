@@ -12,6 +12,7 @@ class ApplicationQueryCSVExportCase(unittest.TestCase):
     """
     All .csv files are exported to the output folder. From each test a different file is created and the filename is
     defined in the test itself.
+    Every execution of these methods will completely overwrite previous existing .csv files.
 
     """
     start_time = None

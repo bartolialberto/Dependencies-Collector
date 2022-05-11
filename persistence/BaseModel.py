@@ -107,7 +107,7 @@ class IpAddressEntity(BaseModel):
 
 
 class WebSiteEntity(BaseModel):
-    url = ForeignKeyField(UrlEntity)
+    url = ForeignKeyField(UrlEntity, primary_key=True)
 
     def __str__(self):
         return f"<url={self.url}>"
@@ -117,7 +117,7 @@ class WebSiteEntity(BaseModel):
 
 
 class WebServerEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
+    name = ForeignKeyField(DomainNameEntity, primary_key=True)
 
     def __str__(self):
         return f"<name={self.name}>"
@@ -137,7 +137,7 @@ class ZoneEntity(BaseModel):
 
 
 class NameServerEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
+    name = ForeignKeyField(DomainNameEntity, primary_key=True)
 
     def __str__(self):
         return f"<name={self.name}>"
@@ -147,7 +147,7 @@ class NameServerEntity(BaseModel):
 
 
 class MailDomainEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
+    name = ForeignKeyField(DomainNameEntity, primary_key=True)
 
     def __str__(self):
         return f"<name={self.name}>"
@@ -157,7 +157,7 @@ class MailDomainEntity(BaseModel):
 
 
 class MailServerEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
+    name = ForeignKeyField(DomainNameEntity, primary_key=True)
 
     def __str__(self):
         return f"<name={self.name}>"
@@ -177,7 +177,7 @@ class ScriptEntity(BaseModel):
 
 
 class ScriptSiteEntity(BaseModel):
-    url = ForeignKeyField(UrlEntity)
+    url = ForeignKeyField(UrlEntity, primary_key=True)
 
     def __str__(self):
         return f"<url={self.url}>"
@@ -187,7 +187,7 @@ class ScriptSiteEntity(BaseModel):
 
 
 class ScriptServerEntity(BaseModel):
-    name = ForeignKeyField(DomainNameEntity)
+    name = ForeignKeyField(DomainNameEntity, primary_key=True)
 
     def __str__(self):
         return f"<name={self.name}>"

@@ -100,7 +100,7 @@ def do_query_2() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
                     pass
                 else:
                     try:
-                        ze = helper_zone.get_not_null_direct_zone_of(https_web_server_entity.name)
+                        ze = helper_zone.get_direct_zone_of(https_web_server_entity.name)
                         if ze is None:
                             print(f"--> NULL direct zone of webserver {https_web_server_entity.name.string} associated to website: {web_site_entity.url.string}")
                             pass
@@ -114,7 +114,7 @@ def do_query_2() -> List[Tuple[WebSiteEntity, ZoneEntity]]:
                         pass
                     else:
                         try:
-                            ze = helper_zone.get_not_null_direct_zone_of(http_web_server_entity.name)
+                            ze = helper_zone.get_direct_zone_of(http_web_server_entity.name)
                             if ze is None:
                                 print(
                                     f"--> NULL direct zone of webserver {http_web_server_entity.name.string} associated to website: {web_site_entity.url.string}")

@@ -1,3 +1,5 @@
+import os
+import platform
 from pathlib import Path
 import selenium
 from selenium.webdriver.firefox.options import Options
@@ -46,7 +48,7 @@ class FirefoxHeadlessWebDriver:
         """
         try:
             # TODO: ma se è linux o mac ... ?
-            result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, 'geckodriver.exe', project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, FirefoxHeadlessWebDriver.geckodriver_filename(), project_root_directory)
         except FilenameNotFoundError:
             raise
         gecko_driver_file = result[0]
@@ -86,3 +88,16 @@ class FirefoxHeadlessWebDriver:
         except selenium.common.exceptions.WebDriverException:
             raise
         self.driver.set_page_load_timeout(self.time_out_in_seconds)  # [s]
+
+    @staticmethod
+    def geckodriver_filename() -> str:
+        # TODO
+        if os.name == 'posix':
+            return 'geckodriver'
+        elif os.name == 'nt':
+            if platform.system():
+                return 'geckodriver.exe'
+            else:
+                raise ValueError
+        else:
+            raise ValueError

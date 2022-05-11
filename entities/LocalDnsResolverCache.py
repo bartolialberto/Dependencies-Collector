@@ -1,5 +1,4 @@
 import csv
-from collections import defaultdict
 from ipaddress import IPv4Address
 from pathlib import Path as PPath
 from typing import Iterable
@@ -17,7 +16,7 @@ from exceptions.NoRecordInCacheError import NoRecordInCacheError
 from entities.paths import Path
 
 
-class LocalDnsResolverCache:
+class LocalDnsResolverCache():
     """
     This class represents a simple sort of personalized cache that keep tracks of all resource records. Resource records
     are saved in a dictionary nested in another dictionary; considered this data structure, duplicates of same resource
@@ -40,7 +39,10 @@ class LocalDnsResolverCache:
         :param separator: The character separator used when exporting the file. Default is a comma (;).
         :type separator: str
         """
-        self.cache = defaultdict(dict)
+        self.cname_dict = dict()
+        self.a_dict = dict()
+        self.ns_dict = dict()
+        self.mx_dict = dict()
         self.separator = separator
 
     def add_entry(self, entry: RRecord) -> None:
@@ -50,7 +52,16 @@ class LocalDnsResolverCache:
         :param entry: The resource record.
         :type entry: RRecord
         """
-        self.cache[entry.name][entry.type] = entry
+        if entry.type == TypesRR.CNAME:
+            self.cname_dict[entry.name] = entry
+        elif entry.type == TypesRR.A:
+            self.a_dict[entry.name] = entry
+        elif entry.type == TypesRR.NS:
+            self.ns_dict[entry.name] = entry
+        elif entry.type == TypesRR.MX:
+            self.mx_dict[entry.name] = entry
+        else:
+            raise ValueError
 
     def add_entries(self, entries: Iterable[RRecord]) -> None:
         """
@@ -60,7 +71,7 @@ class LocalDnsResolverCache:
         :type entries: Iterable[RRecord]
         """
         for entry in entries:
-            self.cache[entry.name][entry.type] = entry
+            self.add_entry(entry)
 
     def add_path(self, path: Path) -> None:
         """
@@ -86,7 +97,10 @@ class LocalDnsResolverCache:
         Cleans everything, deleting all the resource records.
 
         """
-        self.cache.clear()
+        self.cname_dict.clear()
+        self.a_dict.clear()
+        self.ns_dict.clear()
+        self.mx_dict.clear()
 
     def lookup(self, domain_name: DomainName, type_rr: TypesRR) -> RRecord:
         """
@@ -100,10 +114,27 @@ class LocalDnsResolverCache:
         :returns: Occurrence of name and resource record type values as parameters ones.
         :rtype: RRecord
         """
-        try:
-            return self.cache[domain_name][type_rr]
-        except KeyError:
-            raise NoRecordInCacheError(domain_name.string, type_rr)
+        if type_rr == TypesRR.CNAME:
+            try:
+                return self.cname_dict[domain_name]
+            except KeyError:
+                pass
+        elif type_rr == TypesRR.A:
+            try:
+                return self.a_dict[domain_name]
+            except KeyError:
+                pass
+        elif type_rr == TypesRR.NS:
+            try:
+                return self.ns_dict[domain_name]
+            except KeyError:
+                pass
+        elif type_rr == TypesRR.MX:
+            try:
+                return self.mx_dict[domain_name]
+            except KeyError:
+                pass
+        raise NoRecordInCacheError(domain_name.string, type_rr)
 
     def resolve_path(self, domain_name: DomainName, rr_type_wanted: TypesRR) -> Path:
         """
@@ -161,6 +192,10 @@ class LocalDnsResolverCache:
             except NoRecordInCacheError:
                 raise NoAvailablePathError(domain_name.string)
 
+    def __len__(self) -> int:
+        # TODO
+        return len(self.cname_dict.values()) + len(self.a_dict.values()) + len(self.ns_dict.values()) + len(self.mx_dict.values())
+
     def load_csv(self, path: str, take_snapshot=True) -> None:
         """
         Method that loads from a .csv all the entries in this object cache. More specifically, this method loads the
@@ -182,9 +217,7 @@ class LocalDnsResolverCache:
                 try:
                     rr = RRecord.parse_from_csv_entry_as_str(line)
                     self.add_entry(rr)
-                except ValueError:
-                    pass
-                except NotResourceRecordTypeError:
+                except (ValueError, NotResourceRecordTypeError):
                     pass
             f.close()
             if take_snapshot:
@@ -241,13 +274,30 @@ class LocalDnsResolverCache:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
                 # writer.writerow(['', '', ''])       # .csv headers
-                for dn in self.cache.keys():
-                    for rr in self.cache[dn].values():
-                        temp_list = list()
-                        temp_list.append(rr.name)
-                        temp_list.append(rr.type.to_string())
-                        temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
-                        writer.writerow(temp_list)
+                for rr in self.cname_dict.values():
+                    temp_list = list()
+                    temp_list.append(rr.name)
+                    temp_list.append(rr.type.to_string())
+                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
+                    writer.writerow(temp_list)
+                for rr in self.a_dict.values():
+                    temp_list = list()
+                    temp_list.append(rr.name)
+                    temp_list.append(rr.type.to_string())
+                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
+                    writer.writerow(temp_list)
+                for rr in self.ns_dict.values():
+                    temp_list = list()
+                    temp_list.append(rr.name)
+                    temp_list.append(rr.type.to_string())
+                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
+                    writer.writerow(temp_list)
+                for rr in self.mx_dict.values():
+                    temp_list = list()
+                    temp_list.append(rr.name)
+                    temp_list.append(rr.type.to_string())
+                    temp_list.append(resource_records_utils.stamp_values(rr.type, rr.values))
+                    writer.writerow(temp_list)
                 f.close()
         except (PermissionError, FileNotFoundError, OSError):
             raise
@@ -296,22 +346,72 @@ class LocalDnsResolverCache:
             pass
         with file.open('w', encoding='utf-8', newline='') as f:
             write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{self.separator}"))
-            for dn in self.cache.keys():
-                for rr in self.cache[dn].values():
-                    temp_list = list()
-                    temp_list.append(rr.name.string)
-                    temp_list.append(rr.type.to_string())
-                    tmp = "["
-                    for index, val in enumerate(rr.values):
-                        if isinstance(val, DomainName):
-                            tmp += val.string
-                        elif isinstance(val, IPv4Address):
-                            tmp += val.exploded
-                        else:
-                            raise ValueError
-                        if not index == len(rr.values) - 1:
-                            tmp += ","
-                    tmp += "]"
-                    temp_list.append(tmp)
-                    write.writerow(temp_list)
+            for rr in self.cname_dict.values():
+                temp_list = list()
+                temp_list.append(rr.name.string)
+                temp_list.append(rr.type.to_string())
+                tmp = "["
+                for index, val in enumerate(rr.values):
+                    if isinstance(val, DomainName):
+                        tmp += val.string
+                    elif isinstance(val, IPv4Address):
+                        tmp += val.exploded
+                    else:
+                        raise ValueError
+                    if not index == len(rr.values) - 1:
+                        tmp += ","
+                tmp += "]"
+                temp_list.append(tmp)
+                write.writerow(temp_list)
+            for rr in self.a_dict.values():
+                temp_list = list()
+                temp_list.append(rr.name.string)
+                temp_list.append(rr.type.to_string())
+                tmp = "["
+                for index, val in enumerate(rr.values):
+                    if isinstance(val, DomainName):
+                        tmp += val.string
+                    elif isinstance(val, IPv4Address):
+                        tmp += val.exploded
+                    else:
+                        raise ValueError
+                    if not index == len(rr.values) - 1:
+                        tmp += ","
+                tmp += "]"
+                temp_list.append(tmp)
+                write.writerow(temp_list)
+            for rr in self.ns_dict.values():
+                temp_list = list()
+                temp_list.append(rr.name.string)
+                temp_list.append(rr.type.to_string())
+                tmp = "["
+                for index, val in enumerate(rr.values):
+                    if isinstance(val, DomainName):
+                        tmp += val.string
+                    elif isinstance(val, IPv4Address):
+                        tmp += val.exploded
+                    else:
+                        raise ValueError
+                    if not index == len(rr.values) - 1:
+                        tmp += ","
+                tmp += "]"
+                temp_list.append(tmp)
+                write.writerow(temp_list)
+            for rr in self.mx_dict.values():
+                temp_list = list()
+                temp_list.append(rr.name.string)
+                temp_list.append(rr.type.to_string())
+                tmp = "["
+                for index, val in enumerate(rr.values):
+                    if isinstance(val, DomainName):
+                        tmp += val.string
+                    elif isinstance(val, IPv4Address):
+                        tmp += val.exploded
+                    else:
+                        raise ValueError
+                    if not index == len(rr.values) - 1:
+                        tmp += ","
+                tmp += "]"
+                temp_list.append(tmp)
+                write.writerow(temp_list)
             f.close()
