@@ -340,7 +340,7 @@ class MailDomainComposedAssociation(BaseModel):
 
 class ScriptWithdrawAssociation(BaseModel):
     script = ForeignKeyField(ScriptEntity, null=True)
-    web_site = ForeignKeyField(WebSiteEntity)       # era null=True
+    web_site = ForeignKeyField(WebSiteEntity)
     integrity = CharField(null=True)
     https = BooleanField(null=False)
 

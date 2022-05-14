@@ -1,7 +1,8 @@
 import unittest
 from persistence.BaseModel import db, DirectZoneAssociation, DomainNameEntity, WebSiteEntity, WebSiteLandsAssociation, \
     ScriptSiteEntity, ScriptSiteLandsAssociation, IpAddressEntity, IpAddressDependsAssociation, ScriptEntity, \
-    ScriptHostedOnAssociation, WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation
+    ScriptHostedOnAssociation, WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation, NetworkNumbersAssociation, \
+    PrefixesTableAssociation
 
 
 # portal.namirialtsp.com.
@@ -193,6 +194,43 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                     result.append(row)
                 self.assertEqual(1, len(result), f'For: {script_site}')
         print(f"------- END TEST 7 -------")
+
+    # TODO da fare questi ultimi 2: nel documento doc online
+    def test_08_network_numbers(self):
+        print(f"\n------- START TEST 8 -------")
+        ip_ranges_tsv = list()
+        with db.atomic():
+            query = IpAddressDependsAssociation.select()
+            for row in query:
+                ip_ranges_tsv.append(row.ip_range_tsv)
+        print(f"table {IpAddressDependsAssociation._meta.table_name} length={len(ip_ranges_tsv)}")
+        with db.atomic():
+            for network in ip_ranges_tsv:
+                result = list()
+                query = NetworkNumbersAssociation.select() \
+                    .where(NetworkNumbersAssociation.ip_range_tsv == network)
+                for row in query:
+                    result.append(row)
+                self.assertEqual(1, len(result), f'For: {network}')
+        print(f"------- END TEST 8 -------")
+
+    def test_09_prefixes_table(self):
+        print(f"\n------- START TEST 9 -------")
+        ip_ranges_rov = list()
+        with db.atomic():
+            query = IpAddressDependsAssociation.select()
+            for row in query:
+                ip_ranges_rov.append(row.ip_range_rov)
+        print(f"table {IpAddressDependsAssociation._meta.table_name} length={len(ip_ranges_rov)}")
+        with db.atomic():
+            for network in ip_ranges_rov:
+                result = list()
+                query = PrefixesTableAssociation.select() \
+                    .where(PrefixesTableAssociation.ip_range_rov == network)
+                for row in query:
+                    result.append(row)
+                self.assertEqual(1, len(result), f'For: {network}')
+        print(f"------- END TEST 9 -------")
 
 
 if __name__ == '__main__':

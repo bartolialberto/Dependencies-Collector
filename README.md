@@ -22,7 +22,7 @@ pip install selenium==4.1.0
 pip install selenium-wire==4.5.5
 pip install peewee==3.14.8
 ```
-Other Python modules:
+Other Python modules used:
 ```
 dns
 csv
@@ -65,6 +65,7 @@ to the E-R schema provided at the end of this file.
 2) a text file `dns_cache.csv` that can be used for initializing the DNS cache in later executions (see input folder
 above).
 3) a text file  `error_logs.csv` containing the execution errors (e.g., unresolved DNS names).
+4) a text file  `unresolved_entities.csv` containing all unresolved entities of the elaboration.
 
 ### How to run
 The application will execute the `main.py` source file.
