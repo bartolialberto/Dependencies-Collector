@@ -1,11 +1,29 @@
-from typing import Set
-from peewee import DoesNotExist
-from persistence.BaseModel import WebSiteEntity, ScriptEntity, ScriptWithdrawAssociation
+from typing import Set, List, Dict, Union, Optional
+from peewee import DoesNotExist, chunked
+from persistence.BaseModel import WebSiteEntity, ScriptEntity, ScriptWithdrawAssociation, BATCH_SIZE_MAX
 
 
-def insert(wse: WebSiteEntity, se: ScriptEntity or None, https: bool, integrity: str or None) -> ScriptWithdrawAssociation:
+def insert(wse: WebSiteEntity, se: Optional[ScriptEntity], https: bool, integrity: Optional[str]) -> ScriptWithdrawAssociation:
     swa, created = ScriptWithdrawAssociation.get_or_create(script=se, web_site=wse, integrity=integrity, https=https)
     return swa
+
+
+# insert + update = upsert
+def bulk_upserts(data_source: List[Dict[str, Union[ScriptEntity, bool, str, None]]]) -> None:
+    """
+    Must be invoked inside a peewee transaction. Transaction needs the database object (db).
+    Example:
+        with db.atomic() as transaction:
+            bulk_upserts(...)
+
+    :param data_source: Fields name and values of multiple ScriptWithdrawAssociation objects in the form of a
+    dictionary.
+    :type data_source: List[Dict[str, Union[ScriptEntity, bool, str, None]]]
+    """
+    num_of_fields = 4
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    for batch in chunked(data_source, batch_size):
+        ScriptWithdrawAssociation.insert_many(batch).on_conflict_replace().execute()
 
 
 def get_all_of(wse: WebSiteEntity, https: bool) -> Set[ScriptWithdrawAssociation]:

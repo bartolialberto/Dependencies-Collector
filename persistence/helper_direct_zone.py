@@ -9,6 +9,7 @@ def insert(dne: DomainNameEntity, ze: ZoneEntity or None) -> DirectZoneAssociati
     return dza
 
 
+# insert + update = upsert
 def bulk_upserts(data_source: List[Dict[str, Union[DomainNameEntity, ZoneEntity, None]]]) -> None:
     """
     Must be invoked inside a peewee transaction. Transaction needs the database object (db).

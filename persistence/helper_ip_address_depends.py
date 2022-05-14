@@ -9,6 +9,7 @@ def insert(iae: IpAddressEntity, ine: IpNetworkEntity, irte: IpRangeTSVEntity or
     return iada
 
 
+# insert + update = upsert
 def bulk_upserts(data_source: List[Dict[str, Union[IpAddressEntity, IpNetworkEntity, IpRangeTSVEntity, IpRangeROVEntity, None]]]) -> None:
     """
     Must be invoked inside a peewee transaction. Transaction needs the database object (db).

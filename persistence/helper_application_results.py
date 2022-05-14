@@ -157,6 +157,7 @@ def insert_dns_result(dns_results: MultipleDnsZoneDependenciesResult):
 
     with db.atomic():  # peewee transaction
         helper_domain_name_dependencies.bulk_upserts(dependencies_data_source)
+    with db.atomic():  # peewee transaction
         helper_direct_zone.bulk_upserts(direct_zones_data_source)
 
 
@@ -191,6 +192,13 @@ def insert_mail_servers_resolving(results: MultipleMailDomainResolvingResult) ->
 
 
 def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[Url, ScriptDependenciesResult], script_script_site_dependencies: Dict[MainFrameScript, Set[Url]]) -> None:
+    script_hosted_on_data_source = list()
+    script_withdraw_data_source = list()
+    key_se = 'script'
+    key_sse = 'script_site'
+    key_wse = 'web_site'
+    key_i = 'integrity'
+    key_h = 'https'
     with db.atomic():  # peewee transaction
         for web_site in web_site_script_dependencies.keys():
             try:
@@ -207,12 +215,12 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[Url,
                 helper_script_withdraw.delete_unresolved_row_for(wse, is_https)
                 for script in https_scripts:
                     se = helper_script.insert(script.src)
-                    helper_script_withdraw.insert(wse, se, is_https, script.integrity)
+                    script_withdraw_data_source.append({key_wse: wse, key_se: se, key_h: is_https, key_i: script.integrity})
                     for script_site in script_script_site_dependencies[script]:
                         sse = helper_script_site.insert(script_site)
-                        helper_script_hosted_on.insert(se, sse)
+                        script_hosted_on_data_source.append({key_se: se, key_sse: sse})
             else:
-                helper_script_withdraw.insert(wse, None, is_https, None)
+                script_withdraw_data_source.append({key_wse: wse, key_se: None, key_h: is_https, key_i: None})
 
             # HTTP
             is_https = False
@@ -220,12 +228,16 @@ def insert_script_dependencies_resolving(web_site_script_dependencies: Dict[Url,
                 helper_script_withdraw.delete_unresolved_row_for(wse, is_https)
                 for script in http_scripts:
                     se = helper_script.insert(script.src)
-                    helper_script_withdraw.insert(wse, se, is_https, script.integrity)
+                    script_withdraw_data_source.append({key_wse: wse, key_se: se, key_h: is_https, key_i: script.integrity})
                     for script_site in script_script_site_dependencies[script]:
                         sse = helper_script_site.insert(script_site)
-                        helper_script_hosted_on.insert(se, sse)
+                        script_hosted_on_data_source.append({key_se: se, key_sse: sse})
             else:
-                helper_script_withdraw.insert(wse, None, is_https, None)
+                script_withdraw_data_source.append({key_wse: wse, key_se: None, key_h: is_https, key_i: None})
+    with db.atomic():  # peewee transaction
+        helper_script_withdraw.bulk_upserts(script_withdraw_data_source)
+    with db.atomic():  # peewee transaction
+        helper_script_hosted_on.bulk_upserts(script_hosted_on_data_source)
 
 
 def insert_landing_script_sites_results(result: Dict[Url, LandingSiteResult]):
@@ -259,11 +271,15 @@ def insert_landing_script_sites_results(result: Dict[Url, LandingSiteResult]):
 
 
 def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
-    data_source = list()
+    ip_address_depends_data_source = list()
+    network_numbers_data_source = list()
+    prefixes_table_data_source = list()
     key_iae = 'ip_address'
     key_ine = 'ip_network'
     key_irte = 'ip_range_tsv'
     key_irre = 'ip_range_rov'
+    key_re = 'rov'
+    key_ase = 'autonomous_system'
     with db.atomic():       # peewee transaction
         for as_number in finals.results.keys():
             for ip_address in finals.results[as_number].keys():
@@ -276,27 +292,31 @@ def insert_ip_as_and_rov_resolving(finals: ASResolverResultForROVPageScraping):
                 if row_prefixes_table is not None:
                     irre = helper_ip_range_rov.insert(row_prefixes_table.prefix)
                     re = helper_rov.insert(row_prefixes_table)
-                    helper_prefixes_table.insert(irre, re, ase)
+                    prefixes_table_data_source.append({key_irre: irre, key_re: re, key_ase: ase})
                     if ip_range_tsv is None:
-                        data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: irre})
+                        ip_address_depends_data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: irre})
                     else:
                         irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
-                        data_source.append({key_iae: iae, key_ine: ine, key_irte: irte, key_irre: irre})
-                        helper_network_numbers.insert(irte, ase)
+                        ip_address_depends_data_source.append({key_iae: iae, key_ine: ine, key_irte: irte, key_irre: irre})
+                        network_numbers_data_source.append({key_irte: irte, key_ase: ase})
                 else:
                     if ip_range_tsv is None:
-                        data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: None})
+                        ip_address_depends_data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: None})
                     else:
                         irte = helper_ip_range_tsv.insert(ip_range_tsv.compressed)
-                        data_source.append({key_iae: iae, key_ine: ine, key_irte: irte, key_irre: None})
-                        helper_network_numbers.insert(irte, ase)
+                        ip_address_depends_data_source.append({key_iae: iae, key_ine: ine, key_irte: irte, key_irre: None})
+                        network_numbers_data_source.append({key_irte: irte, key_ase: ase})
         for ip_address in finals.no_as_results.keys():
             iae = helper_ip_address.insert(ip_address)     # should never happen
             ine = helper_ip_network.insert_from_address_entity(iae)
-            data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: None})
+            ip_address_depends_data_source.append({key_iae: iae, key_ine: ine, key_irte: None, key_irre: None})
 
     with db.atomic():  # peewee transaction
-        helper_ip_address_depends.bulk_upserts(data_source)
+        helper_ip_address_depends.bulk_upserts(ip_address_depends_data_source)
+    with db.atomic():  # peewee transaction
+        helper_network_numbers.bulk_upserts(network_numbers_data_source)
+    with db.atomic():  # peewee transaction
+        helper_prefixes_table.bulk_upserts(prefixes_table_data_source)
 
 
 def get_unresolved_entities(execute_script_resolving=True, execute_rov_scraping=True) -> set:

@@ -8,6 +8,7 @@ def insert(mde: MailDomainEntity, mse: MailServerEntity or None) -> MailDomainCo
     return mdca
 
 
+# insert + update = upsert
 def bulk_upserts(data_source: List[Dict[str, Union[MailDomainEntity, MailServerEntity, None]]]) -> None:
     """
     Must be invoked inside a peewee transaction. Transaction needs the database object (db).
