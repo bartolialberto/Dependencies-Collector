@@ -1,4 +1,3 @@
-import os
 import platform
 from pathlib import Path
 import selenium
@@ -6,7 +5,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from seleniumwire import webdriver
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
-from static_variables import INPUT_FOLDER_NAME
+from static_variables import INPUT_FOLDER_NAME, GECKODRIVER_FILENAME
 from utils import file_utils
 
 
@@ -47,8 +46,7 @@ class FirefoxHeadlessWebDriver:
         the webdriver object.
         """
         try:
-            # TODO: ma se è linux o mac ... ?
-            result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, FirefoxHeadlessWebDriver.geckodriver_filename(), project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory(INPUT_FOLDER_NAME, GECKODRIVER_FILENAME, project_root_directory)
         except FilenameNotFoundError:
             raise
         gecko_driver_file = result[0]
@@ -91,13 +89,19 @@ class FirefoxHeadlessWebDriver:
 
     @staticmethod
     def geckodriver_filename() -> str:
-        # TODO
-        if os.name == 'posix':
+        """
+        Static method that returns the filename of the geckodriver file to be used in the application based on the
+        OS.
+
+        :raise ValueError: If an unexpected value is computed.
+        :return: Geckodriver filename.
+        :rtype: str
+        """
+        if platform.system() == 'Linux':
             return 'geckodriver'
-        elif os.name == 'nt':
-            if platform.system():
-                return 'geckodriver.exe'
-            else:
-                raise ValueError
+        elif platform.system() == 'Windows':
+            return 'geckodriver.exe'
+        elif platform.system() == 'Darwin':
+            return 'geckodriver'
         else:
             raise ValueError

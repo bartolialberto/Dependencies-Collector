@@ -2,10 +2,9 @@ import unittest
 from persistence.BaseModel import db, DirectZoneAssociation, DomainNameEntity, WebSiteEntity, WebSiteLandsAssociation, \
     ScriptSiteEntity, ScriptSiteLandsAssociation, IpAddressEntity, IpAddressDependsAssociation, ScriptEntity, \
     ScriptHostedOnAssociation, WebSiteDomainNameAssociation, ScriptSiteDomainNameAssociation, NetworkNumbersAssociation, \
-    PrefixesTableAssociation
+    PrefixesTableAssociation, IpRangeROVEntity, IpRangeTSVEntity
 
 
-# portal.namirialtsp.com.
 class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
     def test_01_domain_name_and_direct_zones(self):
         print(f"\n------- START TEST 1 -------")
@@ -43,7 +42,7 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
             query = WebSiteLandsAssociation.select()
             for row in query:
                 web_site_lands.append(row)
-        print(f"table {ScriptSiteEntity._meta.table_name} length={len(web_sites)}")
+        print(f"table {WebSiteEntity._meta.table_name} length={len(web_sites)}")
         print(f"table {WebSiteLandsAssociation._meta.table_name} length={len(web_site_lands)}")
         with db.atomic():
             is_https = True
@@ -195,15 +194,14 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
                 self.assertEqual(1, len(result), f'For: {script_site}')
         print(f"------- END TEST 7 -------")
 
-    # TODO da fare questi ultimi 2: nel documento doc online
     def test_08_network_numbers(self):
         print(f"\n------- START TEST 8 -------")
         ip_ranges_tsv = list()
         with db.atomic():
-            query = IpAddressDependsAssociation.select()
+            query = IpRangeTSVEntity.select()
             for row in query:
-                ip_ranges_tsv.append(row.ip_range_tsv)
-        print(f"table {IpAddressDependsAssociation._meta.table_name} length={len(ip_ranges_tsv)}")
+                ip_ranges_tsv.append(row)
+        print(f"table {IpRangeTSVEntity._meta.table_name} length={len(ip_ranges_tsv)}")
         with db.atomic():
             for network in ip_ranges_tsv:
                 result = list()
@@ -218,10 +216,10 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
         print(f"\n------- START TEST 9 -------")
         ip_ranges_rov = list()
         with db.atomic():
-            query = IpAddressDependsAssociation.select()
+            query = IpRangeROVEntity.select()
             for row in query:
-                ip_ranges_rov.append(row.ip_range_rov)
-        print(f"table {IpAddressDependsAssociation._meta.table_name} length={len(ip_ranges_rov)}")
+                ip_ranges_rov.append(row)
+        print(f"table {IpRangeROVEntity._meta.table_name} length={len(ip_ranges_rov)}")
         with db.atomic():
             for network in ip_ranges_rov:
                 result = list()

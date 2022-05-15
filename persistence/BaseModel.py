@@ -292,6 +292,10 @@ class ZoneComposedAssociation(BaseModel):
 
 
 class ZoneLinksAssociation(BaseModel):
+    """
+    Association that represents the dependency of a zone from other zones.
+
+    """
     zone = ForeignKeyField(ZoneEntity)
     dependency = ForeignKeyField(ZoneEntity)
 
@@ -304,6 +308,10 @@ class ZoneLinksAssociation(BaseModel):
 
 
 class DomainNameDependenciesAssociation(BaseModel):
+    """
+    Association that represents the dependency of a domain name from zones.
+
+    """
     domain_name = ForeignKeyField(DomainNameEntity)
     zone = ForeignKeyField(ZoneEntity)
 
@@ -342,7 +350,7 @@ class ScriptWithdrawAssociation(BaseModel):
     script = ForeignKeyField(ScriptEntity, null=True)
     web_site = ForeignKeyField(WebSiteEntity)
     integrity = CharField(null=True)
-    https = BooleanField(null=False)
+    https = BooleanField(null=False)        # web site url scheme
 
     def __str__(self):
         return f"<script={self.script}, web_site={self.web_site}, integrity={self.integrity}, https={self.https}>"

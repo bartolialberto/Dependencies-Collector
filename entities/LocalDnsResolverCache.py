@@ -193,7 +193,12 @@ class LocalDnsResolverCache():
                 raise NoAvailablePathError(domain_name.string)
 
     def __len__(self) -> int:
-        # TODO
+        """
+        Return the length (the number of items) of this object.
+
+        :return: Object length.
+        :rtype: int
+        """
         return len(self.cname_dict.values()) + len(self.a_dict.values()) + len(self.ns_dict.values()) + len(self.mx_dict.values())
 
     def load_csv(self, path: str, take_snapshot=True) -> None:

@@ -526,7 +526,7 @@ class ApplicationResolversWrapper:
                 for dn in https_result.a_path.get_cname_chain(as_resource_records=False):
                     domain_names.add(dn)
             if http_result is not None:
-                for dn in https_result.a_path.get_cname_chain(as_resource_records=False):
+                for dn in http_result.a_path.get_cname_chain(as_resource_records=False):
                     domain_names.add(dn)
         # adding mail domain, mail servers and aliases associated
         for mail_domain in self.mail_domains_results.dependencies.keys():
