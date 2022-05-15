@@ -86,16 +86,17 @@ If execution aborts because of an unexpected error, a subfolder named with the c
 5) a .txt containing the type of the exception, the result of the str(.) method used on the exception and the traceback
 object print
 
-## DA METTERE ANCORA A PUNTO
+## MISC
 
-The execution flow can be described as follows:
-![alt text](res/flow_diagram.png)
+### ER SCHEMA
 
-
-The database result ER schema is:
+The database ER schema.
 ![alt text](res/er_schema.png)
 
+### ERRORS
 
-Unresolved entities "recover" system:
-![alt text](res/error_table.png)
+How unresolved entities are saved in the database?
+The following image illustrates the entities concerned, a description and an example for each possible 
+unresolved entity.
+![alt text](res/errors.png)
  
