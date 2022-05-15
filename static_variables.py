@@ -1,4 +1,23 @@
-from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+import platform
+
+
+def get_geckodriver_filename() -> str:
+    """
+    Static method that returns the filename of the geckodriver file to be used in the application based on the
+    OS.
+
+    :raise ValueError: If an unexpected value is computed.
+    :return: Geckodriver filename.
+    :rtype: str
+    """
+    if platform.system() == 'Linux':
+        return 'geckodriver'
+    elif platform.system() == 'Windows':
+        return 'geckodriver.exe'
+    elif platform.system() == 'Darwin':
+        return 'geckodriver'
+    else:
+        raise ValueError
 
 
 # SQLite file name
@@ -16,4 +35,4 @@ SNAPSHOTS_FOLDER_NAME = 'SNAPSHOTS'
 INPUT_MAIL_DOMAINS_FILE_NAME = 'mail_domains.txt'
 INPUT_WEB_SITES_FILE_NAME = 'web_pages.txt'
 IP_ASN_ARCHIVE_NAME = 'ip2asn-v4.tsv.gz'
-GECKODRIVER_FILENAME = FirefoxHeadlessWebDriver.geckodriver_filename()
+GECKODRIVER_FILENAME = get_geckodriver_filename()
