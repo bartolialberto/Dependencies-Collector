@@ -1,6 +1,7 @@
 # LavoroTesi
 
-This software takes a list of web pages and a list of mail domains as input and collects all architectural dependencies of those inputs in terms of zones, nameservers, IP networks, autonomous systems.
+This software takes a list of web pages and a list of mail domains as input and collects all architectural dependencies
+of those inputs in terms of zones, nameservers, IP networks, autonomous systems.
 
 The framework for describing dependencies is described in detail in:
 
@@ -70,9 +71,15 @@ above).
 ### How to run
 The application will execute the `main.py` source file.
 
-1) It will collect dependencies as indicated in `web_pages.txt` and `mail_domains.txt` in the `input` folder.
-2) If no files is found in the `input` directory it will collect dependencies for 2 web pages and 2 mail domains
+2) It will collect dependencies as indicated in `web_pages.txt` and `mail_domains.txt` in the `input` folder.
+3) If no files is found in the `input` directory it will collect dependencies for 2 web pages and 2 mail domains
 embedded in the source code.
+
+Flags can be set from command line to personalize execution:
+1) `-tld` says that zone dependencies should consider TLDs
+2) `-continue` says that previous unresolved entities will be resolved completely (if it is possible) 
+3) `-script` says that script resolving will be executed
+4) `-rov` says that ROV scraping will be executed
 
 Execution is quite verbose and will display the various steps being executed.
 

@@ -3,8 +3,8 @@ import platform
 
 def get_geckodriver_filename() -> str:
     """
-    Static method that returns the filename of the geckodriver file to be used in the application based on the
-    OS.
+    Static method that returns the filename of the geckodriver executable file to be used in the application based on
+    the OS.
 
     :raise ValueError: If an unexpected value is computed.
     :return: Geckodriver filename.
