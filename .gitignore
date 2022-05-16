@@ -2,3 +2,4 @@
 !/output/.gitkeep
 /input/*
 !/input/.gitkeep
+/.idea
