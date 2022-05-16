@@ -197,11 +197,17 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
     def test_08_network_numbers(self):
         print(f"\n------- START TEST 8 -------")
         ip_ranges_tsv = list()
+        network_numbers = list()
         with db.atomic():
             query = IpRangeTSVEntity.select()
             for row in query:
                 ip_ranges_tsv.append(row)
+        with db.atomic():
+            query = NetworkNumbersAssociation.select()
+            for row in query:
+                network_numbers.append(row)
         print(f"table {IpRangeTSVEntity._meta.table_name} length={len(ip_ranges_tsv)}")
+        print(f"table {NetworkNumbersAssociation._meta.table_name} length={len(network_numbers)}")
         with db.atomic():
             for network in ip_ranges_tsv:
                 result = list()
@@ -215,11 +221,17 @@ class DatabaseAssociationsConstraintsIntegrityCase(unittest.TestCase):
     def test_09_prefixes_table(self):
         print(f"\n------- START TEST 9 -------")
         ip_ranges_rov = list()
+        prefixes_tables = list()
         with db.atomic():
             query = IpRangeROVEntity.select()
             for row in query:
                 ip_ranges_rov.append(row)
+        with db.atomic():
+            query = PrefixesTableAssociation.select()
+            for row in query:
+                prefixes_tables.append(row)
         print(f"table {IpRangeROVEntity._meta.table_name} length={len(ip_ranges_rov)}")
+        print(f"table {PrefixesTableAssociation._meta.table_name} length={len(prefixes_tables)}")
         with db.atomic():
             for network in ip_ranges_rov:
                 result = list()

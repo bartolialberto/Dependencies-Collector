@@ -2,7 +2,7 @@ import csv
 from pathlib import Path
 from typing import List, Iterable
 from entities.error_log.ErrorLog import ErrorLog
-from static_variables import OUTPUT_FOLDER_NAME
+from static_variables import OUTPUT_FOLDER_NAME, OUTPUT_ERROR_LOGS_FILE_NAME
 from utils import csv_utils, file_utils
 
 
@@ -85,7 +85,7 @@ class ErrorLogger:
         except (PermissionError, FileNotFoundError, OSError):
             raise
 
-    def write_to_csv_in_output_folder(self, filename="error_logs", project_root_directory=Path.cwd()) -> None:
+    def write_to_csv_in_output_folder(self, filename=OUTPUT_ERROR_LOGS_FILE_NAME, project_root_directory=Path.cwd()) -> None:
         """
         This method export all the error logs to a .csv file using the separator of the self object in the output folder
         of the project. It needs the Path object of the project root directory (PRD).
@@ -96,7 +96,7 @@ class ErrorLogger:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: The filename to use (no extension).
+        :param filename: The filename to use (with extension).
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
@@ -104,7 +104,7 @@ class ErrorLogger:
         :raise FileNotFoundError: If file is not found.
         :raise OSError: If another OS-related problem occurred.
         """
-        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
+        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename, project_root_directory)
         file_abs_path = str(file)
         try:
             self.write_to_csv(file_abs_path)

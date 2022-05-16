@@ -1,14 +1,13 @@
 import csv
-from ipaddress import IPv4Address
 from pathlib import Path as PPath
-from typing import Iterable, List
+from typing import Iterable
 from entities.DomainName import DomainName
 from entities.paths.PathBuilder import PathBuilder
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.NoAvailablePathError import NoAvailablePathError
 from exceptions.NotResourceRecordTypeError import NotResourceRecordTypeError
 from exceptions.ReachedMaximumRecursivePathThresholdError import ReachedMaximumRecursivePathThresholdError
-from static_variables import OUTPUT_FOLDER_NAME, SNAPSHOTS_FOLDER_NAME
+from static_variables import OUTPUT_FOLDER_NAME, SNAPSHOTS_FOLDER_NAME, TEMP_DNS_CACHE, OUTPUT_DNS_CACHE_FILE_NAME
 from utils import file_utils, csv_utils, resource_records_utils
 from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
@@ -236,10 +235,10 @@ class LocalDnsResolverCache:
         except (ValueError, PermissionError, FileNotFoundError, OSError):
             raise
 
-    def load_csv_from_output_folder(self, filename='dns_cache', take_snapshot=True, project_root_directory=PPath.cwd()) -> None:
+    def load_csv_from_output_folder(self, filename=OUTPUT_DNS_CACHE_FILE_NAME, take_snapshot=True, project_root_directory=PPath.cwd()) -> None:
         """
         Method that loads from a .csv all the entries in this object cache. More specifically, this method loads the
-        'dns_cache.csv' file from the output folder of the project root directory (PRD). So just invoking this method
+        output DNS cache file from the output folder of the project root directory (PRD). So just invoking this method
         will load the cache (if) exported from the previous execution.
         Path.cwd() returns the current working directory which depends upon the entry point of the application; in
         particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
@@ -248,7 +247,8 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: Name of the cache file without extension. Default is 'dns_cache'.
+        :param filename: Name of the cache file with extension. Default is set in the OUTPUT_DNS_CACHE_FILE_NAME
+        variable.
         :type filename: str
         :param take_snapshot: Flag that sets up the SNAPSHOT folder and creates a temporary snapshot.
         :type take_snapshot: bool
@@ -261,7 +261,7 @@ class LocalDnsResolverCache:
         :raises OSError: If a general I/O error occurs.
         """
         try:
-            result = file_utils.search_for_filename_in_subdirectory(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
+            result = file_utils.search_for_filename_in_subdirectory(OUTPUT_FOLDER_NAME, filename, project_root_directory)
             file = result[0]
         except FilenameNotFoundError:
             raise
@@ -285,27 +285,19 @@ class LocalDnsResolverCache:
             with file.open('w', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f, dialect=f'{csv_utils.return_personalized_dialect_name(self.separator)}')
                 # writer.writerow(['', '', ''])       # .csv headers
-
-                def csv_row(res: RRecord) -> List[DomainName, TypesRR, str]:
-                    lst = list()
-                    lst.append(res.name)
-                    lst.append(res.type.to_string())
-                    lst.append(resource_records_utils.stamp_values(res.type, res.values))
-                    return lst
-
                 for rr in self.cname_dict.values():
-                    writer.writerow(csv_row(rr))
+                    writer.writerow(resource_records_utils.stamp_for_csv_row(rr))
                 for rr in self.a_dict.values():
-                    writer.writerow(csv_row(rr))
+                    writer.writerow(resource_records_utils.stamp_for_csv_row(rr))
                 for rr in self.ns_dict.values():
-                    writer.writerow(csv_row(rr))
+                    writer.writerow(resource_records_utils.stamp_for_csv_row(rr))
                 for rr in self.mx_dict.values():
-                    writer.writerow(csv_row(rr))
+                    writer.writerow(resource_records_utils.stamp_for_csv_row(rr))
                 f.close()
         except (PermissionError, FileNotFoundError, OSError):
             raise
 
-    def write_to_csv_in_output_folder(self, filename="dns_cache", project_root_directory=PPath.cwd()) -> None:
+    def write_to_csv_in_output_folder(self, filename=OUTPUT_DNS_CACHE_FILE_NAME, project_root_directory=PPath.cwd()) -> None:
         """
         Export the cache in the list to a .csv file in the output folder of the project directory (if set correctly).
         It uses the separator set to separate every attribute of the resource record.
@@ -316,7 +308,8 @@ class LocalDnsResolverCache:
         return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
         to default as if the entry point is main.py file (which is the only entry point considered).
 
-        :param filename: The personalized filename without extension, default is 'dns_cache'.
+        :param filename: The personalized filename with extension. Default is set in the OUTPUT_DNS_CACHE_FILE_NAME
+        variable.
         :type filename: str
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
@@ -324,7 +317,7 @@ class LocalDnsResolverCache:
         :raises FileNotFoundError: If it is impossible to open the file.
         :raises OSError: If a general I/O error occurs.
         """
-        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename+".csv", project_root_directory)
+        file = file_utils.set_file_in_folder(OUTPUT_FOLDER_NAME, filename, project_root_directory)
         file_abs_path = str(file)
         try:
             self.write_to_csv(file_abs_path)
@@ -344,36 +337,9 @@ class LocalDnsResolverCache:
         :param project_root_directory: The Path object pointing at the project root directory.
         :type project_root_directory: Path
         """
-        file = file_utils.set_file_in_folder(SNAPSHOTS_FOLDER_NAME, "dns_cache.csv", project_root_directory=project_root_directory)
-        if not file.exists():
-            pass
-        with file.open('w', encoding='utf-8', newline='') as f:
-            write = csv.writer(f, dialect=csv_utils.return_personalized_dialect_name(f"{self.separator}"))
-
-            def str_csv_row(res: RRecord) -> List[str]:
-                lst = list()
-                lst.append(res.name.string)
-                lst.append(res.type.to_string())
-                tmp = "["
-                for index, val in enumerate(res.values):
-                    if isinstance(val, DomainName):
-                        tmp += val.string
-                    elif isinstance(val, IPv4Address):
-                        tmp += val.exploded
-                    else:
-                        raise ValueError
-                    if not index == len(res.values) - 1:
-                        tmp += ","
-                tmp += "]"
-                lst.append(tmp)
-                return lst
-
-            for rr in self.cname_dict.values():
-                write.writerow(str_csv_row(rr))
-            for rr in self.a_dict.values():
-                write.writerow(str_csv_row(rr))
-            for rr in self.ns_dict.values():
-                write.writerow(str_csv_row(rr))
-            for rr in self.mx_dict.values():
-                write.writerow(str_csv_row(rr))
-            f.close()
+        file = file_utils.set_file_in_folder(SNAPSHOTS_FOLDER_NAME, TEMP_DNS_CACHE, project_root_directory=project_root_directory)
+        file_abs_path = str(file)
+        try:
+            self.write_to_csv(file_abs_path)
+        except (PermissionError, FileNotFoundError, OSError):
+            raise

@@ -36,3 +36,12 @@ INPUT_MAIL_DOMAINS_FILE_NAME = 'mail_domains.txt'
 INPUT_WEB_SITES_FILE_NAME = 'web_pages.txt'
 IP_ASN_ARCHIVE_NAME = 'ip2asn-v4.tsv.gz'
 GECKODRIVER_FILENAME = get_geckodriver_filename()
+# output file names
+OUTPUT_DNS_CACHE_FILE_NAME = 'dns_cache.csv'
+OUTPUT_ERROR_LOGS_FILE_NAME = 'error_logs.csv'
+OUTPUT_UNRESOLVED_ENTITIES_FILE_NAME = 'unresolved_entities.csv'
+# temp file names
+TEMP_DNS_CACHE = 'temp_dns_cache.csv'
+TEMP_FLAGS = 'temp_flags.txt'
+TEMP_MAIL_DOMAINS = 'temp_mail_domains.txt'
+TEMP_WEB_SITES = 'temp_web_pages.txt'
