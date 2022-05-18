@@ -185,7 +185,6 @@ if __name__ == "__main__":
         complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_resolving = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
-        execute_rov_resolving=True
         resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_resolving)
         if complete_unresolved_database:
             completer = DatabaseEntitiesCompleter(resolvers)
