@@ -157,8 +157,7 @@ def get_input_application_flags(default_complete_unresolved_database=False, defa
         elif arg == ARGUMENT_CONSIDER_TLD:
             default_consider_tld = True
         elif arg == ARGUMENT_SCRAPE_ROV:
-            # ab qui c'è un bug: variabile sbagliato
-            default_consider_tld = True
+            default_execute_rov_scraping = True
         elif arg == ARGUMENT_RESOLVE_SCRIPT:
             default_execute_script_resolving = True
     print(f"> COMPLETE_UNRESOLVED_DATABASE flag: {str(default_complete_unresolved_database)}")
