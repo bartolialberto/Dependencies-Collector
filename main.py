@@ -157,6 +157,7 @@ def get_input_application_flags(default_complete_unresolved_database=False, defa
         elif arg == ARGUMENT_CONSIDER_TLD:
             default_consider_tld = True
         elif arg == ARGUMENT_SCRAPE_ROV:
+            # ab qui c'è un bug: variabile sbagliato
             default_consider_tld = True
         elif arg == ARGUMENT_RESOLVE_SCRIPT:
             default_execute_script_resolving = True
@@ -185,6 +186,7 @@ if __name__ == "__main__":
         complete_unresolved_database, consider_tld, execute_script_resolving, execute_rov_resolving = get_input_application_flags()
         # entities
         print("********** START APPLICATION **********")
+        execute_rov_resolving=True
         resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_resolving)
         if complete_unresolved_database:
             completer = DatabaseEntitiesCompleter(resolvers)
