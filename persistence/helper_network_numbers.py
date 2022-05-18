@@ -1,6 +1,7 @@
 from typing import List, Dict, Union
 from peewee import chunked
-from persistence.BaseModel import NetworkNumbersAssociation, IpRangeTSVEntity, AutonomousSystemEntity, BATCH_SIZE_MAX
+from persistence.BaseModel import NetworkNumbersAssociation, IpRangeTSVEntity, AutonomousSystemEntity, BATCH_SIZE_MAX, \
+    NORMALIZATION_CONSTANT
 
 
 def insert(irte: IpRangeTSVEntity, ase: AutonomousSystemEntity) -> NetworkNumbersAssociation:
@@ -21,6 +22,6 @@ def bulk_upserts(data_source: List[Dict[str, Union[IpRangeTSVEntity, AutonomousS
     :type data_source: List[Dict[str, Union[IpRangeTSVEntity, AutonomousSystemEntity]]]
     """
     num_of_fields = 2
-    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + NORMALIZATION_CONSTANT))
     for batch in chunked(data_source, batch_size):
         NetworkNumbersAssociation.insert_many(batch).on_conflict_replace().execute()

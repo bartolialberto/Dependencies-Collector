@@ -1,6 +1,7 @@
 from typing import Set, List, Dict, Union, Optional
 from peewee import DoesNotExist, chunked
-from persistence.BaseModel import WebSiteEntity, ScriptEntity, ScriptWithdrawAssociation, BATCH_SIZE_MAX
+from persistence.BaseModel import WebSiteEntity, ScriptEntity, ScriptWithdrawAssociation, BATCH_SIZE_MAX, \
+    NORMALIZATION_CONSTANT
 
 
 def insert(wse: WebSiteEntity, se: Optional[ScriptEntity], https: bool, integrity: Optional[str]) -> ScriptWithdrawAssociation:
@@ -21,7 +22,7 @@ def bulk_upserts(data_source: List[Dict[str, Union[ScriptEntity, bool, str, None
     :type data_source: List[Dict[str, Union[ScriptEntity, bool, str, None]]]
     """
     num_of_fields = 4
-    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + NORMALIZATION_CONSTANT))
     for batch in chunked(data_source, batch_size):
         ScriptWithdrawAssociation.insert_many(batch).on_conflict_replace().execute()
 

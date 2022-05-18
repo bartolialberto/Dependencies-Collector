@@ -17,6 +17,7 @@ if isinstance(db, SqliteDatabase):
         BATCH_SIZE_MAX = 999
 else:
     BATCH_SIZE_MAX = 999
+NORMALIZATION_CONSTANT = 5      # for bulk inserts in DB
 
 
 def handle_tables_creation():       # executed at the end of the file

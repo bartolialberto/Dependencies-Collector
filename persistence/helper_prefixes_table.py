@@ -1,7 +1,7 @@
 from typing import List, Dict, Union
 from peewee import chunked
 from persistence.BaseModel import PrefixesTableAssociation, ROVEntity, AutonomousSystemEntity, \
-    IpRangeROVEntity, BATCH_SIZE_MAX
+    IpRangeROVEntity, BATCH_SIZE_MAX, NORMALIZATION_CONSTANT
 
 
 def insert(irre: IpRangeROVEntity or None, re: ROVEntity or None, ase: AutonomousSystemEntity) -> PrefixesTableAssociation:
@@ -22,6 +22,6 @@ def bulk_upserts(data_source: List[Dict[str, Union[IpRangeROVEntity, ROVEntity, 
     :type data_source: List[Dict[str, Union[IpRangeROVEntity, ROVEntity, AutonomousSystemEntity, None]]]
     """
     num_of_fields = 3
-    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + NORMALIZATION_CONSTANT))
     for batch in chunked(data_source, batch_size):
         PrefixesTableAssociation.insert_many(batch).on_conflict_replace().execute()

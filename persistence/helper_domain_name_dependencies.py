@@ -1,6 +1,7 @@
 from typing import List, Dict, Union
 from peewee import chunked
-from persistence.BaseModel import DomainNameEntity, ZoneEntity, DomainNameDependenciesAssociation, BATCH_SIZE_MAX
+from persistence.BaseModel import DomainNameEntity, ZoneEntity, DomainNameDependenciesAssociation, BATCH_SIZE_MAX, \
+    NORMALIZATION_CONSTANT
 
 
 def insert(dne: DomainNameEntity, ze: ZoneEntity) -> DomainNameDependenciesAssociation:
@@ -20,6 +21,6 @@ def bulk_upserts(data_source: List[Dict[str, Union[DomainNameEntity, ZoneEntity]
     :type data_source: List[Dict[str, Union[DomainNameEntity, ZoneEntity]]]
     """
     num_of_fields = 2
-    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + 1))
+    batch_size = int(BATCH_SIZE_MAX / (num_of_fields + NORMALIZATION_CONSTANT))
     for batch in chunked(data_source, batch_size):
         DomainNameDependenciesAssociation.insert_many(batch).on_conflict_replace().execute()

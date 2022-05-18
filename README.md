@@ -33,6 +33,7 @@ urllib
 ipaddress
 requests
 gzip
+sqlite
 ```
 Install Firefox, download geckodriver (https://github.com/mozilla/geckodriver/releases) and put the executable file in the input folder (see below).
 
