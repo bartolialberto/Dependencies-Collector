@@ -53,7 +53,7 @@ def __inner_resolve_a_path__(dne: DomainNameEntity, builder=None) -> PathBuilder
     try:
         adne = helper_alias.get_alias_from_entity(dne)
         rr = RRecord(DomainName(dne.string), TypesRR.CNAME, [adne.string])
-        builder.add_alias(rr)
+        builder.add_cname(rr)
     except DoesNotExist:
         raise NoAvailablePathError(dne.string)
     try:

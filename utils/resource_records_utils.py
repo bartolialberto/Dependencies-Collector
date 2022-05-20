@@ -1,7 +1,6 @@
 import ipaddress
 from typing import List
 from entities.DomainName import DomainName
-from entities.RRecord import RRecord
 from entities.enums.TypesRR import TypesRR
 
 
@@ -35,7 +34,7 @@ def stamp_values(type_rr: TypesRR, values: list) -> str:
         raise ValueError
 
 
-def stamp_for_csv_row(rr: RRecord) -> List[str]:
+def stamp_for_csv_row(rr) -> List[str]:     # rr: RRecord
     """
     Static method that returns a string representation divided in 3 elements of a list: name, type, values.
 
