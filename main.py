@@ -10,8 +10,8 @@ from entities.DomainName import DomainName
 from entities.Url import Url
 from exceptions.FilenameNotFoundError import FilenameNotFoundError
 from exceptions.InvalidUrlError import InvalidUrlError
-from persistence import helper_application_results
-from persistence.BaseModel import db, close_database_connection
+from persistence import helper_application_results, alias_fix
+from persistence.BaseModel import db, close_database_connection, db_file
 from static_variables import INPUT_FOLDER_NAME, INPUT_MAIL_DOMAINS_FILE_NAME, INPUT_WEB_SITES_FILE_NAME, \
     ARGUMENT_COMPLETE_DATABASE, ARGUMENT_CONSIDER_TLD, ARGUMENT_SCRAPE_ROV, ARGUMENT_RESOLVE_SCRIPT
 from utils import network_utils, list_utils, file_utils, snapshot_utils, datetime_utils, database_driver_utils
@@ -202,6 +202,8 @@ if __name__ == "__main__":
         # insertion in the database
         print("\nInsertion into database started... ")
         helper_application_results.insert_all_application_results(resolvers)
+        df = alias_fix.construct_alias_chained(str(db_file))                # ALIAS CHAINED simplification
+        alias_fix.insert_table_in_db(df, str(db_file), 'alias_chained')     # ALIAS CHAINED simplification
         print("Insertion into database finished.")
         # export dns cache, error_logs and unresolved entities
         resolvers.dns_resolver.cache.write_to_csv_in_output_folder()

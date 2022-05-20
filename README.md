@@ -22,6 +22,7 @@ pip install dnspython==2.1.0
 pip install selenium==4.1.0
 pip install selenium-wire==4.5.5
 pip install peewee==3.14.8
+pip install pandas
 ```
 Other Python modules used:
 ```
@@ -33,7 +34,7 @@ urllib
 ipaddress
 requests
 gzip
-sqlite
+sqlite >= 3.32.0
 ```
 Install Firefox, download geckodriver (https://github.com/mozilla/geckodriver/releases) and put the executable file in the input folder (see below).
 
