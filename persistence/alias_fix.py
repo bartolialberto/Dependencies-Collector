@@ -32,7 +32,8 @@ def select_starting_aliases(alias, other_tables):
     column_names = ['domain', 'name_id', 'alias_id']
     df = pd.DataFrame(columns=column_names)
     for t in other_tables:
-        d_expanded = pd.merge(t, alias, how='left', left_on='name_id', right_on='name_id')
+        d_expanded = pd.merge(t, alias, left_on='name_id', right_on='name_id')
+        print(d_expanded)
         d_expanded = d_expanded[~d_expanded['alias_id'].isnull()]
         if not d_expanded.empty:
             d_expanded['domain'] = d_expanded['name_id']
@@ -40,7 +41,7 @@ def select_starting_aliases(alias, other_tables):
             if df.empty:
                 df = d_expanded.copy(deep=True)
             else:
-                pd.concat((df, d_expanded.copy(deep=True)), axis=0)
+                df = pd.concat([df, d_expanded.copy(deep=True)], ignore_index=True, axis=0)
     return df
 
 
@@ -51,7 +52,7 @@ def construct_alias_chained(db_name):
 
 
 
-    alias = pd.read_sql_query('SELECT * from ALIAS', connection)
+    alias = pd.read_sql_query("SELECT * from ALIAS", connection)
     mail_domains = pd.read_sql_query('SELECT * from MAIL_DOMAIN', connection)
     mail_servers = pd.read_sql_query('SELECT * from MAIL_SERVER', connection)
     web_servers = pd.read_sql_query('SELECT * from WEB_SERVER', connection)
@@ -82,6 +83,7 @@ def construct_alias_chained(db_name):
                 looping = False
     alias_chained = pd.concat([alias_chained, rows], ignore_index=True, axis=0)
 
+
     # at this point ALIASEXPANDED contains all rows of ALIAS related to sname
     # now we need to insert in ALIASEXPANDED all rows of ALIAS that are not related to any sname
     # this is tricky because these tables have different schema
@@ -93,6 +95,7 @@ def construct_alias_chained(db_name):
     df_all = df_all[['name_id', 'alias_id_x']]
     df_all = df_all.rename(columns={'alias_id_x': 'alias_id'})
 
+    # print(df_all)
     # df_all contains all the rows to be added to alias_chained
     # we need to add a domain column; the value of this column will reflect that there is not a chaining
     df_all['domain'] = df_all['name_id']
@@ -109,7 +112,6 @@ def insert_table_in_db(df, db_name, table_name):
     connection.close()
     # print(db_name)
 
-
 def play_with_sql(db_name):
     connection = sqlite3.connect(db_name)
     check_existence = connection.execute('SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name=\'directzone\';').fetchone()
@@ -122,6 +124,11 @@ def play_with_sql(db_name):
 
 
 if __name__ == "__main__":
+    pd.set_option('display.max_columns', None)
+    df = construct_alias_chained('results.sqlite')
+    insert_table_in_db(df, 'results.sqlite', 'ALIAS_CHAINED')
+    exit(0)
+
     base_dir = os.getcwd()
     # where query files (sql) are stored
     sql_script_dir = base_dir + ''
