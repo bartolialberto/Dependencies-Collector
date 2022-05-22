@@ -19,3 +19,12 @@ def remove_duplicates(_list: list):
     :type _list: list
     """
     return list(dict.fromkeys(_list))
+
+
+def merge_set_in_list(_list: list, _set: set, duplicates=False) -> list:
+    for elem in _set:
+        if duplicates:
+            _list.append(elem)
+        else:
+            append_with_no_duplicates(_list, elem)
+    return _list

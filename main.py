@@ -186,10 +186,15 @@ if __name__ == "__main__":
         # entities
         print("********** START APPLICATION **********")
         resolvers = ApplicationResolversWrapper(consider_tld, execute_script_resolving, execute_rov_resolving)
+        are_there_new_domain_name_from_db_completion = False
+        new_domain_names_from_db_completion = set()
         if complete_unresolved_database:
             completer = DatabaseEntitiesCompleter(resolvers)
             unresolved_entities = helper_application_results.get_unresolved_entities(execute_script_resolving, execute_rov_resolving)
-            completer.do_complete_unresolved_entities(unresolved_entities)
+            new_domain_names_from_db_completion = completer.do_complete_unresolved_entities(unresolved_entities)
+            if len(new_domain_names_from_db_completion) > 0:
+                print(f"From DB completion {len(new_domain_names_from_db_completion)} new domain names will be elaborated from MIDST part onwards.")
+                are_there_new_domain_name_from_db_completion = True
         # auxiliary elaborations
         print("********** START ACTUAL APPLICATION ELABORATION **********")
         resolvers.dns_resolver.cache.take_temp_snapshot()  # for future error reproducibility
@@ -197,6 +202,8 @@ if __name__ == "__main__":
         # actual elaboration of all resolvers
         start_execution_time = datetime.now()
         preamble_domain_names = resolvers.do_preamble_execution(input_websites, input_mail_domains)
+        if are_there_new_domain_name_from_db_completion:
+            list_utils.merge_set_in_list(preamble_domain_names, new_domain_names_from_db_completion)
         midst_domain_names = resolvers.do_midst_execution(preamble_domain_names)
         resolvers.do_epilogue_execution(midst_domain_names)
         # insertion in the database

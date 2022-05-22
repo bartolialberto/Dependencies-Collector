@@ -10,6 +10,7 @@ from entities.resolvers.results.ASResolverResultForROVPageScraping import ASReso
 from entities.resolvers.results.AutonomousSystemResolutionResults import AutonomousSystemResolutionResults
 from exceptions.AutonomousSystemNotFoundError import AutonomousSystemNotFoundError
 from exceptions.DomainNonExistentError import DomainNonExistentError
+from exceptions.EmptyInputNoElaborationNeededError import EmptyInputNoElaborationNeededError
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NoAnswerError import NoAnswerError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
@@ -19,7 +20,7 @@ from exceptions.UnknownReasonError import UnknownReasonError
 from persistence import helper_autonomous_system, helper_ip_range_tsv, helper_ip_range_rov, helper_web_server, \
     helper_web_site_lands, helper_script_server, helper_script_site_lands, helper_script_withdraw, helper_script, \
     helper_script_site, helper_paths, helper_network_numbers, helper_rov, helper_prefixes_table, helper_script_hosted_on
-from persistence.BaseModel import IpAddressDependsAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation,\
+from persistence.BaseModel import IpAddressDependsAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation, \
     ScriptSiteLandsAssociation, MailDomainComposedAssociation, AccessAssociation, db
 from utils import datetime_utils, string_utils
 
@@ -46,7 +47,7 @@ class DatabaseEntitiesCompleter:
         """
         self.resolvers_wrapper = resolvers_wrapper
 
-    def do_complete_unresolved_entities(self, unresolved_entities: Set[Union[WebSiteLandsAssociation, ScriptWithdrawAssociation, ScriptSiteLandsAssociation, AccessAssociation, MailDomainComposedAssociation, IpAddressDependsAssociation]]) -> None:
+    def do_complete_unresolved_entities(self, unresolved_entities: Set[Union[WebSiteLandsAssociation, ScriptWithdrawAssociation, ScriptSiteLandsAssociation, AccessAssociation, MailDomainComposedAssociation, IpAddressDependsAssociation]]) -> Set[DomainName]:
         """
         This method is actually the one that executes (tries to execute) the completion of all unresolved entities.
         It also deals with the insertion in the database if there's new data resolved.
@@ -77,16 +78,58 @@ class DatabaseEntitiesCompleter:
             else:
                 raise ValueError
         print("\n********** START DATABASE COMPLETION ELABORATION **********")
-        self.do_complete_unresolved_web_sites_landing(wslas)
-        self.do_complete_domain_names_with_no_access(aas)
-        self.do_complete_unresolved_web_sites_scripts_withdraw(swas)
-        self.do_complete_unresolved_script_sites_landing(sslas)
-        self.do_complete_unresolved_mail_domain(mdcas)
-        self.do_complete_unresolved_ip_address_depends_association(iadas)
-        print(f"Total database completion execution time is: {datetime_utils.compute_delta_and_stamp(start_time)}")
-        print("********** END DATABASE COMPLETION ELABORATION **********\n")
+        total_new_resolution = 0
+        new_domain_names = set()
+        try:
+            wslas_resolved, new_dnes = self.do_complete_unresolved_web_sites_landing(wslas)
+            total_new_resolution = total_new_resolution + wslas_resolved
+            new_domain_names = new_domain_names.union(new_dnes)
+            print(f"RESOLVED {wslas_resolved}/{len(wslas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
 
-    def do_complete_domain_names_with_no_access(self, aas: List[AccessAssociation]) -> None:
+        try:
+            aas_resolved = self.do_complete_domain_names_with_no_access(aas)
+            total_new_resolution = total_new_resolution + aas_resolved
+            print(f"RESOLVED {aas_resolved}/{len(aas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
+
+        try:
+            swas_resolved = self.do_complete_unresolved_web_sites_scripts_withdraw(swas)
+            total_new_resolution = total_new_resolution + swas_resolved
+            print(f"RESOLVED {swas_resolved}/{len(swas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
+
+        try:
+            sslas_resolved, new_dnes = self.do_complete_unresolved_script_sites_landing(sslas)
+            total_new_resolution = total_new_resolution + sslas_resolved
+            new_domain_names = new_domain_names.union(new_dnes)
+            print(f"RESOLVED {sslas_resolved}/{len(sslas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
+
+        try:
+            mdcas_resolved, new_dnes = self.do_complete_unresolved_mail_domain(mdcas)
+            total_new_resolution = total_new_resolution + mdcas_resolved
+            new_domain_names = new_domain_names.union(new_dnes)
+            print(f"RESOLVED {mdcas_resolved}/{len(mdcas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
+
+        try:
+            iadas_resolved = self.do_complete_unresolved_ip_address_depends_association(iadas)
+            total_new_resolution = total_new_resolution + iadas_resolved
+            print(f"RESOLVED {iadas_resolved}/{len(iadas)} associations.")
+        except EmptyInputNoElaborationNeededError:
+            pass
+        print(f"Total database completion execution time is: {datetime_utils.compute_delta_and_stamp(start_time)}")
+        print(f"Total new entities resolved: {total_new_resolution}/{len(unresolved_entities)}")
+        print("********** END DATABASE COMPLETION ELABORATION **********\n")
+        return new_domain_names
+
+    def do_complete_domain_names_with_no_access(self, aas: List[AccessAssociation]) -> int:
         """
         Method that tries to complete unresolved AccessAssociation entities.
 
@@ -94,8 +137,9 @@ class DatabaseEntitiesCompleter:
         :type aas: List[AccessAssociation]
         """
         if len(aas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\nSTART DOMAIN NAME WITH NO ACCESS RESOLVING")
+        resolved = 0
         with db.atomic():
             for i, aa in enumerate(aas):
                 domain_name = DomainName(aa.domain_name.string)
@@ -108,9 +152,11 @@ class DatabaseEntitiesCompleter:
                 print(f"{a_path.stamp()}")
                 helper_paths.insert_a_path(a_path)
                 aa.delete_instance()
+                resolved = resolved + 1
         print(f"END DOMAIN NAME WITH NO ACCESS RESOLVING")
+        return resolved
 
-    def do_complete_unresolved_web_sites_landing(self, wslas: List[WebSiteLandsAssociation]) -> None:
+    def do_complete_unresolved_web_sites_landing(self, wslas: List[WebSiteLandsAssociation]) -> Tuple[int, Set[DomainName]]:
         """
         Method that tries to complete unresolved WebSiteLandsAssociation entities.
 
@@ -118,8 +164,10 @@ class DatabaseEntitiesCompleter:
         :type wslas: List[WebSiteLandsAssociation]
         """
         if len(wslas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED WEB SITES LANDING RESOLUTION")
+        resolved = 0
+        new_dnes = set()
         with db.atomic():
             for i, wsla in enumerate(wslas):
                 site = Url(wsla.web_site.url.string)
@@ -132,11 +180,14 @@ class DatabaseEntitiesCompleter:
                     continue
                 print(f"--> Landed on: {result.url}")
                 server_entity = helper_web_server.insert(result.server)
-                helper_web_site_lands.insert(wsla.web_site, https, result.url, server_entity)
+                new_dnes.add(result.server)
+                helper_web_site_lands.upsert(wsla.web_site, https, result.url, server_entity)
                 wsla.delete_instance()
+                resolved = resolved + 1
         print(f"END UNRESOLVED WEB SITES LANDING RESOLUTION")
+        return resolved, new_dnes
 
-    def do_complete_unresolved_web_sites_scripts_withdraw(self, swas: List[ScriptWithdrawAssociation]) -> None:
+    def do_complete_unresolved_web_sites_scripts_withdraw(self, swas: List[ScriptWithdrawAssociation]) -> int:
         """
         Method that tries to complete unresolved ScriptWithdrawAssociation entities.
 
@@ -144,11 +195,12 @@ class DatabaseEntitiesCompleter:
         :type swas: List[ScriptWithdrawAssociation]
         """
         if len(swas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         if not self.resolvers_wrapper.execute_script_resolving:
             print(f"\n> execute_script_resolving is set to False. If you want to perform completion of script dependencies switch the execute_script_resolving flag to True in the next execution..")
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
+        resolved = 0
         with db.atomic():
             for i, swa in enumerate(swas):
                 url = Url(swa.web_site.url.string)
@@ -174,11 +226,13 @@ class DatabaseEntitiesCompleter:
                     helper_script_site_lands.insert(script_site_entity, True, None, None)
                     helper_script_site_lands.insert(script_site_entity, False, None, None)
                     print(f"--> script[{j+1}/{len(scripts)}]: integrity={script.integrity}, src={script.src}")
-                    # TODO: manca effettivo landing che viene fatto successivamente
+                    # TODO: manca effettivo landing
                 swa.delete_instance()
+                resolved = resolved + 1
         print(f"END UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
+        return resolved
 
-    def do_complete_unresolved_script_sites_landing(self, sslas: List[ScriptSiteLandsAssociation]) -> None:
+    def do_complete_unresolved_script_sites_landing(self, sslas: List[ScriptSiteLandsAssociation]) -> Tuple[int, Set[DomainName]]:
         """
         Method that tries to complete unresolved ScriptSiteLandsAssociation entities.
 
@@ -186,8 +240,10 @@ class DatabaseEntitiesCompleter:
         :type sslas: List[ScriptSiteLandsAssociation]
         """
         if len(sslas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\nSTART UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
+        resolved = 0
+        new_dnes = set()
         with db.atomic():
             for i, ssla in enumerate(sslas):
                 site = Url(ssla.script_site.url.string)
@@ -199,11 +255,14 @@ class DatabaseEntitiesCompleter:
                     continue
                 print(f"--> Landed on: {result.url}")
                 server_entity = helper_script_server.insert(result.server)
-                helper_script_site_lands.insert(ssla.script_site, ssla.starting_https, result.url, server_entity)
+                new_dnes.add(result.server)
+                helper_script_site_lands.upsert(ssla.script_site, ssla.starting_https, result.url, server_entity)
                 ssla.delete_instance()
+                resolved = resolved + 1
         print(f"END UNRESOLVED SCRIPT SITES LANDING RESOLUTION")
+        return resolved, new_dnes
 
-    def do_complete_unresolved_mail_domain(self, mdcas: List[MailDomainComposedAssociation]) -> None:
+    def do_complete_unresolved_mail_domain(self, mdcas: List[MailDomainComposedAssociation]) -> Tuple[int, Set[DomainName]]:
         """
         Method that tries to complete unresolved MailDomainComposedAssociation entities.
 
@@ -211,8 +270,10 @@ class DatabaseEntitiesCompleter:
         :type mdcas: List[MailDomainComposedAssociation]
         """
         if len(mdcas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED MAIL DOMAIN RESOLUTION")
+        resolved = 0
+        new_dnes = set()
         with db.atomic():
             for i, mdca in enumerate(mdcas):
                 mail_domain = DomainName(mdca.mail_domain.name.string)
@@ -221,6 +282,7 @@ class DatabaseEntitiesCompleter:
                     result = self.resolvers_wrapper.dns_resolver.resolve_mail_domain(mail_domain)
                     print(f"association[{i + 1}/{len(mdcas)}]: {result.mail_domain_path}")
                     for j, mail_server in enumerate(result.mail_servers_paths.keys()):
+                        new_dnes.add(mail_server)
                         if result.mail_servers_paths[mail_server] is not None:
                             print(f"--> mail server[{j+1}/{len(result.mail_servers_paths.keys())}] {result.mail_servers_paths[mail_server].stamp()}")
                         else:
@@ -235,9 +297,11 @@ class DatabaseEntitiesCompleter:
                     else:
                         helper_paths.insert_a_path_for_mail_servers(result.mail_servers_paths[mail_server], mde)
                 mdca.delete_instance()
+                resolved = resolved + 1
         print(f"END UNRESOLVED MAIL DOMAIN RESOLUTION")
+        return resolved, new_dnes
 
-    def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]):
+    def do_complete_unresolved_ip_address_depends_association(self, iadas: List[IpAddressDependsAssociation]) -> int:
         """
         Method that tries to complete unresolved IpAddressDependsAssociation entities.
 
@@ -245,11 +309,12 @@ class DatabaseEntitiesCompleter:
         :type iadas: List[IpAddressDependsAssociation]
         """
         if len(iadas) == 0:
-            return
+            raise EmptyInputNoElaborationNeededError
         if not self.resolvers_wrapper.execute_rov_scraping:
             print(f"\n> execute_rov_scraping is set to False. If you want to perform completion of ROV entities switch the execute_rov_scraping flag to True in the next execution..")
-            return
+            raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
+        resolved = 0
         results = AutonomousSystemResolutionResults()
         ase_dict = dict()
         ip_address_depends_dict = dict()
@@ -316,7 +381,9 @@ class DatabaseEntitiesCompleter:
                         .update(ip_range_tsv=ip_address_depends_dict[ip_address].ip_range_tsv, ip_range_rov=irre)\
                         .where(IpAddressDependsAssociation.ip_address == ip_address_depends_dict[ip_address].ip_address)
                     q.execute()
+                    resolved = resolved + 1
             print(f"END UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
+            return resolved
 
     def __do_tsv_database_resolving__(self, ip_address: ipaddress.IPv4Address) -> Tuple[EntryIpAsDatabase, ipaddress.IPv4Network]:
         """
