@@ -33,7 +33,7 @@ def select_starting_aliases(alias, other_tables):
     df = pd.DataFrame(columns=column_names)
     for t in other_tables:
         d_expanded = pd.merge(t, alias, left_on='name_id', right_on='name_id')
-        print(d_expanded)
+        # print(d_expanded)
         d_expanded = d_expanded[~d_expanded['alias_id'].isnull()]
         if not d_expanded.empty:
             d_expanded['domain'] = d_expanded['name_id']

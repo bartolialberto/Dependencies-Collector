@@ -19,9 +19,10 @@ from exceptions.TableNotPresentError import TableNotPresentError
 from exceptions.UnknownReasonError import UnknownReasonError
 from persistence import helper_autonomous_system, helper_ip_range_tsv, helper_ip_range_rov, helper_web_server, \
     helper_web_site_lands, helper_script_server, helper_script_site_lands, helper_script_withdraw, helper_script, \
-    helper_script_site, helper_paths, helper_network_numbers, helper_rov, helper_prefixes_table, helper_script_hosted_on
+    helper_script_site, helper_paths, helper_network_numbers, helper_rov, helper_prefixes_table, \
+    helper_script_hosted_on, helper_application_results
 from persistence.BaseModel import IpAddressDependsAssociation, WebSiteLandsAssociation, ScriptWithdrawAssociation, \
-    ScriptSiteLandsAssociation, MailDomainComposedAssociation, AccessAssociation, db
+    ScriptSiteLandsAssociation, MailDomainComposedAssociation, AccessAssociation, db, ScriptSiteEntity
 from utils import datetime_utils, string_utils
 
 
@@ -135,6 +136,7 @@ class DatabaseEntitiesCompleter:
 
         :param aas: List of AccessAssociation entities.
         :type aas: List[AccessAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
         if len(aas) == 0:
             raise EmptyInputNoElaborationNeededError
@@ -162,6 +164,7 @@ class DatabaseEntitiesCompleter:
 
         :param wslas: List of WebSiteLandsAssociation entities.
         :type wslas: List[WebSiteLandsAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
         if len(wslas) == 0:
             raise EmptyInputNoElaborationNeededError
@@ -193,11 +196,12 @@ class DatabaseEntitiesCompleter:
 
         :param swas: List of ScriptWithdrawAssociation entities.
         :type swas: List[ScriptWithdrawAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
-        if len(swas) == 0:
-            raise EmptyInputNoElaborationNeededError
         if not self.resolvers_wrapper.execute_script_resolving:
             print(f"\n> execute_script_resolving is set to False. If you want to perform completion of script dependencies switch the execute_script_resolving flag to True in the next execution..")
+            raise EmptyInputNoElaborationNeededError
+        if len(swas) == 0:
             raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
         resolved = 0
@@ -223,10 +227,8 @@ class DatabaseEntitiesCompleter:
                     # completing script site - server
                     script_site_entity = helper_script_site.insert(url_script)
                     helper_script_hosted_on.insert(se, script_site_entity)
-                    helper_script_site_lands.insert(script_site_entity, True, None, None)
-                    helper_script_site_lands.insert(script_site_entity, False, None, None)
                     print(f"--> script[{j+1}/{len(scripts)}]: integrity={script.integrity}, src={script.src}")
-                    # TODO: manca effettivo landing
+                    self.__do_script_site_landing__(script_site_entity)
                 swa.delete_instance()
                 resolved = resolved + 1
         print(f"END UNRESOLVED WEB SITES SCRIPTS WITHDRAW RESOLUTION")
@@ -238,6 +240,7 @@ class DatabaseEntitiesCompleter:
 
         :param sslas: List of ScriptSiteLandsAssociation entities.
         :type sslas: List[ScriptSiteLandsAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
         if len(sslas) == 0:
             raise EmptyInputNoElaborationNeededError
@@ -268,6 +271,7 @@ class DatabaseEntitiesCompleter:
 
         :param mdcas: List of MailDomainComposedAssociation entities.
         :type mdcas: List[MailDomainComposedAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
         if len(mdcas) == 0:
             raise EmptyInputNoElaborationNeededError
@@ -288,7 +292,7 @@ class DatabaseEntitiesCompleter:
                         else:
                             print(f"--> mail server[{j+1}/{len(result.mail_servers_paths.keys())}] {mail_server} unresolved..")
                 except (DomainNonExistentError, NoAnswerError, UnknownReasonError):
-                    # print(f"--> Can't resolve...")
+                    print(f"--> Can't resolve...")
                     continue
                 cname_dnes, mde, mses = helper_paths.insert_mx_path(result.mail_domain_path)
                 for mail_server in result.mail_servers_paths.keys():
@@ -307,11 +311,12 @@ class DatabaseEntitiesCompleter:
 
         :param iadas: List of IpAddressDependsAssociation entities.
         :type iadas: List[IpAddressDependsAssociation]
+        :raise EmptyInputNoElaborationNeededError: If no input has to be elaborated.
         """
-        if len(iadas) == 0:
-            raise EmptyInputNoElaborationNeededError
         if not self.resolvers_wrapper.execute_rov_scraping:
             print(f"\n> execute_rov_scraping is set to False. If you want to perform completion of ROV entities switch the execute_rov_scraping flag to True in the next execution..")
+            raise EmptyInputNoElaborationNeededError
+        if len(iadas) == 0:
             raise EmptyInputNoElaborationNeededError
         print(f"\n\nSTART UNRESOLVED IP ADDRESS DEPENDENCIES RESOLUTION")
         resolved = 0
@@ -411,3 +416,18 @@ class DatabaseEntitiesCompleter:
         except (ValueError, AutonomousSystemNotFoundError):
             raise
         return entry, net
+
+    def __do_script_site_landing__(self, script_site_entity: ScriptSiteEntity) -> None:
+        """
+        Method that performs script site landing in a 'compact' way, without any prints. then it inserts the result in
+        the database.
+
+        :param script_site_entity: A script site entity of the DB.
+        :type script_site_entity: ScriptSiteEntity
+        """
+        script_site = Url(script_site_entity.url.string)
+        result = self.resolvers_wrapper.landing_resolver.resolve_site(script_site)
+        temp = {script_site: result}
+        helper_application_results.insert_landing_script_sites_results(temp)
+
+
