@@ -1,8 +1,7 @@
 import ipaddress
 from typing import List
-import selenium
-from selenium.webdriver.common.by import By
-from entities.FirefoxHeadlessWebDriver import FirefoxHeadlessWebDriver
+import requests
+import re
 from entities.RowPrefixesTable import RowPrefixesTable
 from exceptions.NetworkNotFoundError import NetworkNotFoundError
 from exceptions.NotROVStateTypeError import NotROVStateTypeError
@@ -11,90 +10,59 @@ from exceptions.TableNotPresentError import TableNotPresentError
 
 
 class ROVPageScraper:
-    """
-    This class represents a scraper that looks for the 'pfx_table_div' (id of html element) table in the page (ROV page):
-            https://stats.labs.apnic.net/roa/ASXXXX?c=IT&l=1&v=4&t=thist&d=thisd
-    where XXXX is the autonomous system number. Requires a valid headless browser to work associated to geckodriver.
-    In particular geckodriver executable needs to be placed in the 'input' folder of the project root folder (PRD).
-
-    ...
-
-    Attributes
-    ----------
-    headless_browser : FirefoxHeadlessWebDriver
-        An instance of a headless browser, in particular Firefox.
-    prefixes_table : List[RowPrefixesTable]
-        A list that represents the pfx_table_div (id of html element) table in the page (ROV page) saved state of this
-        object to save computational time when asked to see if an ip address is contained in one of the prefixes in
-        such table. We wanna avoid traversing the DOM for each address query.
-    current_as_number : int
-        An integer that saves the current as page loaded.
-    """
-
-    def __init__(self, headless_browser: FirefoxHeadlessWebDriver):
-        """
-        Initialize the object.
-
-        :param headless_browser: The instance of a Firefox headless browser.
-        :type headless_browser: FirefoxHeadlessWebDriver
-        """
-        self.headless_browser = headless_browser
+    def __init__(self, dbg=False):
+        self.baseUrl = 'https://stats.labs.apnic.net/roa/AS'
+        self.pageLoaded = False
+        self.sleepTime = 30
+        self.dbg = dbg
         self.prefixes_table = list()
-        self.current_as_number = -1
+        self.responseDocument = None
+        self.extractorRegex = 'var roatable.*\(\[.*]\s*\]\);'
 
-    def load_page(self, url_page: str) -> None:
-        """
-        Execute a GET of the url in the headless browser. The result is in the state of the headless browser.
+    def loadPage(self, urlPage):
+        if self.dbg:
+            print('Loading page ', urlPage, ' ...')
+        self.responseDocument = requests.get(urlPage).text.replace("\n", " ")
+        self.pageLoaded = True
+        if self.dbg:
+            print('Page loaded')
 
-        :param url_page: The url.
-        :type url_page: str
-        :raise selenium.common.exceptions.TimeoutException: If something goes wrong with the request and the timer is
-        triggered.
-        :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
-        """
+    def load_as_page(self, asn):
+        self.loadPage(self.baseUrl + str(asn))
+        # ab - added for compatibility with Fabbio
         try:
-            self.headless_browser.driver.get(url_page)
-        except selenium.common.exceptions.TimeoutException:
-            self.headless_browser.close_and_reopen()
-            self.prefixes_table = list()
-            self.current_as_number = -1
-            raise
-        except selenium.common.exceptions.WebDriverException:
-            self.prefixes_table = list()
-            self.current_as_number = -1
+            self.scrape_prefixes_table_from_page(asn)
+        except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError):
             raise
 
-    def load_as_page(self, as_number: int) -> None:
-        """
-        Execute a GET of the url that is associated with the autonomous system number parameter. The result is in the
-        state of the headless browser.
+    def __scrapeTable(self):
+        # good XPath tutorial
+        # https://www.swtestacademy.com/xpath-selenium/#selenium-webdriver-tutorials
 
-        :param as_number: The autonomous system number.
-        :type as_number: int
-        :raise ValueError: If the autonomous system number is < 0.
-        :raise selenium.common.exceptions.WebDriverException: If something goes wrong with the request.
-        :raise TableNotPresentError: If there's a problem while parsing the html page.
-        elements to reach the pfx_table_div (id html element) table.
-        :raise ValueError: If the data found for a row are not formatted as expected. See __init__() of class
-        RowPrefixesTable.
-        :raise TableEmptyError: If there's a problem while parsing the html page.
-        :raise NotROVStateTypeError: If the data found for a row are not formatted as expected. See __init__() of class
-        RowPrefixesTable.
-        """
-        if as_number < 0:
-            raise ValueError
-        else:
-            try:
-                self.load_page(ROVPageScraper.base_url(as_number))
-            except (selenium.common.exceptions.WebDriverException, selenium.common.exceptions.TimeoutException):
-                raise
-            self.current_as_number = as_number
-            try:
-                self.scrape_prefixes_table_from_page()
-            except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError):
-                raise
+        tableToScrape = re.findall(self.extractorRegex, self.responseDocument)
+        len = tableToScrape[0].count(']') - 2
+        str1 = tableToScrape[0]
+        ## ">213.208.0.0/19</a>
+        indexes = [_.start() for _ in re.finditer("p=", str1)]
 
-    def scrape_prefixes_table_from_page(self) -> List[RowPrefixesTable]:
+        scrapedData = []
+        for i in indexes:
+            end = str1.find('\\', i)
+            scrapedData.append(str1[i + 2:end])
+        return scrapedData
+
+    def getResults(self, xpath=None):
+        if self.pageLoaded == False:
+            raise Exception('Page not loaded')
+        results = self.__scrapeTable()
+        return results
+
+    def __del__(self):
+        if self.dbg:
+            print('Destructor executed (no action needed)')
+
+
+    def scrape_prefixes_table_from_page(self, asn) -> List[RowPrefixesTable]:
         """
         This method scrape the current page in the headless browser to find the pfx_table_div (id html element) table
         constructed (normally) in the ROV page. Obviously it needs a previous load of a valid autonomous system page.
@@ -111,40 +79,17 @@ class ROVPageScraper:
         :rtype: List[RowPrefixesTable]
         """
         try:
-            div = self.headless_browser.driver.find_element(By.ID, 'pfx_table_div')
-        except selenium.common.exceptions.NoSuchElementException:
-            self.prefixes_table = None
-            raise TableNotPresentError(self.current_as_number)
-        try:
-            table = div.find_element(By.TAG_NAME, 'table')
-        except selenium.common.exceptions.NoSuchElementException:
-            self.prefixes_table = None
-            raise TableNotPresentError(self.current_as_number)
-        try:
-            tbody = table.find_element(By.TAG_NAME, "tbody")
-        except selenium.common.exceptions.NoSuchElementException:
-            self.prefixes_table = None
-            raise TableNotPresentError(self.current_as_number)
-        try:
-            trs = tbody.find_elements(By.TAG_NAME, "tr")
-        except selenium.common.exceptions.NoSuchElementException:
-            self.prefixes_table = list()
-            raise TableEmptyError(self.current_as_number)
-        self.prefixes_table = list()
-        for tr in trs:
-            try:
-                tds = tr.find_elements(By.TAG_NAME, 'td')
-            except selenium.common.exceptions.NoSuchElementException:
-                self.prefixes_table = list()
-                raise TableEmptyError(self.current_as_number)
-            try:
-                # tds[0].text is the index number
-                tmp = RowPrefixesTable(tds[1].text, tds[2].text, tds[3].text, tds[4].text, tds[5].text, tds[6].text, tds[7].text)
+            roa_data = self.__scrapeTable()
+            roa_data_len = len(roa_data)
+            for i in range(roa_data_len):
+                #     def __init__(self, as_number: str, prefix: str, span: str, cc: str, visibility: str, rov_state: str, roas: str):
+                tmp = RowPrefixesTable('AS'+str(asn), roa_data[i], '256', 'IT', '10', 'VLD', ' ')
                 self.prefixes_table.append(tmp)
-            except (ValueError, NotROVStateTypeError):
-                self.prefixes_table = None
-                raise
+        except (ValueError, NotROVStateTypeError):
+            self.prefixes_table = None
+            raise
         return self.prefixes_table
+
 
     def get_network_if_present(self, ip: ipaddress.IPv4Address) -> RowPrefixesTable:
         """
@@ -169,15 +114,3 @@ class ROVPageScraper:
             if ip in row.prefix:
                 return row
         raise NetworkNotFoundError(ip.compressed)
-
-    @staticmethod
-    def base_url(as_number: int) -> str:
-        """
-        Construct the base ROV page url from an autonomous system number.
-
-        :param as_number: An integer that represents an autonomous system number.
-        :type as_number: int
-        :return: The ROV page url of that autonomous system number.
-        :rtype: str
-        """
-        return 'https://stats.labs.apnic.net/roa/AS'+str(as_number)+'?c=IT&l=1&v=4&t=thist&d=thisd'

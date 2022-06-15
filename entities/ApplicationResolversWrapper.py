@@ -110,7 +110,8 @@ class ApplicationResolversWrapper:
         self.consider_tld = consider_tld
         self.execute_script_resolving = execute_script_resolving
         self.headless_browser_is_instantiated = False
-        if execute_rov_scraping or execute_script_resolving:
+        # if execute_rov_scraping or execute_script_resolving:
+        if execute_script_resolving:
             try:
                 self.headless_browser = FirefoxHeadlessWebDriver(project_root_directory=project_root_directory)
             except (FileWithExtensionNotFoundError, selenium.common.exceptions.WebDriverException) as e:
@@ -120,7 +121,8 @@ class ApplicationResolversWrapper:
         if execute_script_resolving:
             self.script_resolver = ScriptDependenciesResolver(self.headless_browser)
         if execute_rov_scraping:
-            self.rov_page_scraper = ROVPageScraper(self.headless_browser)
+            #self.rov_page_scraper = ROVPageScraper(self.headless_browser)
+            self.rov_page_scraper = ROVPageScraper()
         self.dns_resolver = DnsResolver(self.consider_tld)
         self.landing_resolver = LandingResolver(self.dns_resolver)
         try:
