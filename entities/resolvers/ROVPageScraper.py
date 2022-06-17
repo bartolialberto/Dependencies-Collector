@@ -17,7 +17,8 @@ class ROVPageScraper:
         self.dbg = dbg
         self.prefixes_table = list()
         self.responseDocument = None
-        self.extractorRegex = 'var roatable.*\(\[.*]\s*\]\);'
+        #self.extractorRegex = 'var roatable.*\(\[.*]\s*\]\);'
+        self.extractorRegex='var roatable.*\(\[.*]\s*\]\);(?s:.*?)roatable'
 
     def loadPage(self, urlPage):
         if self.dbg:
