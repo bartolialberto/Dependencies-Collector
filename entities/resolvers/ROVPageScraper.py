@@ -38,17 +38,18 @@ class ROVPageScraper:
     def __scrapeTable(self):
         # good XPath tutorial
         # https://www.swtestacademy.com/xpath-selenium/#selenium-webdriver-tutorials
+        scrapedData = []
 
         tableToScrape = re.findall(self.extractorRegex, self.responseDocument)
-        len = tableToScrape[0].count(']') - 2
-        str1 = tableToScrape[0]
-        ## ">213.208.0.0/19</a>
-        indexes = [_.start() for _ in re.finditer("p=", str1)]
-
-        scrapedData = []
-        for i in indexes:
-            end = str1.find('\\', i)
-            scrapedData.append(str1[i + 2:end])
+        if len(tableToScrape) != 0:
+            #len = tableToScrape[0].count(']') - 2
+            str1 = tableToScrape[0]
+            ## ">213.208.0.0/19</a>
+            indexes = [_.start() for _ in re.finditer("p=", str1)]
+            for i in indexes:
+                end = str1.find('\\', i)
+                scrapedData.append(str1[i + 2:end])
+                
         return scrapedData
 
     def getResults(self, xpath=None):
@@ -81,10 +82,11 @@ class ROVPageScraper:
         try:
             roa_data = self.__scrapeTable()
             roa_data_len = len(roa_data)
-            for i in range(roa_data_len):
+            if roa_data_len != 0:
+                for i in range(roa_data_len):
                 #     def __init__(self, as_number: str, prefix: str, span: str, cc: str, visibility: str, rov_state: str, roas: str):
-                tmp = RowPrefixesTable('AS'+str(asn), roa_data[i], '256', 'IT', '10', 'VLD', ' ')
-                self.prefixes_table.append(tmp)
+                    tmp = RowPrefixesTable('AS'+str(asn), roa_data[i], '256', 'IT', '10', 'VLD', ' ')
+                    self.prefixes_table.append(tmp)
         except (ValueError, NotROVStateTypeError):
             self.prefixes_table = None
             raise

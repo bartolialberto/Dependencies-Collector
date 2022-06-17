@@ -18,25 +18,6 @@ from utils import network_utils, list_utils, file_utils, snapshot_utils, datetim
 
 
 def get_input_websites(default_websites=('google.it/doodles', 'www.youtube.it/feed/explore'), project_root_directory=Path.cwd()) -> List[Url]:
-    """
-    Start of the application: getting the websites, and returning them as a list of Url.
-    They can be set from a file name web_pages.txt put in the input folder in which each website is
-    written per line. If no website is set the application will start with 2 default websites to show its behaviour.
-    Such websites are: google.it/doodles, www.youtube.it/feed/explore.
-    Path.cwd() returns the current working directory which depends upon the entry point of the application; in
-    particular, if we start the application from the main.py file in the PRD, every time Path.cwd() is encountered
-    (even in methods belonging to files that are in sub-folders with respect to PRD) then the actual PRD is
-    returned. If the application is started from a file that belongs to the entities package, then Path.cwd() will
-    return the entities sub-folder with respect to the PRD. So to give a bit of modularity, the PRD parameter is set
-    to default as if the entry point is main.py file (which is the only entry point considered).
-
-    :param default_websites: The default websites to use when no one is set by the user.
-    :type default_websites: Tuple[str]
-    :param project_root_directory: The Path object pointing at the project root directory.
-    :type project_root_directory: Path
-    :return: The list of computed websites.
-    :rtype: List[Url]
-    """
     print(f"******* COMPUTING INPUT WEB SITES *******")
     lines = get_input_generic_file(INPUT_WEB_SITES_FILE_NAME, default_websites, project_root_directory=project_root_directory)
     values = set()
