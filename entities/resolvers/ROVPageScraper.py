@@ -17,6 +17,7 @@ class ROVPageScraper:
         self.dbg = dbg
         self.prefixes_table = list()
         self.responseDocument = None
+        self.current_as_number = -1 #awful..compatibility in exception handling...
         #self.extractorRegex = 'var roatable.*\(\[.*]\s*\]\);'
         self.extractorRegex='var roatable.*\(\[.*]\s*\]\);(?s:.*?)roatable'
 
@@ -32,6 +33,7 @@ class ROVPageScraper:
         self.loadPage(self.baseUrl + str(asn))
         # ab - added for compatibility with Fabbio
         try:
+            self.current_as_number = asn
             self.scrape_prefixes_table_from_page(asn)
         except (TableNotPresentError, ValueError, TableEmptyError, NotROVStateTypeError):
             raise
